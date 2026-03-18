@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <title>Smart Campus Complaint & Response System - GDC Dharamshala</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    
+    <!-- Icons (FontAwesome used for storytelling icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css?v=4">
+</head>
+<body>
+    <!-- Storytelling Animated Background -->
+    <div id="storyboard-bg" class="storyboard-bg">
+        <div class="bg-layer layer-town active" style="background-image: url('images/branding/campus_wide.png')"></div>
+        <div class="bg-layer layer-admin" style="background-image: url('images/branding/campus_admin.png')"></div>
+        <div class="bg-layer layer-college" style="background-image: url('images/branding/campus_gate.png')"></div>
+        <div class="bg-layer layer-governance" style="background-image: url('images/branding/governance.png')"></div>
+        <div class="bg-layer layer-student" style="background-image: url('images/branding/student_hub.png')"></div>
+        <div class="bg-layer layer-mountains" style="background-image: url('images/branding/campus_life.png')"></div>
+        <div class="bg-overlay"></div>
+    </div>
+
+    <!-- Section 1 — Welcome Screen -->
+    <section id="section-1" class="fullscreen-section section-welcome">
+        <!-- Particles container -->
+        <div id="particles-js" class="particles-bg"></div>
+        
+        <!-- College Header - Top Left aligned -->
+        <div class="college-header gsap-fade-up">
+            <img src="images/branding/logo.png" alt="GDC Dharamshala Logo" class="college-logo">
+            <div class="header-text">
+                <h2 style="font-weight: 800; text-transform: uppercase; color: var(--gold);">Government Degree College Dharamshala</h2>
+                <p class="established">Established 1926</p>
+            </div>
+        </div>
+
+        <div class="content-wrapper text-center z-index-2">
+            <!-- Main Title -->
+            <h1 class="main-title gsap-fade-up delay-1">Smart Campus Complaint & <span class="text-gold">Response System</span></h1>
+            
+            <!-- Tagline -->
+            <p class="tagline gsap-fade-up delay-2">"Empowering Transparent Campus Governance Through Technology"</p>
+            
+            <!-- Portal Buttons -->
+            <div class="portal-buttons gsap-fade-up delay-3">
+                <a href="login.html?role=Student" class="btn btn-glass btn-glow"><i class="fa-solid fa-user-graduate"></i> Student Portal</a>
+                <a href="login.html?role=Staff" class="btn btn-glass btn-glow"><i class="fa-solid fa-chalkboard-user"></i> Staff Portal</a>
+                <a href="login.html?role=Admin" class="btn btn-glass btn-glow"><i class="fa-solid fa-user-shield"></i> Admin Panel</a>
+                <a href="login.html?role=Principal" class="btn btn-glass btn-gold"><i class="fa-solid fa-chart-pie"></i> Principal Dashboard</a>
+                <a href="terms-conditions/terms.html" class="btn btn-glass"><i class="fa-solid fa-circle-question"></i> Help</a>
+            </div>
+            
+            <div class="scroll-indicator gsap-fade-up delay-4">
+                <span>Scroll to explore</span>
+                <i class="fa-solid fa-chevron-down scroll-bounce"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 2 — The Problem -->
+    <section id="section-2" class="fullscreen-section section-problem">
+        <div class="ambient-shapes"></div>
+        <div class="content-wrapper">
+            <h2 class="section-title text-center text-problem-trigger">The Reality We Face</h2>
+            
+            <div class="problem-grid">
+                <div class="problem-card glass-panel prob-card-1">
+                    <i class="fa-solid fa-person-walking"></i>
+                    <p>Wandering campus seeking the right office.</p>
+                </div>
+                <div class="problem-card glass-panel prob-card-2">
+                    <i class="fa-solid fa-lightbulb"></i> <!-- Broken conceptual -->
+                    <p>Unreported broken lights & tech issues.</p>
+                </div>
+                <div class="problem-card glass-panel prob-card-3">
+                    <i class="fa-solid fa-broom"></i>
+                    <p>Overlooked cleanliness concerns in classrooms.</p>
+                </div>
+                <div class="problem-card glass-panel prob-card-4">
+                    <i class="fa-solid fa-circle-question"></i>
+                    <p>Confusion about the correct complaint channel.</p>
+                </div>
+            </div>
+
+            <h3 class="problem-statement text-center">
+                “Students often face problems on campus but don't know where to report them.”
+            </h3>
+        </div>
+    </section>
+
+    <!-- Section 3 — Introducing the Solution -->
+    <section id="section-3" class="fullscreen-section section-solution">
+        <div class="content-wrapper text-center">
+            <h2 class="section-title solution-title">Introducing the Smart Campus Complaint & Response System</h2>
+            
+            <div class="interface-illustration glass-panel">
+                <div class="interface-header">
+                    <div class="dots"><span></span><span></span><span></span></div>
+                    <div class="title">System Interface</div>
+                </div>
+                <div class="interface-body">
+                    <div class="sol-step sol-step-1">
+                        <i class="fa-solid fa-mobile-screen"></i>
+                        <span>Students Submit Complaint</span>
+                    </div>
+                    <div class="connector connector-1"><i class="fa-solid fa-arrow-down"></i></div>
+                    
+                    <div class="sol-step sol-step-2">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <span>System Auto-Routes to Dept</span>
+                    </div>
+                    <div class="connector connector-2"><i class="fa-solid fa-arrow-down"></i></div>
+                    
+                    <div class="sol-step sol-step-3">
+                        <i class="fa-solid fa-bell"></i>
+                        <span>Staff Receives Notification</span>
+                    </div>
+                    <div class="connector connector-3"><i class="fa-solid fa-arrow-down"></i></div>
+                    
+                    <div class="sol-step sol-step-4 text-gold">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <span>Issue Gets Resolved</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 4 — Complaint Workflow Animation -->
+    <section id="section-4" class="fullscreen-section section-workflow">
+        <div class="content-wrapper">
+            <h2 class="section-title text-center">The Journey of a Resolution</h2>
+            
+            <div class="workflow-container">
+                <div class="workflow-line"></div>
+                
+                <div class="wf-node wf-student">
+                    <div class="wf-icon"><i class="fa-solid fa-user-graduate"></i></div>
+                    <div class="wf-text">Student submits complaint</div>
+                </div>
+                
+                <div class="wf-node wf-admin">
+                    <div class="wf-icon"><i class="fa-solid fa-user-shield"></i></div>
+                    <div class="wf-text">Admin receives request</div>
+                </div>
+                
+                <div class="wf-node wf-dept">
+                    <div class="wf-icon"><i class="fa-solid fa-building-user"></i></div>
+                    <div class="wf-text">Department is notified</div>
+                </div>
+                
+                <div class="wf-node wf-staff">
+                    <div class="wf-icon"><i class="fa-solid fa-wrench"></i></div>
+                    <div class="wf-text">Staff resolves the issue</div>
+                </div>
+                
+                <div class="wf-node wf-success">
+                    <div class="wf-icon border-gold text-gold"><i class="fa-solid fa-check"></i></div>
+                    <div class="wf-text">Student confirms solution</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 5 — Transparency and Analytics -->
+    <section id="section-5" class="fullscreen-section section-analytics">
+        <div class="content-wrapper">
+            <div class="analytics-split">
+                <div class="analytics-text text-center">
+                    <h2 class="section-title">Transparency & Analytics</h2>
+                    <h3 class="analytics-statement">“Data-driven administration improves campus accountability.”</h3>
+                </div>
+                
+                <div class="chart-container glass-panel">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 6 — Principal Dashboard Highlight -->
+    <section id="section-6" class="fullscreen-section section-dashboard">
+        <div class="content-wrapper">
+            <h2 class="section-title text-center">Principal Dashboard Highlight</h2>
+            
+            <div class="dashboard-mockup glass-panel">
+                <div class="dash-header" style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <img src="images/branding/logo.png" alt="GDC Dharamshala Logo" style="height: 50px; border-radius: 50%; border: 2px solid var(--gold); background: #fff; padding: 2px;">
+                        <h3 style="margin: 0;">Live College Metrics</h3>
+                    </div>
+                    <div class="live-indicator" style="margin: 0;">LIVE</div>
+                </div>
+                
+                <div class="dash-grid">
+                    <div class="dash-card">
+                        <i class="fa-solid fa-envelope-open-text text-blue"></i>
+                        <h4>Total Complaints</h4>
+                        <div class="dash-number counter-total">0</div>
+                    </div>
+                    
+                    <div class="dash-card">
+                        <i class="fa-solid fa-check-circle text-green"></i>
+                        <h4>Resolved Issues</h4>
+                        <div class="dash-number counter-resolved">0</div>
+                    </div>
+                    
+                    <div class="dash-card">
+                        <i class="fa-solid fa-building text-gold"></i>
+                        <h4>Top Dept Efficiency</h4>
+                        <div class="dash-number counter-efficiency">0%</div>
+                    </div>
+                    
+                    <div class="dash-card alert-card">
+                        <i class="fa-solid fa-triangle-exclamation text-red"></i>
+                        <h4>Emergency Alerts</h4>
+                        <div class="dash-number counter-alerts">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- Section 7 — Final Call to Action -->
+    <section id="section-7" class="fullscreen-section section-cta">
+        <div id="particles-js-cta" class="particles-bg op-50"></div>
+        <div class="content-wrapper text-center z-index-2">
+            <h2 class="final-statement">“Together we build a smarter campus.”</h2>
+            
+            <div id="dynamic-gallery" class="dynamic-gallery">
+                <div class="slider-frame" id="slider-frame">
+                    <div id="slider-track" class="slider-track">
+                        <!-- Slides injected here -->
+                    </div>
+                    
+                    <!-- Arrows -->
+                    <div class="slider-arrow arrow-prev" id="slider-prev"><i class="fa-solid fa-chevron-left"></i></div>
+                    <div class="slider-arrow arrow-next" id="slider-next"><i class="fa-solid fa-chevron-right"></i></div>
+                    
+                    <div id="slider-nav" class="slider-nav">
+                        <!-- Dots injected here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="cta-buttons">
+                <a href="activate.html" class="btn btn-glass btn-large btn-glow"><i class="fa-solid fa-user-plus"></i> Register as Student</a>
+                <a href="login.html" class="btn btn-glass btn-large btn-gold btn-glow"><i class="fa-solid fa-right-to-bracket"></i> Login to Dashboard</a>
+                <a href="login.html?role=Student" class="btn btn-glass btn-large"><i class="fa-solid fa-bullhorn"></i> Report an Issue</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="padding: 3rem 0 2rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); color: var(--text-muted); font-size: 0.9rem; position: relative; z-index: 10;">
+        <div class="content-wrapper">
+            <!-- Footer Grid -->
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 2rem; margin-bottom: 3rem; padding: 0 1rem;">
+                
+                <!-- Address Section -->
+                <div style="flex: 1; min-width: 250px; text-align: left;">
+                    <h4 style="color: var(--gold); font-size: 0.95rem; margin-bottom: 1.2rem; font-family: var(--font-sans); letter-spacing: 1px; font-weight: 600; text-transform: uppercase;">ADDRESS</h4>
+                    <p style="margin-bottom: 6px; color: rgba(255,255,255,0.9); font-weight: 500;">The Principal</p>
+                    <p style="margin-bottom: 6px; color: rgba(255,255,255,0.9);">Govt Degree College Dharamshala</p>
+                    <p style="margin-bottom: 6px; color: rgba(255,255,255,0.9);">Distt &ndash; Kangra, HP</p>
+                    <p style="margin-bottom: 15px; color: rgba(255,255,255,0.9);">Pin &ndash; 176215</p>
+                    <p style="margin-bottom: 6px; color: rgba(255,255,255,0.7); font-size: 0.85rem;">Phone: 01892-224894</p>
+                    <p style="margin-bottom: 0; color: rgba(255,255,255,0.7); font-size: 0.85rem;">Email: gdcdharamshala@gmail.com</p>
+                </div>
+
+                <!-- Credits Section -->
+                <div style="flex: 1; min-width: 250px; text-align: left;">
+                    <h4 style="color: var(--gold); font-size: 0.95rem; margin-bottom: 1.2rem; font-family: var(--font-sans); letter-spacing: 1px; font-weight: 600; text-transform: uppercase;">DEVELOPED BY</h4>
+                    <p style="margin-bottom: 4px; color: rgba(255,255,255,0.9); font-weight: 600;">B.Tech Students:</p>
+                    <p style="margin-bottom: 12px; color: rgba(255,255,255,0.9);">Ashmit Kumar & Ankita Bharti</p>
+                    
+                    <p style="margin-bottom: 6px; color: rgba(255,255,255,0.9); font-weight: 600;">Guidance:</p>
+                    <div style="display: flex; flex-direction: column; gap: 3px; color: rgba(255,255,255,0.8); font-size: 0.85rem;">
+                        <p style="margin: 0;">Dr. Naresh Sharma</p>
+                        <p style="margin: 0;">Dr. Pawan Thakur</p>
+                        <p style="margin: 0;">Mr. Harsh Guleria</p>
+                    </div>
+                </div>
+
+                <!-- Map Section -->
+                <div style="flex: 1.2; min-width: 300px; height: 200px; border-radius: 12px; overflow: hidden; border: 1px solid var(--glass-border); box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    <iframe 
+                        src="https://www.google.com/maps?q=Government%20Degree%20College%20Dharamshala&output=embed" 
+                        width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+                    </iframe>
+                </div>
+            </div>
+            
+            <!-- Bottom Copyright -->
+            <div style="text-align: center; width: 100%; padding-top: 1.5rem; border-top: 1px solid var(--glass-border); font-size: 0.8rem; color: rgba(255,255,255,0.5);">
+                <p style="margin-bottom: 8px;">&copy; 2026 Government Degree College Dharamshala. All rights reserved.</p>
+                <a href="terms-conditions/terms.html" style="color: rgba(255,255,255,0.5); text-decoration: none; transition: 0.3s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Terms & Conditions</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- External Libraries (CDN) -->
+    <!-- Particles.js -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    
+    <!-- GSAP Core & ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Animations -->
+    <script src="js/animations.js"></script>
+</body>
+</html>
