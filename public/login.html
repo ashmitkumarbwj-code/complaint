@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <title>Login - Smart Campus</title>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Main Styles -->
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .auth-bg {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, rgba(59,130,246,0.1) 0%, rgba(13,17,23,1) 100%);
+            z-index: 0;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 450px;
+            background: var(--surface-light);
+            padding: 3rem 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.08);
+            position: relative;
+            z-index: 2;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .auth-header h2 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: rgba(13, 17, 23, 0.7);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .role-btn {
+            flex: 1;
+            padding: 0.8rem;
+            text-align: center;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .role-btn.active {
+            background: rgba(59, 130, 246, 0.15);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-full {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        #otp-section {
+            display: none;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Storytelling Animated Background -->
+    <div id="storyboard-bg" class="storyboard-bg">
+        <div class="bg-layer layer-1 active" style="background-image: url('images/branding/campus_wide.png')"></div>
+        <div class="bg-layer layer-2" style="background-image: url('images/branding/campus_gate.png')"></div>
+        <div class="bg-layer layer-3" style="background-image: url('images/branding/campus_life.png')"></div>
+        <div class="bg-overlay"></div>
+    </div>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <a href="index.html" class="back-link">← Back to Home</a>
+            
+            <div class="auth-header">
+                <img src="images/branding/logo.png" alt="College Logo" style="width: 80px; margin-bottom: 1rem; border-radius: 50%; border: 2px solid var(--gold); padding: 3px; background: white;">
+                <h1 style="font-weight: 800; font-size: 1.2rem; color: var(--gold); margin-bottom: 1.5rem; text-transform: uppercase;">Govt. College Dharamshala</h1>
+                <h2>Welcome Back</h2>
+                <p>Verify your identity to access the portal.</p>
+            </div>
+
+            <form id="auth-form">
+                <!-- Role Selection -->
+                <div class="role-selector" id="role-selector">
+                    <div class="role-btn active" data-role="student">Student</div>
+                    <div class="role-btn" data-role="staff">Staff/Faculty</div>
+                    <div class="role-btn" data-role="admin">Admin</div>
+                    <div class="role-btn" data-role="principal">Principal</div>
+                </div>
+
+                <!-- Step 1: Identifier -->
+                <div id="identifier-section">
+                    <div class="form-group" id="identifier-group">
+                        <label class="form-label" id="identifier-label">Roll Number</label>
+                        <input type="text" class="form-control" id="identifier-input" placeholder="e.g. 21DCS010" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password-input" placeholder="••••••••" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-full btn-glow" id="btn-login">Login to Portal</button>
+                    
+                    <div style="text-align: center; margin-top: 1.5rem;">
+                        <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            <a id="forgot-link" href="forgot-password.html" style="color: #888; text-decoration: none;">Forgot Password?</a>
+                        </p>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.4rem;">
+                            <a id="activate-link" href="activate.html" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Student? Activate Account</a>
+                        </p>
+                        <p id="activate-admin-wrap" style="font-size: 0.9rem; color: var(--text-secondary); display: none;">
+                            <a id="activate-admin-link" href="activate-staff.html?role=Admin" style="color: #ef4444; text-decoration: none; font-weight: 600;">Admin? Activate Account</a>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- OTP Section (Hidden for MVP or future use) -->
+                <div id="otp-section" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label">Enter 6-Digit OTP</label>
+                        <input type="text" class="form-control" id="otp-input" placeholder="000000" maxlength="6">
+                    </div>
+                    <button type="button" class="btn btn-success btn-full btn-glow">Verify OTP</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const forcedRole = urlParams.get('role');
+            const roleBtns = document.querySelectorAll('.role-btn');
+            const activateLink = document.getElementById('activate-link');
+            const forgotLink = document.getElementById('forgot-link');
+            const authHeader = document.querySelector('.auth-header p');
+
+            function updateLinksForRole(roleText) {
+                const role = roleText.toLowerCase();
+                const isAdmin = role.includes('admin');
+                const isPrincipal = role.includes('principal');
+                const isStaff = ['staff', 'hod'].some(r => role.includes(r));
+                const adminWrap = document.getElementById('activate-admin-wrap');
+
+                if (isAdmin) {
+                    // Admin selected: show Staff activate link + Admin activate link
+                    activateLink.href = 'activate-staff.html?role=Staff';
+                    activateLink.textContent = 'Staff/Faculty? Activate Account';
+                    activateLink.style.color = '#f59e0b';
+                    forgotLink.href = 'forgot-password-staff.html?role=Admin';
+                    forgotLink.textContent = 'Forgot Password?';
+                    adminWrap.style.display = 'block';
+                    document.getElementById('activate-admin-link').href = 'activate-staff.html?role=Admin';
+                } else if (isPrincipal) {
+                    // Principal selected
+                    activateLink.href = 'activate-staff.html?role=Principal';
+                    activateLink.textContent = 'Principal? Activate Account';
+                    activateLink.style.color = '#f59e0b';
+                    forgotLink.href = 'forgot-password-staff.html?role=Principal';
+                    forgotLink.textContent = 'Forgot Password?';
+                    adminWrap.style.display = 'none';
+                } else if (isStaff) {
+                    // Staff/HOD
+                    activateLink.href = 'activate-staff.html?role=Staff';
+                    activateLink.textContent = 'Staff/Faculty? Activate Account';
+                    activateLink.style.color = '#f59e0b';
+                    forgotLink.href = 'forgot-password-staff.html?role=Staff';
+                    forgotLink.textContent = 'Forgot Password?';
+                    adminWrap.style.display = 'none';
+                } else {
+                    // Student: default
+                    activateLink.href = 'activate.html';
+                    activateLink.textContent = 'Student? Activate Account';
+                    activateLink.style.color = 'var(--primary-color)';
+                    forgotLink.href = 'forgot-password.html';
+                    forgotLink.textContent = 'Forgot Password?';
+                    adminWrap.style.display = 'none';
+                }
+            }
+
+            // Update links whenever a role button is clicked
+            roleBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    updateLinksForRole(btn.textContent.trim());
+                });
+            });
+
+            if (forcedRole) {
+                const target = Array.from(roleBtns).find(btn =>
+                    btn.textContent.trim().toLowerCase().includes(forcedRole.toLowerCase())
+                );
+                if (target) {
+                    roleBtns.forEach(btn => {
+                        if (btn !== target) btn.style.display = 'none';
+                        else btn.classList.add('active');
+                    });
+                    const roleName = target.textContent.trim();
+                    authHeader.textContent = `Verify your identity to access the ${roleName} portal.`;
+                    updateLinksForRole(roleName);
+                }
+            } else {
+                // Default: Student
+                updateLinksForRole('Student');
+            }
+        });
+    </script>
+    <script src="js/auth.js"></script>
+    <script src="js/animations.js"></script>
+</body>
+</html>
