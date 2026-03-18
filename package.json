@@ -1,0 +1,46 @@
+{
+  "name": "smart_campus_response_system",
+  "version": "1.0.0",
+  "description": "A real-time complaint management platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "pm2:start": "node node_modules/pm2/bin/pm2 start ecosystem.config.cjs",
+    "pm2:stop": "node node_modules/pm2/bin/pm2 stop smart-campus",
+    "pm2:restart": "node node_modules/pm2/bin/pm2 restart smart-campus",
+    "pm2:delete": "node node_modules/pm2/bin/pm2 delete smart-campus",
+    "pm2:logs": "node node_modules/pm2/bin/pm2 logs smart-campus",
+    "pm2:status": "node node_modules/pm2/bin/pm2 status"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^5.71.0",
+    "cloudinary": "^2.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-rate-limit": "^7.2.0",
+    "express-validator": "^7.3.1",
+    "firebase-admin": "^10.3.0",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.10.0",
+    "jsonwebtoken": "^9.0.3",
+    "mammoth": "^1.12.0",
+    "morgan": "^1.10.1",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.19.1",
+    "nodemailer": "^8.0.1",
+    "socket.io": "^4.8.3",
+    "twilio": "^5.12.2",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "pm2": "^5.3.0"
+  }
+}

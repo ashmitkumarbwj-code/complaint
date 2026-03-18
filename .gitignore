@@ -1,0 +1,31 @@
+# ── Environment & Secrets ─────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Dependencies ──────────────────────────────────────────────
+node_modules/
+vendor/
+
+# ── PHP leftovers (should not exist) ─────────────────────────
+composer.lock
+
+# ── Logs ──────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+
+# ── OS files ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE / Editor ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Firebase service account key ──────────────────────────────
+**/firebase_service_account.json
+**/serviceAccountKey.json
