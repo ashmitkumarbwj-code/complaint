@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Department Dashboard - Smart Campus</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: var(--surface-light);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-3px); border-color: var(--primary-color); }
+        .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
+        .stat-info h3 { font-size: 1.75rem; font-weight: 800; margin-bottom: 0.25rem; }
+        .stat-info p { color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; }
+
+        .urgent-section {
+            background: rgba(255, 71, 87, 0.05);
+            border: 1px solid rgba(255, 71, 87, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: none; /* Hidden by default, shown if high priority exist */
+        }
+        .urgent-header { display: flex; align-items: center; gap: 0.75rem; color: #ff4757; font-weight: 700; margin-bottom: 1rem; }
+        .urgent-list { display: grid; gap: 1rem; }
+        .urgent-item { background: rgba(255, 71, 87, 0.1); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+
+        .table-container {
+            background: var(--surface-light);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
+        }
+        .table-header { padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .search-box { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 0.6rem 1rem; border-radius: 8px; color: white; display: flex; align-items: center; gap: 0.5rem; }
+        .search-box input { background: none; border: none; color: white; outline: none; width: 250px; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 1rem 1.5rem; background: rgba(255,255,255,0.02); color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+        td { padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        tr:hover { background: rgba(255,255,255,0.01); }
+
+        .badge { padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+        .badge-pending { background: rgba(255, 159, 67, 0.1); color: #ff9f43; }
+        .badge-progress { background: rgba(84, 160, 255, 0.1); color: #54a0ff; }
+        .badge-resolved { background: rgba(46, 213, 115, 0.1); color: #2ed573; }
+        .badge-high { border: 1px solid #ff4757; color: #ff4757; }
+
+        /* Modal Styles */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--surface-light); width: 90%; max-width: 600px; border-radius: 20px; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); }
+        .modal-body p { margin-bottom: 1rem; color: var(--text-secondary); line-height: 1.6; }
+        .status-actions { display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <header class="d-flex justify-content-between align-items-center mb-5">
+            <div class="d-flex align-items-center gap-3">
+                <img src="images/branding/logo.png" alt="Logo" style="height: 60px; border-radius: 50%; border: 2px solid var(--gold); background: white; padding: 3px;">
+                <div>
+                    <h1 id="header-dept" class="mb-0" style="font-size: 1.5rem; font-weight: 800; color: var(--gold); text-transform: uppercase;">Govt. College Dharamshala</h1>
+                    <p id="header-welcome" class="mb-0 text-secondary"></p>
+                </div>
+            </div>
+            <button class="btn btn-glass" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(84, 160, 255, 0.1); color: #54a0ff;"><i class="fas fa-clipboard-list"></i></div>
+                <div class="stat-info"><h3 id="stat-total">--</h3><p>Total Complaints</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(255, 159, 67, 0.1); color: #ff9f43;"><i class="fas fa-clock"></i></div>
+                <div class="stat-info"><h3 id="stat-pending">--</h3><p>Pending</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(46, 213, 115, 0.1); color: #2ed573;"><i class="fas fa-tasks"></i></div>
+                <div class="stat-info"><h3 id="stat-progress">--</h3><p>In Progress</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(29, 209, 161, 0.1); color: #1dd1a1;"><i class="fas fa-check-double"></i></div>
+                <div class="stat-info"><h3 id="stat-resolved">--</h3><p>Resolved Today</p></div>
+            </div>
+        </div>
+
+        <!-- Priority Alerts -->
+        <div class="urgent-section" id="urgent-section">
+            <div class="urgent-header"><i class="fas fa-exclamation-triangle"></i> Urgent Complaints Needing Action</div>
+            <div class="urgent-list" id="urgent-list"></div>
+        </div>
+
+        <!-- Table View -->
+        <div class="table-container">
+            <div class="table-header">
+                <h4 class="m-0">Assigned Complaints</h4>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="complaint-search" placeholder="Search by ID or Student Name...">
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Student</th>
+                            <th>Title</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="complaints-tbody">
+                        <tr><td colspan="7" class="text-center py-5"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div class="modal" id="detailsModal">
+        <div class="modal-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 id="modal-title">#C1023 Water Leakage</h3>
+                <button class="btn btn-icon" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Dynamic Content -->
+            </div>
+            <div class="status-actions" id="modal-actions">
+                <!-- Action Buttons -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/department.js"></script>
+</body>
+</html>
