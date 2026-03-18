@@ -1,0 +1,436 @@
+/**
+ * Smart Campus Response System
+ * GSAP, Chart.js, and Particles.js Initialization
+ */
+
+document.addEventListener("DOMContentLoaded", () => {
+    // Register GSAP ScrollTrigger
+    gsap.registerPlugin(ScrollTrigger);
+
+    initStorytellingBG();
+    initParticles();
+    initGSAPAnimations();
+    initChart();
+    initCounters();
+});
+
+/* --- Storytelling Background Logic --- */
+function initStorytellingBG() {
+    const layers = {
+        town: document.querySelector('.layer-town'),
+        college: document.querySelector('.layer-college'),
+        mountains: document.querySelector('.layer-mountains')
+    };
+
+    if (!layers.town) return; // Prevent errors on other pages
+
+    function setActiveLayer(activeKey) {
+        Object.keys(layers).forEach(key => {
+            if (key === activeKey) {
+                layers[key].classList.add('active');
+            } else {
+                layers[key].classList.remove('active');
+            }
+        });
+    }
+
+    // Section 1 (Welcome) -> Town
+    ScrollTrigger.create({
+        trigger: "#section-1",
+        start: "top center",
+        onEnter: () => setActiveLayer('town'),
+        onEnterBack: () => setActiveLayer('town')
+    });
+
+    // Section 2 (Intro) -> Admin
+    ScrollTrigger.create({
+        trigger: "#section-2",
+        start: "top center",
+        onEnter: () => setActiveLayer('admin'),
+        onEnterBack: () => setActiveLayer('admin')
+    });
+ 
+    // Section 3 (Solution) -> College
+    ScrollTrigger.create({
+        trigger: "#section-3",
+        start: "top center",
+        onEnter: () => setActiveLayer('college'),
+        onEnterBack: () => setActiveLayer('college')
+    });
+
+    // Section 4 (Transparency) -> Governance
+    ScrollTrigger.create({
+        trigger: "#section-4",
+        start: "top center",
+        onEnter: () => setActiveLayer('governance'),
+        onEnterBack: () => setActiveLayer('governance')
+    });
+
+    // Section 5 (Analytics) -> Mountains
+    ScrollTrigger.create({
+        trigger: "#section-5",
+        start: "top center",
+        onEnter: () => setActiveLayer('mountains'),
+        onEnterBack: () => setActiveLayer('mountains')
+    });
+
+    // Section 6 (Community) -> Student
+    ScrollTrigger.create({
+        trigger: "#section-6",
+        start: "top center",
+        onEnter: () => setActiveLayer('student'),
+        onEnterBack: () => setActiveLayer('student')
+    });
+}
+
+/* =========================================================================
+   1. Particles.js Initialization
+   ========================================================================= */
+function initParticles() {
+    const particleConfig = {
+        "particles": {
+            "number": { "value": 80, "density": { "enable": true, "value_area": 800 } },
+            "color": { "value": ["#d4af37", "#3a86ff", "#ffffff"] },
+            "shape": { "type": "circle" },
+            "opacity": { "value": 0.5, "random": true, "anim": { "enable": true, "speed": 1, "opacity_min": 0.1, "sync": false } },
+            "size": { "value": 3, "random": true, "anim": { "enable": false } },
+            "line_linked": { "enable": true, "distance": 150, "color": "#d4af37", "opacity": 0.2, "width": 1 },
+            "move": { "enable": true, "speed": 1.5, "direction": "none", "random": true, "straight": false, "out_mode": "out", "bounce": false }
+        },
+        "interactivity": {
+            "detect_on": "canvas",
+            "events": { "onhover": { "enable": true, "mode": "repulse" }, "onclick": { "enable": true, "mode": "push" }, "resize": true },
+            "modes": { "repulse": { "distance": 100, "duration": 0.4 }, "push": { "particles_nb": 4 } }
+        },
+        "retina_detect": true
+    };
+
+    if(document.getElementById('particles-js')) {
+        particlesJS("particles-js", particleConfig);
+    }
+    
+    // Slower particles for final CTA
+    const ctaConfig = JSON.parse(JSON.stringify(particleConfig));
+    ctaConfig.particles.move.speed = 0.5;
+    ctaConfig.particles.number.value = 40;
+    
+    if(document.getElementById('particles-js-cta')) {
+        particlesJS("particles-js-cta", ctaConfig);
+    }
+}
+
+/* =========================================================================
+   2. GSAP Scroll Animations
+   ========================================================================= */
+function initGSAPAnimations() {
+    
+    // --- Section 1: Welcome Screen ---
+    const tl1 = gsap.timeline();
+    tl1.to(".gsap-fade-up", {
+        y: 0,
+        opacity: 1,
+        duration: 1,
+        stagger: 0.2,
+        ease: "power3.out"
+    });
+
+    // --- Section 2: The Problem ---
+    gsap.to(".section-problem .problem-card", {
+        scrollTrigger: {
+            trigger: ".section-problem",
+            start: "top 60%"
+        },
+        y: 0,
+        opacity: 1,
+        duration: 0.8,
+        stagger: 0.2,
+        ease: "back.out(1.7)"
+    });
+
+    gsap.to(".problem-statement", {
+        scrollTrigger: { trigger: ".section-problem", start: "top 40%" },
+        opacity: 1,
+        duration: 1.5,
+        ease: "power2.inOut"
+    });
+
+    // --- Section 3: Introducing Solution ---
+    const tl3 = gsap.timeline({
+        scrollTrigger: { trigger: ".section-solution", start: "top 50%" }
+    });
+
+    tl3.to(".interface-illustration", { opacity: 1, y: -20, duration: 1, ease: "power3.out" })
+       .to(".sol-step-1", { opacity: 1, duration: 0.5 })
+       .to(".connector-1", { opacity: 1, duration: 0.3 })
+       .to(".sol-step-2", { opacity: 1, duration: 0.5 })
+       .to(".connector-2", { opacity: 1, duration: 0.3 })
+       .to(".sol-step-3", { opacity: 1, duration: 0.5 })
+       .to(".connector-3", { opacity: 1, duration: 0.3 })
+       .to(".sol-step-4", { opacity: 1, scale: 1.05, duration: 0.5, ease: "back.out(1.5)" });
+
+    // --- Section 4: Workflow Animation ---
+    const tl4 = gsap.timeline({
+        scrollTrigger: { trigger: ".section-workflow", start: "top 50%" }
+    });
+
+    // Animate connector line drawing width
+    tl4.to(".workflow-line::after", { width: "100%", duration: 2, ease: "power1.inOut" }, 0);
+    
+    // Pop in nodes successively
+    const nodes = document.querySelectorAll(".wf-node");
+    nodes.forEach((node, index) => {
+        tl4.to(node, {
+            scale: 1, opacity: 1, duration: 0.5, ease: "back.out(2)",
+            onStart: () => node.classList.add('active')
+        }, index * 0.4);
+    });
+
+    // --- Section 5: Analytics Text & Chart Reveal ---
+    const tl5 = gsap.timeline({
+        scrollTrigger: { trigger: ".section-analytics", start: "top 60%" }
+    });
+
+    tl5.to(".analytics-statement", { opacity: 1, duration: 1, ease: "power2.out" })
+       .to(".chart-container", { x: 0, opacity: 1, duration: 1, ease: "power3.out" }, "-=0.5");
+
+    // --- Section 6: Dashboard Mockup ---
+    gsap.to(".dashboard-mockup", {
+        scrollTrigger: { trigger: ".section-dashboard", start: "top 70%" },
+        y: 0, opacity: 1, duration: 1, ease: "power4.out"
+    });
+
+
+    // --- Section 7: Final CTA ---
+    const tl7 = gsap.timeline({
+        scrollTrigger: { trigger: ".section-cta", start: "top 70%" }
+    });
+    
+    tl7.to(".final-statement", { scale: 1, opacity: 1, duration: 1.2, ease: "power3.out" })
+       .to(".cta-buttons", { y: 0, opacity: 1, duration: 0.8 }, "-=0.6");
+}
+
+/* =========================================================================
+   3. Chart.js Initialization
+   ========================================================================= */
+function initChart() {
+    const ctx = document.getElementById('performanceChart');
+    if(!ctx) return;
+
+    // We only execute chart render when scrolled into view
+    ScrollTrigger.create({
+        trigger: ".section-analytics",
+        start: "top 60%",
+        once: true,
+        onEnter: () => renderChart(ctx)
+    });
+}
+
+function renderChart(canvas) {
+    new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [
+                {
+                    label: 'Resolved Issues (Green Bar)',
+                    data: [120, 190, 250, 310],
+                    backgroundColor: '#2ea043', /* Green */
+                    borderRadius: 4
+                },
+                {
+                    label: 'Unresolved Issues (Red Bar)',
+                    data: [45, 30, 15, 5],
+                    backgroundColor: '#f85149', /* Red */
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            animation: {
+                duration: 2000,
+                easing: 'easeOutQuart'
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    ticks: { color: '#adb5bd' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#adb5bd' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: '#ffffff', font: { family: 'Inter' } }
+                }
+            }
+        }
+    });
+}
+
+/* =========================================================================
+   4. Counters Animation (Section 6 Dashboard)
+   ========================================================================= */
+function initCounters() {
+    const runCounters = async () => {
+        try {
+            const res = await fetch('/api/dashboards/public/stats');
+            const data = await res.json();
+            
+            if (data.success) {
+                const total = data.solved + data.unresolved;
+                const efficiency = total > 0 ? Math.round((data.solved / total) * 100) : 0;
+
+                gsap.to(".counter-total", { innerHTML: total, duration: 2, snap: { innerHTML: 1 }, ease: "power1.inOut" });
+                gsap.to(".counter-resolved", { innerHTML: data.solved, duration: 2.5, snap: { innerHTML: 1 }, ease: "power1.inOut" });
+                gsap.to(".counter-efficiency", { innerHTML: efficiency, duration: 2.5, snap: { innerHTML: 1 }, ease: "power1.inOut", onUpdate: function() {
+                    document.querySelector('.counter-efficiency').innerHTML += '%';
+                }});
+                // Alerts count can stays hardcoded or we can fetch true criticals
+                gsap.to(".counter-alerts", { innerHTML: 2, duration: 1, snap: { innerHTML: 1 }, ease: "power1.inOut" });
+            }
+        } catch (err) { console.error('Error fetching public stats:', err); }
+    };
+
+    ScrollTrigger.create({
+        trigger: ".section-dashboard",
+        start: "top 70%",
+        once: true,
+        onEnter: runCounters
+    });
+}
+
+/* =========================================================================
+   5. Fetch and Render Dynamic Gallery
+   ========================================================================= */
+function initDynamicGallery() {
+    const galleryContainer = document.getElementById('dynamic-gallery');
+    const sliderFrame = document.getElementById('slider-frame');
+    const sliderTrack = document.getElementById('slider-track');
+    const sliderNav = document.getElementById('slider-nav');
+    const btnPrev = document.getElementById('slider-prev');
+    const btnNext = document.getElementById('slider-next');
+    
+    if (!galleryContainer || !sliderTrack) return;
+
+    let isPaused = false;
+    let currentSlide = 0;
+    let slideInterval;
+
+    fetch('/api/gallery')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.images && data.images.length > 0) {
+                const totalSlides = data.images.length;
+
+                // Populate Slides & Dots
+                data.images.forEach((img, idx) => {
+                    const slide = document.createElement('div');
+                    slide.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
+                    
+                    // prioritize DB title, fallback to cleaned filename
+                    const captionTitle = img.title && img.title.trim() !== "" 
+                                            ? img.title 
+                                            : img.filename.split('.')[0].replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                    slide.innerHTML = `
+                        <img src="${img.url}" alt="${img.filename}">
+                        <div class="slider-caption">
+                            <h3>Campus Highlights</h3>
+                            <p>${captionTitle}</p>
+                        </div>
+                    `;
+                    sliderTrack.appendChild(slide);
+
+                    const dot = document.createElement('div');
+                    dot.className = `slider-dot ${idx === 0 ? 'active' : ''}`;
+                    dot.addEventListener('click', () => {
+                        resetInterval();
+                        goToSlide(idx);
+                    });
+                    sliderNav.appendChild(dot);
+                });
+
+                // Swipe Support
+                let touchStartX = 0;
+                let touchEndX = 0;
+
+                sliderFrame.addEventListener('touchstart', e => {
+                    touchStartX = e.changedTouches[0].screenX;
+                }, {passive: true});
+
+                sliderFrame.addEventListener('touchend', e => {
+                    touchEndX = e.changedTouches[0].screenX;
+                    handleSwipe();
+                }, {passive: true});
+
+                function handleSwipe() {
+                    if (touchEndX < touchStartX - 50) nextSlide(); // Swipe Left
+                    if (touchEndX > touchStartX + 50) prevSlide(); // Swipe Right
+                }
+
+                function goToSlide(index) {
+                    const slides = document.querySelectorAll('.slider-slide');
+                    const dots = document.querySelectorAll('.slider-dot');
+                    
+                    slides[currentSlide].classList.remove('active');
+                    dots[currentSlide].classList.remove('active');
+                    
+                    currentSlide = index;
+                    
+                    slides[currentSlide].classList.add('active');
+                    dots[currentSlide].classList.add('active');
+                    
+                    // Premium Transition Effect
+                    gsap.fromTo(slides[currentSlide], 
+                        { filter: 'blur(10px)', opacity: 0, scale: 1.1 }, 
+                        { filter: 'blur(0)', opacity: 1, scale: 1, duration: 1.2, ease: "power2.out" }
+                    );
+                }
+
+                function nextSlide() {
+                    if (isPaused) return;
+                    goToSlide((currentSlide + 1) % totalSlides);
+                }
+
+                function prevSlide() {
+                    resetInterval();
+                    goToSlide((currentSlide - 1 + totalSlides) % totalSlides);
+                }
+
+                function resetInterval() {
+                    clearInterval(slideInterval);
+                    slideInterval = setInterval(nextSlide, 5000);
+                }
+
+                // Internal interval
+                slideInterval = setInterval(nextSlide, 5000);
+
+                // Event Listeners
+                btnNext.addEventListener('click', () => { resetInterval(); nextSlide(); });
+                btnPrev.addEventListener('click', prevSlide);
+                
+                sliderFrame.addEventListener('mouseenter', () => isPaused = true);
+                sliderFrame.addEventListener('mouseleave', () => isPaused = false);
+
+                // Reveal Gallery
+                gsap.to(galleryContainer, {
+                    scrollTrigger: { trigger: ".section-cta", start: "top 70%" },
+                    y: 0, opacity: 1, duration: 1, ease: "power3.out"
+                });
+            } else {
+                galleryContainer.style.display = 'none';
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching gallery images:', err);
+            galleryContainer.style.display = 'none';
+        });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    initDynamicGallery();
+});
