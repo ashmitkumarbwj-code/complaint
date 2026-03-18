@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activate Student Account | Smart Campus SCRS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background: radial-gradient(circle at top right, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 2rem;
+        }
+
+        .activate-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .step-container {
+            display: none;
+        }
+
+        .step-container.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-weight: 500;
+            color: #4facfe;
+        }
+
+        .form-control {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid var(--glass-border);
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4facfe;
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-activate {
+            width: 100%;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: #1a1a2e;
+            border: none;
+            padding: 1.2rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .btn-activate:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 242, 254, 0.4);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: #888;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #4facfe;
+            width: 33.33%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .otp-input-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .otp-box {
+            width: 50px;
+            height: 60px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="activate-container">
+        <div class="header">
+            <h1>Activate Student Account</h1>
+            <p id="step-desc">Choose your verification method</p>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+
+        <!-- Step 1: Verification -->
+        <div class="step-container active" id="step-1">
+            <div class="form-group">
+                <label class="form-label">Verification Method</label>
+                <select id="verification-method" class="form-control" onchange="toggleMethod()">
+                    <option value="email">Official Email</option>
+                    <option value="sms">Mobile Number</option>
+                </select>
+            </div>
+
+            <div id="email-section" class="form-group">
+                <label class="form-label">Registered College Email</label>
+                <input type="text" id="email" class="form-control" placeholder="e.g. s.name@college.edu">
+            </div>
+
+            <div id="sms-section" class="form-group" style="display: none;">
+                <label class="form-label">Roll Number</label>
+                <input type="text" id="roll-number" class="form-control" placeholder="Enter Registration/Roll Number" style="margin-bottom: 1rem;">
+                <label class="form-label">Registered Mobile Number</label>
+                <input type="tel" id="mobile-number" class="form-control" placeholder="10-digit mobile number">
+            </div>
+
+            <button class="btn-activate" onclick="nextStep(1)">Send OTP <i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+
+        <!-- Step 2: OTP Verification -->
+        <div class="step-container" id="step-2">
+            <div class="form-group" style="text-align: center;">
+                <label class="form-label">Enter 6-Digit OTP</label>
+                <input type="text" id="otp-code" class="form-control" placeholder="Enter OTP" style="text-align: center; letter-spacing: 0.5rem; font-size: 1.5rem;">
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: #888;">OTP sent to your registered email address</p>
+            </div>
+            <button class="btn-activate" onclick="nextStep(2)">Verify OTP <i class="fa-solid fa-check-double"></i></button>
+        </div>
+
+        <!-- Step 3: Password Creation -->
+        <div class="step-container" id="step-3">
+            <div class="form-group">
+                <label class="form-label">Create Password</label>
+                <input type="password" id="password" class="form-control" placeholder="Min 8 characters">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <input type="password" id="confirm-password" class="form-control" placeholder="Repeat password">
+            </div>
+            <button class="btn-activate" onclick="finishActivation()">Activate Now <i class="fa-solid fa-bolt"></i></button>
+        </div>
+
+        <p style="text-align: center; margin-top: 2rem; font-size: 0.9rem;">
+            Already activated? <a href="login.html" style="color: #4facfe; text-decoration: none;">Login here</a>
+        </p>
+    </div>
+
+    <script src="js/activate.js"></script>
+    <script>
+        // Always Student on this page
+        document.addEventListener('DOMContentLoaded', () => {
+            window.SCRS_ROLE = 'Student';
+        });
+
+        function toggleMethod() {
+            const method = document.getElementById('verification-method').value;
+            if (method === 'email') {
+                document.getElementById('email-section').style.display = 'block';
+                document.getElementById('sms-section').style.display = 'none';
+            } else {
+                document.getElementById('email-section').style.display = 'none';
+                document.getElementById('sms-section').style.display = 'block';
+            }
+        }
+
+        // Entrance Animation
+        gsap.from(".activate-container", {
+            duration: 1,
+            y: 50,
+            opacity: 0,
+            ease: "power4.out"
+        });
+    </script>
+</body>
+</html>
