@@ -1,0 +1,42 @@
+[
+    {
+        "id": 1,
+        "name": "Science",
+        "description": "Physics, Chemistry, Biology, Math",
+        "head": "Dr. R. Sharma",
+        "email": "science@gcd.ac.in",
+        "complaints": 0
+    },
+    {
+        "id": 2,
+        "name": "Arts",
+        "description": "History, Political Science, Sociology",
+        "head": "Dr. M. Kaur",
+        "email": "arts@gcd.ac.in",
+        "complaints": 0
+    },
+    {
+        "id": 3,
+        "name": "Commerce",
+        "description": "Accountancy, Economics, Business Studies",
+        "head": "Dr. P. Verma",
+        "email": "commerce@gcd.ac.in",
+        "complaints": 0
+    },
+    {
+        "id": 4,
+        "name": "Administration",
+        "description": "Admissions, Fees, Registrar Office",
+        "head": "Mr. V. Singh",
+        "email": "admin@gcd.ac.in",
+        "complaints": 0
+    },
+    {
+        "id": 5,
+        "name": "Infrastructure",
+        "description": "Buildings, Labs, Electricity, Sanitation",
+        "head": "Mr. K. Sharma",
+        "email": "infra@gcd.ac.in",
+        "complaints": 0
+    }
+]
