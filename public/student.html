@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - Smart Campus</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+        .welcome-card {
+            background: var(--surface-light);
+            padding: 2rem;
+            border-radius: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .complaint-form-card {
+            background: var(--surface-light);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 2rem;
+        }
+        .complaint-list {
+            display: grid;
+            gap: 1.5rem;
+        }
+        .complaint-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 1.5rem;
+            border-radius: 12px;
+            transition: var(--transition);
+        }
+        .complaint-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.05);
+        }
+        .status-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .status-pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .status-inprogress { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .status-resolved { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .status-rejected { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .status-escalated { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Welcome Section -->
+        <div class="welcome-card">
+            <div class="d-flex align-items-center gap-3">
+                <img src="images/branding/logo.png" alt="Logo" style="height: 60px; border-radius: 50%; border: 2px solid var(--gold); background: white; padding: 3px;">
+                <div>
+                    <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--gold); text-transform: uppercase; margin: 0;">Govt. College Dharamshala</h1>
+                    <p id="welcome-text" style="color: var(--text-secondary); margin: 0; font-weight: 500;">Hello, Student!</p>
+                </div>
+            </div>
+            <button class="btn btn-glass" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+        </div>
+
+        <div class="grid-2">
+            <!-- Report Section -->
+            <div class="complaint-form-card">
+                <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-bullhorn text-gold"></i> Report New Issue</h2>
+                <form id="complaint-form">
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-control" id="complaint-category" required>
+                            <option value="Noise">Noise in Hostel</option>
+                            <option value="Electricity">Electricity Issue</option>
+                            <option value="Infrastructure">Infrastructure Damage</option>
+                            <option value="Mess">Mess Food Problem</option>
+                            <option value="Security">Security Issue</option>
+                            <option value="Harassment">Harassment / Bullying</option>
+                            <option value="Faculty">Faculty Related</option>
+                            <option value="Cleanliness">Cleanliness Concerns</option>
+                            <option value="Other">Other Issues</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Priority Level</label>
+                        <select class="form-control" id="complaint-priority" required>
+                            <option value="Low">Low (No rush)</option>
+                            <option value="Medium" selected>Medium (Standard)</option>
+                            <option value="High">High (Urgent)</option>
+                            <option value="Emergency">🚨 EMERGENCY (Immediate Threat)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <input type="text" class="form-control" id="complaint-location" placeholder="e.g. Hostel Block C, Room 307" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attachment (Image/Video)</label>
+                        <input type="file" class="form-control" id="complaint-media" accept="image/*,video/*">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="complaint-description" rows="4" placeholder="Describe the problem in detail..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full btn-glow">Submit Complaint ⚡</button>
+                </form>
+            </div>
+
+            <!-- Tracking Section -->
+            <div>
+                <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-clock-rotate-left"></i> My Reports</h2>
+                <div id="complaint-list" class="complaint-list">
+                    <!-- Loaded dynamically -->
+                    <p class="text-center" style="color: var(--text-secondary);">Loading your reports...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/student.js"></script>
+</body>
+</html>
