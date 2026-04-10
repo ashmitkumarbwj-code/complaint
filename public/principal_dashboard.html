@@ -430,7 +430,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Complaint</th>
+                            <th>Description</th>
                             <th>Department</th>
                             <th>Status</th>
                             <th>Priority</th>
@@ -465,21 +465,22 @@
 
                     <!-- Profile Form -->
                     <form id="profile-edit-form" class="glass-panel" style="padding: 2rem;">
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label class="form-label">Display Name</label>
-                            <input type="text" id="profile-name" class="form-control" placeholder="Update your name">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label class="form-label">New Password</label>
-                            <input type="password" id="profile-password" class="form-control" placeholder="Min 8 characters">
-                            <small style="color: var(--text-secondary); font-size: 0.75rem;">Leave blank to keep current password</small>
+                        <div class="form-group" style="margin-bottom: 2rem;">
+                            <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8; margin-bottom: 0.75rem; display: block;">Display Name</label>
+                            <input type="text" id="profile-name" class="elegant-input" placeholder="Update your name">
                         </div>
                         <div class="form-group" style="margin-bottom: 2rem;">
-                            <label class="form-label">Confirm New Password</label>
-                            <input type="password" id="profile-confirm-password" class="form-control" placeholder="Repeat new password">
+                            <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8; margin-bottom: 0.75rem; display: block;">New Password</label>
+                            <input type="password" id="profile-password" class="elegant-input" placeholder="Min 8 characters">
+                            <small style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.5rem; display: block;">Leave blank to keep current password</small>
                         </div>
-                        <button type="submit" id="save-profile-btn" class="btn btn-primary" style="width: 100%;">
-                            <i class="fa-solid fa-save"></i> Save Profile Changes
+                        <div class="form-group" style="margin-bottom: 2.5rem;">
+                            <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8; margin-bottom: 0.75rem; display: block;">Confirm New Password</label>
+                            <input type="password" id="profile-confirm-password" class="elegant-input" placeholder="Repeat new password">
+                        </div>
+                        <button type="submit" id="save-profile-btn" class="btn-submit-premium">
+                            <span>Save Profile Changes</span>
+                            <i class="fa-solid fa-save"></i>
                         </button>
                     </form>
                 </div>
@@ -563,5 +564,9 @@
         .modal-overlay.active { display: flex !important; }
         .gsap-reveal-modal { opacity: 1; transform: none; }
     </style>
+    <script src="js/interactive-bubbles.js"></script>
+    <script src="js/mediaUtils.js"></script>
+    <script src="js/principal.js"></script>
+
 </body>
 </html>

@@ -1,27 +1,20 @@
-/**
- * PM2 ecosystem file for Smart Campus SCRS
- * Usage: pm2 start ecosystem.config.cjs
- * Or:    npx pm2 start ecosystem.config.cjs
- */
 module.exports = {
   apps: [
     {
-      name: 'smart-campus',
+      name: 'smart-campus-scrs',
       script: 'server.js',
-      instances: 1,
+      instances: 'max',
+      exec_mode: 'cluster',
       autorestart: true,
       watch: false,
-      max_memory_restart: '500M',
-      env: {
-        NODE_ENV: 'development',
-      },
+      max_memory_restart: '1G',
       env_production: {
         NODE_ENV: 'production',
+        USE_REDIS: 'false'
       },
-      error_file: './logs/pm2-error.log',
-      out_file: './logs/pm2-out.log',
-      merge_logs: true,
-      time: true,
-    },
-  ],
+      error_file: 'logs/err.log',
+      out_file: 'logs/out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss'
+    }
+  ]
 };

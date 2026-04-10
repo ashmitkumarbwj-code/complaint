@@ -263,6 +263,24 @@ function renderActiveComplaint() {
     priorityBadge.textContent = c.priority;
     priorityBadge.className = `status-badge ${c.priority === 'Emergency' || c.priority === 'High' ? 'priority-high' : 'status-pending'}`;
 
+    // Media Preview (Instant)
+    const mediaContainer = document.getElementById('review-media-container') || document.createElement('div');
+    if (!document.getElementById('review-media-container')) {
+        mediaContainer.id = 'review-media-container';
+        mediaContainer.style.marginTop = '1.5rem';
+        document.getElementById('review-description').after(mediaContainer);
+    }
+    
+    if (c.media_url) {
+        mediaContainer.innerHTML = `
+            <div style="font-weight:700; font-size:0.75rem; text-transform:uppercase; color:var(--gold-color); margin-bottom:0.5rem; opacity:0.8;">Evidence / Media</div>
+            ${MediaUtils.render(c.media_url)}
+        `;
+    } else {
+        mediaContainer.innerHTML = '';
+    }
+
+
     // Load History for this complaint
     loadComplaintHistory(c.id);
 }
@@ -556,12 +574,13 @@ function renderAllComplaints(complaints) {
     tbody.innerHTML = filtered.map(c => `
         <tr>
             <td>#${c.id}</td>
+            <td style="font-weight:700; color:var(--gold-color);">${c.title || 'Untitled'}</td>
             <td>${c.student_name || 'Student #' + c.student_id}</td>
             <td>${c.department_name}</td>
             <td>${c.category}</td>
             <td><span class="status-badge status-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span></td>
-            <td>${c.priority}</td>
-            <td>${new Date(c.created_at).toLocaleString()}</td>
+            <td><span class="status-badge" style="background:rgba(255,255,255,0.05);">${c.priority}</span></td>
+            <td>${new Date(c.created_at).toLocaleDateString()}</td>
         </tr>
     `).join('');
 }

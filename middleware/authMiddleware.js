@@ -24,6 +24,12 @@ module.exports = (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded.user;
+        
+        // Update tracing context if available
+        if (req.updateTraceContext) {
+            req.updateTraceContext(decoded.user);
+        }
+
         next();
     } catch (err) {
         console.warn(`[Auth Middleware] Token verification failed: ${err.message} (Token: ${token.substring(0, 10)}...)`);

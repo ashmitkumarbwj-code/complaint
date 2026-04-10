@@ -4,11 +4,14 @@ const multer = require('multer');
 const complaintController = require('../controllers/complaintController');
 const auth = require('../middleware/authMiddleware');
 const v = require('../middleware/validators');
+const checkRole = require('../middleware/roleMiddleware');
+
+const { complaintLimiter } = require('../middleware/rateLimiter');
 
 // Multer setup (using disk storage so background workers can process files)
-// Limits: 5 MB max, JPEG/PNG only
-const ALLOWED_EXT  = /\.(jpg|jpeg|png)$/i;
-const ALLOWED_MIME = /^image\/(jpeg|png)$/;
+// Limits: 10 MB max, JPEG/PNG/MP4/MOV only
+const ALLOWED_EXT  = /\.(jpg|jpeg|png|mp4|mov|avi)$/i;
+const ALLOWED_MIME = /^(image\/(jpeg|png)|video\/(mp4|quicktime|x-msvideo))$/;
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -24,21 +27,34 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB hard cap
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB cap (SaaS safe)
     fileFilter: (req, file, cb) => {
         const validExt  = ALLOWED_EXT.test(file.originalname);
         const validMime = ALLOWED_MIME.test(file.mimetype);
         if (validExt && validMime) {
             return cb(null, true);
         }
-        cb(new Error('Only JPG and PNG images are allowed (max 5 MB).'));
+        cb(new Error('Only Images (JPG/PNG) and Videos (MP4/MOV) are allowed (max 10 MB).'));
     }
 });
 
-// Submit: auth → multer (parse file) → file validation → body validation → controller
+// Submit: auth → rateLimit → multer (parse file) → file validation → body validation → controller
 router.post('/submit',
     auth,
-    upload.single('media'),
+    complaintLimiter,
+    (req, res, next) => {
+        upload.single('media')(req, res, (err) => {
+            if (err instanceof multer.MulterError) {
+                // A Multer error occurred when uploading.
+                return res.status(422).json({ success: false, message: `Upload error: ${err.message}` });
+            } else if (err) {
+                // An unknown error occurred when uploading (like our fileFilter error).
+                return res.status(422).json({ success: false, message: err.message });
+            }
+            // Everything went fine.
+            next();
+        });
+    },
     v.validateFileUpload,
     v.validateSubmitComplaint,
     complaintController.submitComplaint
@@ -52,7 +68,7 @@ router.get('/student/:student_id',
 );
 
 // Get all complaints (admin/HOD/principal)
-router.get('/all', auth, complaintController.getAllComplaints);
+router.get('/all', auth, checkRole(['Admin', 'Principal']), complaintController.getAllComplaints);
 
 // Update complaint status
 router.patch('/status/:complaint_id',

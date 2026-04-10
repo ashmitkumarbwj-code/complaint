@@ -99,18 +99,79 @@ async function query(sql, params = []) {
 }
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
+/**
+ * Automated Tenant Isolation Wrapper (Golden Rule Enforcement)
+ * Automatically appends 'AND tenant_id = ?' to SQL queries using context from req.user.
+ * 
+ * @param {Object} req - Express request object (must have req.user.tenant_id)
+ * @param {string} sql - Original SQL string
+ * @param {Array}  params - Original query parameters
+ */
+async function tenantExecute(req, sql, params = []) {
+    if (!req.user || !req.user.tenant_id) {
+        logger.error('[SECURITY FATAL] Tenant context missing on scoped query!');
+        throw new Error('[DB SEC] Tenant context missing in request. Query blocked to prevent leakage.');
+    }
+    
+    const tenantId = req.user.tenant_id;
+    let modifiedSql = sql.trim();
+
+    // identify if it already has a WHERE clause
+    const hasWhere = /\bWHERE\b/i.test(modifiedSql);
+    const isSelect = /\bSELECT\b/i.test(modifiedSql);
+    const isUpdate = /\bUPDATE\b/i.test(modifiedSql);
+    const isDelete = /\bDELETE\b/i.test(modifiedSql);
+
+    if (isSelect || isUpdate || isDelete) {
+        if (hasWhere) {
+            // Find common trailing clauses to insert BEFORE them
+            if (/\bGROUP BY\b/i.test(modifiedSql)) {
+                modifiedSql = modifiedSql.replace(/\bGROUP BY\b/i, `AND tenant_id = ? GROUP BY`);
+            } else if (/\bORDER BY\b/i.test(modifiedSql)) {
+                modifiedSql = modifiedSql.replace(/\bORDER BY\b/i, `AND tenant_id = ? ORDER BY`);
+            } else if (/\bLIMIT\b/i.test(modifiedSql)) {
+                modifiedSql = modifiedSql.replace(/\bLIMIT\b/i, `AND tenant_id = ? LIMIT`);
+            } else {
+                modifiedSql += ` AND tenant_id = ?`;
+            }
+        } else {
+            modifiedSql += ` WHERE tenant_id = ?`;
+        }
+    }
+
+    // Add tenantId to the END of the params
+    return await pool.execute(modifiedSql, [...params, tenantId]);
+}
+
+/**
+ * Validate Tenant ID from Request Body/Query (For Auth flows)
+ */
+function getTenantId(req) {
+    const tenantId = req.body.tenant_id || req.query.tenant_id;
+    if (!tenantId) {
+        throw new Error('Tenant ID is required for this operation.');
+    }
+    return tenantId;
+}
+
+// ─── Exports ──────────────────────────────────────────────────────────────────
 module.exports = {
-    // The raw pool — use for transactions or advanced usage
+    // The raw pool — use for background jobs (explicit tenant passing required)
     pool,
 
-    // Safe parameterized execute (recommended for all queries)
+    // Raw execution (User with Admin access or non-tenant tables)
     execute: (sql, params) => pool.execute(sql, params),
+
+    // The Golden Rule: Use this for 99% of controller logic
+    tenantExecute,
 
     // Aliased query helper with logging
     query,
 
-    // Shorthand for controllers that already use `db.execute(...)` throughout
-    // This makes the module a drop-in replacement for the old `pool` export
-    then: undefined  // Prevents accidental `await db` usage
+    // Helper for Auth flows
+    getTenantId,
+
+    then: undefined 
 };
+
 

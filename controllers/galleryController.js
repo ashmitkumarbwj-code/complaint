@@ -16,10 +16,10 @@ const db = require('../config/db');
  */
 exports.getGallery = async (req, res) => {
     try {
-        const [images] = await db.execute('SELECT * FROM gallery_images ORDER BY created_at DESC');
+        const [images] = await db.tenantExecute(req, 'SELECT * FROM gallery_images ORDER BY created_at DESC');
         res.json({ success: true, images });
     } catch (error) {
-        console.error('Get gallery error:', error);
+        logger.error('Get gallery error:', error);
         res.status(500).json({ success: false, message: 'Error fetching gallery images' });
     }
 };
@@ -38,9 +38,9 @@ exports.uploadImage = async (req, res) => {
         const filename = req.file.filename;
         const url = 'images/gallery/' + filename;
 
-        const [result] = await db.execute(
-            'INSERT INTO gallery_images (filename, url, title) VALUES (?, ?, ?)',
-            [filename, url, title || '']
+        const [result] = await db.tenantExecute(req,
+            'INSERT INTO gallery_images (tenant_id, filename, url, title) VALUES (?, ?, ?, ?)',
+            [req.user.tenant_id, filename, url, title || '']
         );
 
         res.json({ 
@@ -54,7 +54,7 @@ exports.uploadImage = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Upload gallery error:', error);
+        logger.error('Upload gallery error:', error);
         res.status(500).json({ success: false, error: 'Error uploading image' });
     }
 };
@@ -67,8 +67,8 @@ exports.deleteImage = async (req, res) => {
     const { id } = req.params;
 
     try {
-        // Find image first to get filename
-        const [images] = await db.execute('SELECT filename FROM gallery_images WHERE id = ?', [id]);
+        // Find image first to get filename (Tenant-Scoped)
+        const [images] = await db.tenantExecute(req, 'SELECT filename FROM gallery_images WHERE id = ?', [id]);
         if (images.length === 0) {
             return res.status(404).json({ success: false, error: 'Image not found' });
         }
@@ -76,8 +76,8 @@ exports.deleteImage = async (req, res) => {
         const filename = images[0].filename;
         const filePath = path.join(galleryDir, filename);
 
-        // Delete from DB
-        await db.execute('DELETE FROM gallery_images WHERE id = ?', [id]);
+        // Delete from DB (Tenant-Scoped)
+        await db.tenantExecute(req, 'DELETE FROM gallery_images WHERE id = ?', [id]);
 
         // Delete from filesystem
         if (fs.existsSync(filePath)) {
@@ -86,7 +86,7 @@ exports.deleteImage = async (req, res) => {
 
         res.json({ success: true, message: 'Image deleted successfully' });
     } catch (error) {
-        console.error('Delete gallery error:', error);
+        logger.error('Delete gallery error:', error);
         res.status(500).json({ success: false, error: 'Error deleting image' });
     }
 };
@@ -100,10 +100,11 @@ exports.updateTitle = async (req, res) => {
     const { title } = req.body;
 
     try {
-        await db.execute('UPDATE gallery_images SET title = ? WHERE id = ?', [title, id]);
+        await db.tenantExecute(req, 'UPDATE gallery_images SET title = ? WHERE id = ?', [title, id]);
         res.json({ success: true, message: 'Title updated successfully' });
     } catch (error) {
-        console.error('Update title error:', error);
+        logger.error('Update title error:', error);
         res.status(500).json({ success: false, error: 'Error updating title' });
     }
 };
+

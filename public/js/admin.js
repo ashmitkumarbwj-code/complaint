@@ -192,28 +192,62 @@ document.addEventListener("DOMContentLoaded", () => {
         window.requestAnimationFrame(step);
     }
 
+    window.currentCompPage = 1;
+    let totalCompPages = 1;
+
+    window.changeCompPage = (delta) => {
+        const newPage = window.currentCompPage + delta;
+        if (newPage >= 1 && newPage <= totalCompPages) {
+            window.currentCompPage = newPage;
+            fetchComplaints();
+        }
+    };
+
     async function fetchComplaints() {
         try {
             const token = localStorage.getItem('scrs_token');
-            const compRes = await fetch('/api/complaints/all', {
+            const status = document.getElementById('filter-status')?.value || '';
+            const dept = document.getElementById('filter-dept')?.value || '';
+            
+            let url = `/api/complaints/all?page=${window.currentCompPage}&limit=10`; // Smaller limit for testing
+            if (status) url += `&status=${encodeURIComponent(status)}`;
+            if (dept) url += `&department_id=${encodeURIComponent(dept)}`;
+
+            const compRes = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const compData = await compRes.json();
             if (compData.success) {
                 renderTable(compData.complaints);
+                
+                if (compData.pagination) {
+                    totalCompPages = compData.pagination.totalPages || 1;
+                    const info = document.getElementById('comp-page-info');
+                    if(info) info.textContent = `Page ${window.currentCompPage} of ${totalCompPages}`;
+                }
             }
         } catch (err) { console.error(err); }
     }
 
     function renderTable(complaints) {
         const tbody = document.getElementById('complaints-tbody');
-        tbody.innerHTML = complaints.map(c => `
+        tbody.innerHTML = complaints.map(c => {
+            const isVideo = c.media_url && (c.media_url.endsWith('.mp4') || c.media_url.endsWith('.mov') || c.media_url.includes('/video/upload/'));
+            
+            return `
             <tr class="fade-in">
                 <td>#${c.id}</td>
+                <td style="font-weight: 700; color: var(--gold);">${c.title || 'Untitled'}</td>
                 <td>${c.student_name || 'Student #' + c.student_id}</td>
-                <td>${c.category}</td>
-                <td>${c.location}</td>
+                <td><span style="font-size:0.8rem; opacity:0.8;">${c.category} @ ${c.location}</span></td>
                 <td><span class="status-badge status-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span></td>
+                <td style="text-align:center;">
+                    ${c.media_url ? `
+                        <button class="action-btn" style="background:rgba(212,175,55,0.1); color:var(--gold); border: 1px solid var(--gold);" onclick="viewComplaintMedia('${c.media_url}', '${c.title || 'Complaint Media'}')">
+                            <i class="fa-solid ${isVideo ? 'fa-video' : 'fa-image'}"></i> View
+                        </button>
+                    ` : '<span style="opacity:0.3;">None</span>'}
+                </td>
                 <td style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                     <button class="action-btn btn-resolve" ${c.status.toLowerCase() === 'resolved' ? 'disabled' : ''} onclick="updateStatus(${c.id}, 'Resolved')">
                         <i class="fa-solid fa-check-double"></i> Resolve
@@ -226,8 +260,26 @@ document.addEventListener("DOMContentLoaded", () => {
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `}).join('');
     }
+
+    // New utility for seamless media viewing
+    window.viewComplaintMedia = (url, title) => {
+        const isVideo = url && (url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('/video/upload/'));
+        const modal = document.getElementById('idModal'); // Reuse ID Modal for general media
+        const container = modal.querySelector('.modal-content') || modal;
+        
+        // Clear previous and set new content
+        const modalBody = document.getElementById('modalImg').parentElement;
+        modalBody.innerHTML = `
+            <h3 style="margin-bottom: 2rem; color: var(--gold);">${title}</h3>
+            ${MediaUtils.render(url)}
+            <button class="btn btn-glass" style="margin-top: 1.5rem; width: 100%;" onclick="document.getElementById('idModal').style.display='none'">Close Preview</button>
+        `;
+
+        
+        modal.style.display = 'flex';
+    };
 
     // Additional fetch functions (Staff, Students, Departments, Gallery) reused from original
     // ... [Implementation for fetchStaff, fetchStudents, loadDepartments, loadGallery remains similar but cleaned up]
@@ -764,10 +816,17 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await res.json();
             if (data.success) {
+                const optionsHtml = data.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                
                 const deptSelect = document.getElementById('staff-dept');
-                if(!deptSelect) return;
-                deptSelect.innerHTML = '<option value="">No Department / General</option>' + 
-                    data.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                if(deptSelect) {
+                    deptSelect.innerHTML = '<option value="">No Department / General</option>' + optionsHtml;
+                }
+
+                const filterDept = document.getElementById('filter-dept');
+                if(filterDept) {
+                    filterDept.innerHTML = '<option value="">All Departments</option>' + optionsHtml;
+                }
             }
         } catch (err) { console.error(err); }
     }

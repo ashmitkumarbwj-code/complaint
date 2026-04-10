@@ -67,10 +67,10 @@ exports.updateProfile = async (req, res) => {
         query += updates.join(', ') + ' WHERE id = ?';
         params.push(userId);
 
-        await db.execute(query, params);
+        await db.tenantExecute(req, query, params);
 
         // Fetch updated user data to return
-        const [rows] = await db.execute('SELECT id, username, email, role, profile_image FROM users WHERE id = ?', [userId]);
+        const [rows] = await db.tenantExecute(req, 'SELECT id, username, email, role, profile_image FROM users WHERE id = ?', [userId]);
         const updatedUser = rows[0];
 
         res.json({
@@ -90,7 +90,7 @@ exports.updateProfile = async (req, res) => {
  */
 exports.getProfile = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT id, username, email, role, profile_image, mobile_number FROM users WHERE id = ?', [req.user.id]);
+        const [rows] = await db.tenantExecute(req, 'SELECT id, username, email, role, profile_image, mobile_number FROM users WHERE id = ?', [req.user.id]);
         if (rows.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
         res.json({ success: true, user: rows[0] });
     } catch (error) {
@@ -98,3 +98,4 @@ exports.getProfile = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error fetching profile' });
     }
 };
+

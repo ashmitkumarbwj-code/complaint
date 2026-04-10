@@ -115,18 +115,19 @@
         <div class="table-container">
             <div class="table-header">
                 <h4 class="m-0">Assigned Complaints</h4>
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="complaint-search" placeholder="Search by ID or Student Name...">
+                <div class="search-box glass-panel" style="padding: 0.25rem 1rem; border-radius: 99px;">
+                    <i class="fas fa-search" style="color: var(--gold); opacity: 0.7;"></i>
+                    <input type="text" id="complaint-search" class="elegant-input" placeholder="Search by ID or Student Name..." style="border: none !important; background: transparent !important; padding: 0.8rem 0.5rem !important;">
                 </div>
             </div>
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Student</th>
+                            <th>#ID</th>
                             <th>Title</th>
+                            <th>Student</th>
+                            <th>Category</th>
                             <th>Priority</th>
                             <th>Status</th>
                             <th>Time</th>
@@ -157,7 +158,9 @@
         </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/interactive-bubbles.js"></script>
+    <script src="js/mediaUtils.js"></script>
     <script src="js/department.js"></script>
+
 </body>
 </html>

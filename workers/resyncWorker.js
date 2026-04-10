@@ -1,0 +1,76 @@
+const db = require('../config/db');
+const cloudinary = require('../config/cloudinary');
+const logger = require('../utils/logger');
+const fs = require('fs').promises;
+const path = require('path');
+
+/**
+ * Resync Worker
+ * Handles complaints that failed initial upload due to Cloudinary/Redis outages.
+ */
+exports.processPendingResyncs = async () => {
+    try {
+        logger.info('[RESILIENCE] Starting periodic re-sync for failed uploads...');
+
+        // 1. Find all complaints needing re-sync
+        const [rows] = await db.execute(`
+            SELECT id, tenant_id, local_file_path 
+            FROM complaints 
+            WHERE processing_status = 'pending_resync' 
+            AND local_file_path IS NOT NULL
+        `);
+
+        if (rows.length === 0) {
+            logger.info('[RESILIENCE] No pending re-syncs found.');
+            return;
+        }
+
+        logger.info(`[RESILIENCE] Found ${rows.length} files awaiting cloud re-sync.`);
+
+        for (const complaint of rows) {
+            const { id, tenant_id, local_file_path } = complaint;
+
+            // Check if file still exists on disk
+            try {
+                await fs.access(local_file_path);
+            } catch (e) {
+                logger.error(`[RESILIENCE] File not found on disk for complaint #${id}: ${local_file_path}`);
+                await db.execute(
+                    "UPDATE complaints SET processing_status = 'failed' WHERE id = ?",
+                    [id]
+                );
+                continue;
+            }
+
+            try {
+                logger.debug(`[RESILIENCE] Attempting re-sync for #${id}...`);
+                
+                // 2. Upload to Cloudinary
+                const result = await cloudinary.uploader.upload(local_file_path, {
+                    folder: `smart_campus/complaints/tenant_${tenant_id}`,
+                    resource_type: 'auto'
+                });
+
+                // 3. Update DB
+                await db.execute(
+                    `UPDATE complaints 
+                     SET media_url = ?, processing_status = 'completed' 
+                     WHERE id = ?`,
+                    [result.secure_url, id]
+                );
+
+                logger.info(`[RESILIENCE] Re-sync successful for complaint #${id}`);
+
+                // 4. Clean up disk
+                await fs.unlink(local_file_path);
+
+            } catch (uploadErr) {
+                logger.warn(`[RESILIENCE] Re-sync failed again for complaint #${id}: ${uploadErr.message}`);
+                // Leave as pending_resync for next run
+            }
+        }
+
+    } catch (err) {
+        logger.error('[RESILIENCE] Fatal error in resyncWorker:', err);
+    }
+};

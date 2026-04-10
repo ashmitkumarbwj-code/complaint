@@ -90,6 +90,7 @@ function renderComplaints(complaints) {
     tbody.innerHTML = complaints.map(c => `
         <tr>
             <td><span class="text-primary font-bold">#${c.id}</span></td>
+            <td style="font-weight:600; color:var(--primary-color);">${c.title || 'Untitled'}</td>
             <td>${c.student_name || 'Anonymous'}</td>
             <td>${c.category}</td>
             <td><span class="badge ${c.priority === 'High' ? 'badge-high' : ''}">${c.priority}</span></td>
@@ -120,17 +121,21 @@ function viewDetails(c) {
     const body = document.getElementById('modal-body');
     const actions = document.getElementById('modal-actions');
 
-    title.textContent = `#${c.id} ${c.category}`;
+    title.textContent = `#${c.id} ${c.title || c.category}`;
+    const isVideo = c.media_url && (c.media_url.endsWith('.mp4') || c.media_url.endsWith('.mov') || c.media_url.includes('/video/upload/'));
+
     body.innerHTML = `
         <div class="mb-3"><strong>Student:</strong> ${c.student_name} (${c.roll_number || 'N/A'})</div>
         <div class="mb-3"><strong>Location:</strong> ${c.location}</div>
+        <div class="mb-3"><strong>Category:</strong> ${c.category}</div>
         <div class="mb-3"><strong>Description:</strong><br>${c.description}</div>
         ${c.media_url ? `
             <div class="mb-3">
                 <strong>Attachment:</strong><br>
-                <img src="${c.media_url}" style="max-width: 100%; border-radius: 10px; margin-top: 5px;">
+                ${MediaUtils.render(c.media_url)}
             </div>
         ` : ''}
+
         <div class="mb-3"><strong>Submitted:</strong> ${new Date(c.created_at).toLocaleString()}</div>
         <div><strong>Current Status:</strong> <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span></div>
     `;

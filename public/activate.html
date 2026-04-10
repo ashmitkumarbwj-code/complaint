@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Firebase SDK (Compat version for simplicity with existing code) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
     <style>
         :root {
             --glass-bg: rgba(255, 255, 255, 0.05);
@@ -168,8 +173,11 @@
                 <label class="form-label">Roll Number</label>
                 <input type="text" id="roll-number" class="form-control" placeholder="Enter Registration/Roll Number" style="margin-bottom: 1rem;">
                 <label class="form-label">Registered Mobile Number</label>
-                <input type="tel" id="mobile-number" class="form-control" placeholder="10-digit mobile number">
+                <input type="tel" id="mobile-number" class="form-control" placeholder="e.g. +91 9876543210 (with country code)">
             </div>
+
+            <!-- Firebase ReCaptcha Container -->
+            <div id="recaptcha-container" style="margin-top: 1rem;"></div>
 
             <button class="btn-activate" onclick="nextStep(1)">Send OTP <i class="fa-solid fa-paper-plane"></i></button>
         </div>

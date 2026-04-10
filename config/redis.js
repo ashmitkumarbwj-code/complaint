@@ -12,20 +12,28 @@ if (useRedis) {
             host: process.env.REDIS_HOST || '127.0.0.1',
             port: process.env.REDIS_PORT || 6379,
             password: process.env.REDIS_PASSWORD || null,
-            maxRetriesPerRequest: null
+            maxRetriesPerRequest: null,
+            retryStrategy(times) {
+                const delay = Math.min(times * 50, 2000);
+                return delay;
+            }
         });
 
         connection.on('error', (err) => {
-            logger.warn('Redis connection error. Background jobs will be skipped.');
-            isAvailable = false;
+            if (isAvailable) {
+                logger.warn(`Redis connection lost: ${err.message}. Retrying...`);
+                isAvailable = false;
+            }
         });
 
         connection.on('connect', () => {
             logger.info('Connected to Redis');
             isAvailable = true;
         });
-        
-        isAvailable = true; // Assume available until error
+
+        connection.on('ready', () => {
+            isAvailable = true;
+        });
     } catch (e) {
         logger.warn('Failed to initialize Redis:', e.message);
     }

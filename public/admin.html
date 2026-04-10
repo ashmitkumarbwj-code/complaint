@@ -208,8 +208,26 @@
 
         <!-- All Complaints Section -->
         <div class="table-card glass-panel">
-            <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+            <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                 <h2>Live Complaints Stream</h2>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <select id="filter-status" class="elegant-select" style="min-width: 150px;" onchange="window.currentCompPage=1; fetchComplaints()">
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                    <select id="filter-dept" class="elegant-select" style="min-width: 150px;" onchange="window.currentCompPage=1; fetchComplaints()">
+                        <option value="">All Departments</option>
+                        <!-- Loaded dynamically via loadDepartments() -->
+                    </select>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; background: rgba(255,255,255,0.05); padding: 0.2rem; border-radius: 8px;">
+                        <button class="btn btn-glass" style="padding: 0.4rem 0.8rem;" onclick="changeCompPage(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span id="comp-page-info" style="font-size: 0.9rem; color: var(--gold); padding: 0 0.5rem;">Page 1</span>
+                        <button class="btn btn-glass" style="padding: 0.4rem 0.8rem;" onclick="changeCompPage(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
             </div>
             <table>
                 <thead>
@@ -238,33 +256,36 @@
             <div id="staff-form-container" style="display: none; padding: 2rem; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);">
                 <form id="add-staff-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
                     <div class="form-group">
-                        <label class="form-label">Full Name</label>
-                        <input type="text" id="staff-name" class="form-control" placeholder="e.g. Dr. Jane Smith" required>
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">Full Name</label>
+                        <input type="text" id="staff-name" class="elegant-input" placeholder="e.g. Dr. Jane Smith" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" id="staff-email" class="form-control" placeholder="e.g. jane@gdc.edu" required>
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">Email Address</label>
+                        <input type="email" id="staff-email" class="elegant-input" placeholder="e.g. jane@gdc.edu" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Mobile Number</label>
-                        <input type="text" id="staff-mobile" class="form-control" placeholder="e.g. 9876543210" required>
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">Mobile Number</label>
+                        <input type="text" id="staff-mobile" class="elegant-input" placeholder="e.g. 9876543210" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Department</label>
-                        <select id="staff-dept" class="form-control" required>
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">Department</label>
+                        <select id="staff-dept" class="elegant-select" required>
                             <!-- Loaded dynamically -->
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">System Role</label>
-                        <select id="staff-role" class="form-control" required>
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">System Role</label>
+                        <select id="staff-role" class="elegant-select" required>
                             <option value="Staff">Staff / Faculty</option>
                             <option value="HOD">Head of Department (HOD)</option>
                             <option value="Principal">Principal (Super User)</option>
                         </select>
                     </div>
                     <div class="form-group" style="display: flex; align-items: flex-end;">
-                        <button type="submit" class="btn btn-primary btn-full">Send Activation Link</button>
+                        <button type="submit" class="btn-submit-premium" style="padding: 0.8rem; font-size: 0.9rem;">
+                            <span>Send Activation Link</span>
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -278,6 +299,7 @@
                         <th>Role</th>
                         <th>Status</th>
                     </tr>
+
                 </thead>
                 <tbody id="staff-tbody">
                     <!-- Loaded dynamically -->
@@ -295,31 +317,34 @@
             <div id="student-form-container" style="display: none; padding: 2rem; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);">
                 <form id="add-student-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
                     <div class="form-group">
-                        <label class="form-label">Roll Number</label>
-                        <input type="text" id="stu-roll" class="form-control" placeholder="e.g. 21DCS001" required>
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">Roll Number</label>
+                        <input type="text" id="stu-roll" class="elegant-input" placeholder="e.g. 21DCS001" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Department</label>
-                        <input type="text" id="stu-dept" class="form-control" placeholder="e.g. Computer Science" required>
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">Department</label>
+                        <input type="text" id="stu-dept" class="elegant-input" placeholder="e.g. Computer Science" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Year</label>
-                        <input type="text" id="stu-year" class="form-control" placeholder="e.g. 3rd" required>
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">Year</label>
+                        <input type="text" id="stu-year" class="elegant-input" placeholder="e.g. 3rd" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Mobile Number</label>
-                        <input type="text" id="stu-mobile" class="form-control" placeholder="e.g. 9876543210" required>
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">Mobile Number</label>
+                        <input type="text" id="stu-mobile" class="elegant-input" placeholder="e.g. 9876543210" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Email</label>
-                        <input type="email" id="stu-email" class="form-control" placeholder="e.g. student@gdc.edu" required>
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">Email</label>
+                        <input type="email" id="stu-email" class="elegant-input" placeholder="e.g. student@gdc.edu" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">ID Card Image URL (Cloudinary)</label>
-                        <input type="text" id="stu-id-url" class="form-control" placeholder="Paste Cloudinary URL here">
+                        <label class="form-label" style="font-weight:700; color:var(--gold); text-transform:uppercase; font-size:0.85rem; letter-spacing:0.5px; opacity:0.8;">ID Card URL</label>
+                        <input type="text" id="stu-id-url" class="elegant-input" placeholder="Paste Cloudinary URL">
                     </div>
                     <div class="form-group" style="display: flex; align-items: flex-end;">
-                        <button type="submit" class="btn btn-primary btn-full">Add to Master List</button>
+                        <button type="submit" class="btn-submit-premium" style="padding: 0.8rem; font-size: 0.9rem;">
+                            <span>Add to Registry</span>
+                            <i class="fa-solid fa-user-plus"></i>
+                        </button>
                     </div>
                 </form>
             </div>
@@ -451,8 +476,10 @@
         <!-- Scripts -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-        <script src="/socket.io/socket.io.js"></script>
+        <script src="js/interactive-bubbles.js"></script>
+        <script src="js/mediaUtils.js"></script>
         <script src="js/admin.js"></script>
+
     </div>
 </body>
 </html>

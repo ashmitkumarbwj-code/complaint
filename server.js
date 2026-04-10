@@ -6,6 +6,7 @@ const cors    = require('cors');
 const rateLimit = require('express-rate-limit');
 const morgan  = require('morgan');
 const logger  = require('./utils/logger');
+const { traceMiddleware } = require('./middleware/traceMiddleware');
 
 // Handle Uncaught Exceptions EARLY
 process.on('uncaughtException', (err) => {
@@ -25,6 +26,9 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 const app = express();
+
+// 1. High-Priority Tracing (MUST be first)
+app.use(traceMiddleware);
 
 // Global Rate Limiting
 const limiter = rateLimit({
@@ -93,6 +97,7 @@ const galleryRoutes = require('./routes/gallery');
 const statsRoutes = require('./routes/stats');
 const usersRoutes = require('./routes/users');
 const departmentRoutes = require('./routes/departments');
+const healthRoutes = require('./routes/health');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
@@ -102,6 +107,7 @@ app.use('/api/gallery', galleryRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/departments', departmentRoutes);
+app.use('/api/health', healthRoutes);
 
 // API 404 — unknown /api/* routes return JSON (static won't serve these)
 app.use((req, res, next) => {
@@ -111,15 +117,52 @@ app.use((req, res, next) => {
     next();
 });
 
-// Default route
+// Default route (handles root index.html)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// App 404 fallback for any other unhandled GET routes (HTML)
+app.use((req, res, next) => {
+    if (req.method === 'GET') {
+        res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+    } else {
+        next();
+    }
 });
 
 // Initialize Background Workers (BullMQ) if Redis is available
 const { getIsAvailable } = require('./config/redis');
 if (getIsAvailable()) {
     require('./workers/index');
+
+    // BullBoard Integration for Queue Monitoring
+    try {
+        const { createBullBoard } = require('@bull-board/api');
+        const { BullMQAdapter } = require('@bull-board/api/bullMQAdapter');
+        const { ExpressAdapter } = require('@bull-board/express');
+        const { notificationQueue, uploadQueue } = require('./utils/queueService');
+        const requireAuth = require('./middleware/authMiddleware');
+        const checkRole = require('./middleware/roleMiddleware');
+
+        const serverAdapter = new ExpressAdapter();
+        serverAdapter.setBasePath('/admin/queues');
+
+        createBullBoard({
+            queues: [
+                new BullMQAdapter(notificationQueue),
+                new BullMQAdapter(uploadQueue)
+            ],
+            serverAdapter: serverAdapter,
+        });
+
+        // Protect the dashboard with auth middleware
+        app.use('/admin/queues', requireAuth, checkRole(['Admin', 'Principal']), serverAdapter.getRouter());
+        logger.info('BullBoard initialized at /admin/queues');
+    } catch (err) {
+        logger.warn('BullBoard not initialized: ' + err.message);
+    }
+
 } else {
     logger.info('Skipping background workers (Redis not available).');
 }
@@ -127,19 +170,30 @@ if (getIsAvailable()) {
 // Global error-handling middleware
 app.use((err, req, res, next) => {
     logger.error(`Unhandled error on ${req.method} ${req.originalUrl} — ${err.message}`, err);
+    
     if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(422).json({ success: false, message: 'File size exceeds the 5 MB limit.' });
+        return res.status(422).json({ 
+            success: false, 
+            message: 'File size exceeds the limit (Max 20 MB for multimedia).' 
+        });
     }
-    if (err.message && err.message.startsWith('Only JPG')) {
-        return res.status(422).json({ success: false, message: err.message });
-    }
-    res.status(500).json({ success: false, message: 'An internal server error occurred.' });
+
+    // Pass through validation errors or other handled errors
+    if (res.headersSent) return next(err);
+    
+    res.status(err.status || 500).json({ 
+        success: false, 
+        message: err.message || 'An internal server error occurred.' 
+    });
 });
+
 
 // Setup Scheduled Jobs
 const complaintControllerCore = require('./controllers/complaintController');
 const escalationService = require('./utils/escalationService');
 const backupService = require('./utils/backupService');
+
+const resyncWorker = require('./workers/resyncWorker');
 
 // Run database backup daily
 setInterval(async () => {
@@ -150,6 +204,11 @@ setInterval(async () => {
         logger.error('[Cron] Daily Backup/Cleanup Failed:', err);
     }
 }, 24 * 60 * 60 * 1000);
+
+// Run Resilience Re-sync every 10 minutes
+setInterval(async () => {
+    await resyncWorker.processPendingResyncs();
+}, 10 * 60 * 1000);
 
 // Run media cleanup job daily
 setInterval(async () => {

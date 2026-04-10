@@ -4,7 +4,7 @@ let selectedMethod = 'email';
 async function nextStep(step) {
     if (step === 1) {
         selectedMethod = document.getElementById('verification-method').value;
-        const payload = { method: selectedMethod, role: 'Student' };
+        const payload = { method: selectedMethod, role: 'Student', tenant_id: 1 };
 
         if (selectedMethod === 'email') {
             const email = document.getElementById('email').value.trim();
@@ -46,7 +46,7 @@ async function nextStep(step) {
             return;
         }
 
-        const payload = { method: selectedMethod, otp: otp };
+        const payload = { method: selectedMethod, otp: otp, tenant_id: 1 };
         if (selectedMethod === 'email') {
             payload.email = document.getElementById('email').value.trim();
         } else {
@@ -90,7 +90,8 @@ async function finishReset() {
     const payload = {
         method: selectedMethod,
         otp: otp,
-        password: password
+        password: password,
+        tenant_id: 1
     };
 
     if (selectedMethod === 'email') {

@@ -5,13 +5,18 @@
  */
 
 const db = require('../config/db');
+const cacheService = require('../utils/cacheService');
+const logger = require('../utils/logger');
 const ALL_CATEGORIES = ['Noise','Electricity','Mess','Harassment','Infrastructure','Security','Cleanliness','Technical','Faculty','Other'];
 
 // ── GET /api/departments ──────────────────────────────────────────────────────
 // Returns all departments with staff count, complaint counts, and categories
 exports.getAllDepartments = async (req, res) => {
     try {
-        const [rows] = await db.execute(`
+        const cached = await cacheService.get(`deps:all:${req.user.tenant_id}`);
+        if (cached) return res.json({ success: true, departments: cached });
+
+        const [rows] = await db.tenantExecute(req, `
             SELECT
                 d.id,
                 d.name,
@@ -26,14 +31,16 @@ exports.getAllDepartments = async (req, res) => {
             FROM departments d
             LEFT JOIN department_members dm ON d.id = dm.department_id
             LEFT JOIN complaints          c  ON d.id = c.department_id
+            WHERE 1=1
             GROUP BY d.id
             ORDER BY d.name ASC
         `);
 
         // Fetch categories for each department
-        const [catRows] = await db.execute(`
+        const [catRows] = await db.tenantExecute(req, `
             SELECT department_id, GROUP_CONCAT(category ORDER BY category SEPARATOR ',') AS categories
             FROM department_categories
+            WHERE 1=1
             GROUP BY department_id
         `);
 
@@ -45,9 +52,11 @@ exports.getAllDepartments = async (req, res) => {
             categories: catMap[d.id] || []
         }));
 
+        await cacheService.set(`deps:all:${req.user.tenant_id}`, departments, 3600); 
+
         res.json({ success: true, departments });
     } catch (error) {
-        console.error('[Dept] getAllDepartments error:', error);
+        logger.error('[Dept] getAllDepartments error:', error);
         res.status(500).json({ success: false, message: 'Error fetching departments' });
     }
 };
@@ -56,7 +65,10 @@ exports.getAllDepartments = async (req, res) => {
 // Rich per-department stats for Principal dashboard
 exports.getAllDeptStats = async (req, res) => {
     try {
-        const [rows] = await db.execute(`
+        const cached = await cacheService.get(`deps:stats:${req.user.tenant_id}`);
+        if (cached) return res.json({ success: true, departments: cached });
+
+        const [rows] = await db.tenantExecute(req, `
             SELECT
                 d.id,
                 d.name,
@@ -70,13 +82,15 @@ exports.getAllDeptStats = async (req, res) => {
             FROM departments d
             LEFT JOIN department_members dm ON d.id = dm.department_id
             LEFT JOIN complaints          c  ON d.id = c.department_id
+            WHERE 1=1
             GROUP BY d.id
             ORDER BY d.name ASC
         `);
 
-        const [catRows] = await db.execute(`
+        const [catRows] = await db.tenantExecute(req, `
             SELECT department_id, GROUP_CONCAT(category ORDER BY category SEPARATOR ',') AS categories
             FROM department_categories
+            WHERE 1=1
             GROUP BY department_id
         `);
 
@@ -93,9 +107,11 @@ exports.getAllDeptStats = async (req, res) => {
             };
         });
 
+        await cacheService.set(`deps:stats:${req.user.tenant_id}`, departments, 300); 
+
         res.json({ success: true, departments });
     } catch (error) {
-        console.error('[Dept] getAllDeptStats error:', error);
+        logger.error('[Dept] getAllDeptStats error:', error);
         res.status(500).json({ success: false, message: 'Error fetching department stats' });
     }
 };
@@ -105,13 +121,16 @@ exports.getAllDeptStats = async (req, res) => {
 exports.getDepartmentById = async (req, res) => {
     const { id } = req.params;
     try {
-        const [deptRows] = await db.execute('SELECT * FROM departments WHERE id = ?', [id]);
+        const cached = await cacheService.get(`deps:${id}:${req.user.tenant_id}`);
+        if (cached) return res.json({ success: true, department: cached });
+
+        const [deptRows] = await db.tenantExecute(req, 'SELECT * FROM departments WHERE id = ?', [id]);
         if (deptRows.length === 0) {
             return res.status(404).json({ success: false, message: 'Department not found' });
         }
 
         // Get members
-        const [members] = await db.execute(`
+        const [members] = await db.tenantExecute(req, `
             SELECT dm.user_id, dm.role_in_dept, dm.assigned_at, u.username, u.email, u.role
             FROM department_members dm
             JOIN users u ON dm.user_id = u.id
@@ -120,12 +139,12 @@ exports.getDepartmentById = async (req, res) => {
         `, [id]);
 
         // Get categories
-        const [cats] = await db.execute(
+        const [cats] = await db.tenantExecute(req, 
             'SELECT category FROM department_categories WHERE department_id = ?', [id]
         );
 
         // Get complaint stats
-        const [stats] = await db.execute(`
+        const [stats] = await db.tenantExecute(req, `
             SELECT
                 COUNT(*) AS total,
                 SUM(CASE WHEN status = 'Pending'     THEN 1 ELSE 0 END) AS pending,
@@ -134,17 +153,18 @@ exports.getDepartmentById = async (req, res) => {
             FROM complaints WHERE department_id = ?
         `, [id]);
 
-        res.json({
-            success: true,
-            department: {
-                ...deptRows[0],
-                members,
-                categories: cats.map(c => c.category),
-                stats: stats[0]
-            }
-        });
+        const deptData = {
+            ...deptRows[0],
+            members,
+            categories: cats.map(c => c.category),
+            stats: stats[0]
+        };
+
+        await cacheService.set(`deps:${id}:${req.user.tenant_id}`, deptData, 600); 
+
+        res.json({ success: true, department: deptData });
     } catch (error) {
-        console.error('[Dept] getDepartmentById error:', error);
+        logger.error('[Dept] getDepartmentById error:', error);
         res.status(500).json({ success: false, message: 'Error fetching department' });
     }
 };
@@ -162,8 +182,8 @@ exports.createDepartment = async (req, res) => {
         await conn.beginTransaction();
 
         const [result] = await conn.execute(
-            'INSERT INTO departments (name, description, email, head) VALUES (?, ?, ?, ?)',
-            [name.trim(), description || null, email || null, head || null]
+            'INSERT INTO departments (tenant_id, name, description, email, head) VALUES (?, ?, ?, ?, ?)',
+            [req.user.tenant_id, name.trim(), description || null, email || null, head || null]
         );
         const deptId = result.insertId;
 
@@ -171,20 +191,24 @@ exports.createDepartment = async (req, res) => {
         if (Array.isArray(categories) && categories.length > 0) {
             const validCats = categories.filter(c => ALL_CATEGORIES.includes(c));
             if (validCats.length > 0) {
-                const placeholders = validCats.map(() => '(?, ?)').join(', ');
-                const vals = validCats.flatMap(c => [deptId, c]);
+                const placeholders = validCats.map(() => '(?, ?, ?)').join(', ');
+                const vals = validCats.flatMap(c => [req.user.tenant_id, deptId, c]);
                 await conn.execute(
-                    `INSERT IGNORE INTO department_categories (department_id, category) VALUES ${placeholders}`,
+                    `INSERT IGNORE INTO department_categories (tenant_id, department_id, category) VALUES ${placeholders}`,
                     vals
                 );
             }
         }
 
         await conn.commit();
+        
+        await cacheService.invalidate('deps:all');
+        await cacheService.invalidate('deps:stats');
+        
         res.status(201).json({ success: true, message: `Department "${name}" created successfully`, department_id: deptId });
     } catch (error) {
         await conn.rollback();
-        console.error('[Dept] createDepartment error:', error);
+        logger.error('[Dept] createDepartment error:', error);
         res.status(500).json({ success: false, message: 'Error creating department' });
     } finally {
         conn.release();
@@ -203,29 +227,34 @@ exports.updateDepartment = async (req, res) => {
 
         // Update basic fields
         await conn.execute(
-            'UPDATE departments SET name = ?, description = ?, email = ?, head = ? WHERE id = ?',
-            [name, description || null, email || null, head || null, id]
+            'UPDATE departments SET name = ?, description = ?, email = ?, head = ? WHERE id = ? AND tenant_id = ?',
+            [name, description || null, email || null, head || null, id, req.user.tenant_id]
         );
 
         // Replace categories
         if (Array.isArray(categories)) {
-            await conn.execute('DELETE FROM department_categories WHERE department_id = ?', [id]);
+            await conn.execute('DELETE FROM department_categories WHERE department_id = ? AND tenant_id = ?', [id, req.user.tenant_id]);
             const validCats = categories.filter(c => ALL_CATEGORIES.includes(c));
             if (validCats.length > 0) {
-                const placeholders = validCats.map(() => '(?, ?)').join(', ');
-                const vals = validCats.flatMap(c => [id, c]);
+                const placeholders = validCats.map(() => '(?, ?, ?)').join(', ');
+                const vals = validCats.flatMap(c => [req.user.tenant_id, id, c]);
                 await conn.execute(
-                    `INSERT IGNORE INTO department_categories (department_id, category) VALUES ${placeholders}`,
+                    `INSERT IGNORE INTO department_categories (tenant_id, department_id, category) VALUES ${placeholders}`,
                     vals
                 );
             }
         }
 
         await conn.commit();
+
+        await cacheService.invalidate('deps:all');
+        await cacheService.invalidate('deps:stats');
+        await cacheService.invalidate(`deps:${id}`);
+
         res.json({ success: true, message: 'Department updated successfully' });
     } catch (error) {
         await conn.rollback();
-        console.error('[Dept] updateDepartment error:', error);
+        logger.error('[Dept] updateDepartment error:', error);
         res.status(500).json({ success: false, message: 'Error updating department' });
     } finally {
         conn.release();
@@ -244,7 +273,7 @@ exports.addMember = async (req, res) => {
 
     try {
         // Verify user exists and is Staff/HOD
-        const [userRows] = await db.execute(
+        const [userRows] = await db.tenantExecute(req, 
             "SELECT id, username, role FROM users WHERE id = ? AND role IN ('Staff','HOD')",
             [user_id]
         );
@@ -252,14 +281,18 @@ exports.addMember = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Staff user not found' });
         }
 
-        await db.execute(
-            'INSERT INTO department_members (department_id, user_id, role_in_dept) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE role_in_dept = VALUES(role_in_dept)',
-            [id, user_id, role_in_dept || 'Staff']
+        await db.tenantExecute(req, 
+            'INSERT INTO department_members (tenant_id, department_id, user_id, role_in_dept) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE role_in_dept = VALUES(role_in_dept)',
+            [req.user.tenant_id, id, user_id, role_in_dept || 'Staff']
         );
+
+        await cacheService.invalidate('deps:all');
+        await cacheService.invalidate('deps:stats');
+        await cacheService.invalidate(`deps:${id}`);
 
         res.json({ success: true, message: `${userRows[0].username} added to department` });
     } catch (error) {
-        console.error('[Dept] addMember error:', error);
+        logger.error('[Dept] addMember error:', error);
         res.status(500).json({ success: false, message: 'Error adding member' });
     }
 };
@@ -269,16 +302,21 @@ exports.addMember = async (req, res) => {
 exports.removeMember = async (req, res) => {
     const { id, user_id } = req.params;
     try {
-        const [result] = await db.execute(
+        const [result] = await db.tenantExecute(req, 
             'DELETE FROM department_members WHERE department_id = ? AND user_id = ?',
             [id, user_id]
         );
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Member not found in this department' });
         }
+        
+        await cacheService.invalidate('deps:all');
+        await cacheService.invalidate('deps:stats');
+        await cacheService.invalidate(`deps:${id}`);
+
         res.json({ success: true, message: 'Member removed from department' });
     } catch (error) {
-        console.error('[Dept] removeMember error:', error);
+        logger.error('[Dept] removeMember error:', error);
         res.status(500).json({ success: false, message: 'Error removing member' });
     }
 };
@@ -287,7 +325,7 @@ exports.removeMember = async (req, res) => {
 // Returns all Staff/HOD users for the member-add dropdown
 exports.getAvailableStaff = async (req, res) => {
     try {
-        const [rows] = await db.execute(
+        const [rows] = await db.tenantExecute(req, 
             "SELECT id, username, email, role FROM users WHERE role IN ('Staff','HOD') AND is_verified = 1 ORDER BY username ASC"
         );
         res.json({ success: true, staff: rows });

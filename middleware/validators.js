@@ -69,6 +69,11 @@ const otpRule = (field = 'otp') =>
         .notEmpty().withMessage('OTP is required.')
         .matches(/^\d{4,8}$/).withMessage('OTP must be a 4–8 digit number.');
 
+const tenantRule = () =>
+    body('tenant_id')
+        .notEmpty().withMessage('Tenant context (College ID) is required.')
+        .isInt({ min: 1 }).withMessage('Invalid Tenant ID.');
+
 // ─────────────────────────────────────────────────────────────────
 // Auth Validators
 // ─────────────────────────────────────────────────────────────────
@@ -82,6 +87,7 @@ exports.validateLogin = [
     body('password')
         .notEmpty().withMessage('Password is required.')
         .isLength({ max: 128 }).withMessage('Password is too long.'),
+    tenantRule(),
     validate
 ];
 
@@ -95,6 +101,7 @@ exports.validateRequestActivation = [
     emailRuleOptional('email'),
     mobileRuleOptional('mobile_number'),
     rollNumberRuleOptional('roll_number'),
+    tenantRule(),
     validate
 ];
 
@@ -104,6 +111,7 @@ exports.validateVerifyOTP = [
     emailRuleOptional('email'),
     mobileRuleOptional('mobile_number'),
     otpRule('otp'),
+    tenantRule(),
     validate
 ];
 
@@ -112,12 +120,21 @@ exports.validateCompleteActivation = [
     methodRule(),
     emailRuleOptional('email'),
     mobileRuleOptional('mobile_number'),
-    otpRule('otp'),
+    body('otp')
+        .if(body('method').equals('email'))
+        .trim()
+        .notEmpty().withMessage('OTP is required for email verification.')
+        .matches(/^\d{4,8}$/).withMessage('OTP must be a 4–8 digit number.'),
+    body('firebaseToken')
+        .if(body('method').equals('sms'))
+        .trim()
+        .notEmpty().withMessage('Firebase token is required for mobile verification.'),
     passwordRule('password'),
     body('role')
         .trim()
         .notEmpty().withMessage('Role is required.')
         .isIn(['Student', 'Staff', 'HOD', 'Admin', 'Principal', 'student', 'staff', 'hod', 'admin', 'principal']).withMessage('Invalid role.'),
+    tenantRule(),
     validate
 ];
 
@@ -130,6 +147,7 @@ exports.validateRequestReset = [
         .optional()
         .trim()
         .isIn(['Student', 'Staff', 'HOD', 'Admin', 'Principal']).withMessage('Invalid role specified.'),
+    tenantRule(),
     validate
 ];
 
@@ -139,6 +157,7 @@ exports.validateVerifyReset = [
     emailRuleOptional('email'),
     mobileRuleOptional('mobile_number'),
     otpRule('otp'),
+    tenantRule(),
     validate
 ];
 
@@ -149,6 +168,7 @@ exports.validateResetPassword = [
     mobileRuleOptional('mobile_number'),
     otpRule('otp'),
     passwordRule('password'),
+    tenantRule(),
     validate
 ];
 
@@ -165,11 +185,10 @@ exports.validateActivateStaff = [
 
 // POST /api/auth/verify-firebase
 exports.validateVerifyFirebase = [
-    body('uid')
+    body('firebaseToken')
         .trim()
-        .notEmpty().withMessage('Firebase UID is required.')
-        .isLength({ max: 128 }).withMessage('Firebase UID is too long.'),
-    mobileRule('mobile_number'),
+        .notEmpty().withMessage('Firebase ID Token is required.')
+        .isLength({ min: 10 }).withMessage('Firebase Token is too short.'),
     validate
 ];
 
@@ -182,6 +201,11 @@ exports.validateSubmitComplaint = [
     body('student_id')
         .notEmpty().withMessage('Student ID is required.')
         .isInt({ min: 1 }).withMessage('Student ID must be a positive integer.'),
+    body('title')
+        .trim()
+        .notEmpty().withMessage('Complaint title is required.')
+        .isLength({ min: 3, max: 50 }).withMessage('Title must be between 3 and 50 characters.')
+        .escape(),
     body('category')
         .trim()
         .notEmpty().withMessage('Complaint category is required.')
@@ -190,11 +214,13 @@ exports.validateSubmitComplaint = [
     body('description')
         .trim()
         .notEmpty().withMessage('Complaint description is required.')
-        .isLength({ min: 20, max: 2000 }).withMessage('Description must be between 20 and 2000 characters.'),
+        .isLength({ min: 10, max: 500 }).withMessage('Description must be between 10 and 500 characters.')
+        .escape(),
     body('location')
         .trim()
         .notEmpty().withMessage('Location is required.')
-        .isLength({ min: 3, max: 200 }).withMessage('Location must be between 3 and 200 characters.'),
+        .isLength({ min: 3, max: 200 }).withMessage('Location must be between 3 and 200 characters.')
+        .escape(),
     body('priority')
         .optional()
         .trim()
@@ -213,7 +239,8 @@ exports.validateUpdateStatus = [
     body('admin_notes')
         .optional()
         .trim()
-        .isLength({ max: 1000 }).withMessage('Admin notes must not exceed 1000 characters.'),
+        .isLength({ max: 1000 }).withMessage('Admin notes must not exceed 1000 characters.')
+        .escape(),
     validate
 ];
 
@@ -231,23 +258,28 @@ exports.validateStudentId = [
 exports.validateFileUpload = (req, res, next) => {
     if (!req.file) return next(); // File is optional
 
-    // Only JPEG and PNG are permitted
-    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png'];
+    // Allowed mimetypes: JPG, PNG, MP4, MOV, AVI
+    const allowedMimes = [
+        'image/jpeg', 'image/jpg', 'image/png', 
+        'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'
+    ];
+    
     if (!allowedMimes.includes(req.file.mimetype)) {
         return res.status(422).json({
             success: false,
-            message: 'Invalid file type. Only JPG and PNG images are allowed.'
+            message: 'Invalid file type. Only Images (JPG, PNG) and Videos (MP4, MOV) are allowed.'
         });
     }
 
-    // Hard 5 MB ceiling (belt-and-suspenders over multer limits)
-    const maxSizeBytes = 5 * 1024 * 1024;
+    // 10 MB ceiling for multimedia (Production Safe)
+    const maxSizeBytes = 10 * 1024 * 1024;
     if (req.file.size > maxSizeBytes) {
         return res.status(422).json({
             success: false,
-            message: 'File size exceeds the 5 MB limit. Please upload a smaller image.'
+            message: 'File size exceeds the 10 MB limit. Please upload a smaller file.'
         });
     }
 
     next();
 };
+

@@ -37,6 +37,19 @@ const jsonFormat = format.combine(
     format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     format.errors({ stack: true }),
     format.splat(),
+    format((info) => {
+        // Attempt to get context from traceMiddleware
+        try {
+            const { getStore } = require('../middleware/traceMiddleware');
+            const store = getStore();
+            if (store) {
+                return { ...info, ...store };
+            }
+        } catch (e) {
+            // Middleware might not be loaded yet or outside req context
+        }
+        return info;
+    })(),
     format.json()
 );
 

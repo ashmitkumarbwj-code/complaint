@@ -43,5 +43,7 @@ router.post('/resend-otp',          otpLimiter,    authController.resendOTP);
 router.post('/activate-staff',      otpLimiter,    v.validateActivateStaff,       authController.activateStaff);
 router.post('/verify-firebase',     loginLimiter,  v.validateVerifyFirebase,      authController.verifyFirebase);
 
+router.post('/refresh',             authController.refreshToken);
+router.post('/logout',              authController.logout);
 
 module.exports = router;
