@@ -95,7 +95,7 @@ function setupNav() {
 async function fetchDashboardStats() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('/api/dashboards/principal/stats', {
+        const res = await fetch('http://117.237.13.35:5000/api/dashboards/principal/stats', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -115,7 +115,7 @@ async function fetchDashboardStats() {
 async function fetchCriticalComplaints() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('/api/dashboards/principal/critical', {
+        const res = await fetch('http://117.237.13.35:5000/api/dashboards/principal/critical', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -292,7 +292,7 @@ async function loadComplaintHistory(id) {
 
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch(`/api/complaints/${id}/history`, {
+        const res = await fetch(`http://117.237.13.35:5000/api/complaints/${id}/history`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -330,7 +330,7 @@ document.getElementById('btn-clear-next').addEventListener('click', async () => 
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Clearing...';
 
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch(`/api/complaints/status/${complaintId}`, {
+        const res = await fetch(`http://117.237.13.35:5000/api/complaints/status/${complaintId}`, {
             method: 'PATCH',
             headers: { 
                 'Authorization': `Bearer ${token}`,
@@ -462,10 +462,13 @@ function transitionStory(sectionKey) {
 // ─────────────────────────────────────────────────────────────────────────────
 let efficiencyChart = null;
 let distributionChart = null;
+let weeklyPerformanceChart = null;
 
 function initCharts() {
     const effCtx = document.getElementById('efficiencyChart');
     const distCtx = document.getElementById('distributionChart');
+    const weekCtx = document.getElementById('weeklyPerformanceChart');
+    
     if (!effCtx || !distCtx) return;
 
     const chartOptions = {
@@ -519,6 +522,121 @@ function initCharts() {
             }
         }
     });
+
+    // Weekly Performance Chart (Resolved vs Unresolved)
+    if (weekCtx) {
+        weeklyPerformanceChart = new Chart(weekCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Week 4', 'Week 3', 'Week 2', 'Week 1'],
+                datasets: [
+                    {
+                        label: 'Resolved',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: '#10b981',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Unresolved',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: '#ef4444',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                ...chartOptions,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: undefined, // Let it scale
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: 'rgba(255,255,255,0.5)' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: 'rgba(255,255,255,0.7)' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { color: '#fff', font: { size: 11 } }
+                    }
+                }
+            }
+        });
+
+        // Trigger initial fetch
+        fetchWeeklyPerformance();
+        
+        // Auto-refresh every 30s
+        setInterval(fetchWeeklyPerformance, 30000);
+    }
+}
+
+let _weeklyChartInitialized = false;
+
+async function fetchWeeklyPerformance() {
+    const loadingEl  = document.getElementById('weekly-chart-loading');
+    const emptyEl    = document.getElementById('weekly-chart-empty');
+    const refreshEl  = document.getElementById('weekly-chart-refresh-indicator');
+    const canvasEl   = document.getElementById('weeklyPerformanceChart');
+
+    // First load → show spinner; subsequent → show subtle "Refreshing..." badge
+    if (!_weeklyChartInitialized) {
+        if (loadingEl)  loadingEl.style.display  = 'flex';
+        if (emptyEl)    emptyEl.style.display    = 'none';
+        if (canvasEl)   canvasEl.style.opacity   = '0';
+    } else {
+        if (refreshEl)  { refreshEl.style.display = 'flex'; }
+    }
+
+    try {
+        const token = localStorage.getItem('scrs_token');
+        const res = await fetch('http://117.237.13.35:5000/api/dashboards/weekly-stats', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        // Check if we actually have any complaint activity
+        const hasData = data.success &&
+            (data.resolved.some(v => v > 0) || data.unresolved.some(v => v > 0));
+
+        if (loadingEl)  loadingEl.style.display  = 'none';
+
+        if (!hasData) {
+            // Empty state
+            if (emptyEl)   emptyEl.style.display  = 'flex';
+            if (canvasEl)  canvasEl.style.opacity  = '0';
+        } else {
+            // Populate and reveal chart
+            if (emptyEl)   emptyEl.style.display  = 'none';
+            if (canvasEl)  canvasEl.style.opacity  = '1';
+
+            if (weeklyPerformanceChart) {
+                weeklyPerformanceChart.data.labels            = data.weeks;
+                weeklyPerformanceChart.data.datasets[0].data  = data.resolved;
+                weeklyPerformanceChart.data.datasets[1].data  = data.unresolved;
+                weeklyPerformanceChart.update('none');
+            }
+        }
+
+        _weeklyChartInitialized = true;
+
+    } catch (err) {
+        console.error('[Dashboard] Error fetching weekly performance:', err);
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (emptyEl) {
+            emptyEl.style.display = 'flex';
+            emptyEl.querySelector('p').textContent = 'Could not load chart data. Will retry on next refresh.';
+        }
+    } finally {
+        if (refreshEl) refreshEl.style.display = 'none';
+    }
 }
 
 function updateCharts(departments) {
@@ -549,7 +667,7 @@ function updateCharts(departments) {
 async function fetchAllComplaintsForPrincipal() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('/api/complaints/all', {
+        const res = await fetch('http://117.237.13.35:5000/api/complaints/all', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -592,7 +710,7 @@ function renderAllComplaints(complaints) {
 async function fetchDeptPerformance() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('/api/departments/stats/all', {
+        const res = await fetch('http://117.237.13.35:5000/api/departments/stats/all', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -664,7 +782,7 @@ async function fetchDeptPerformance() {
 async function fetchPrincipalAnalytics() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('/api/dashboards/admin/stats', {
+        const res = await fetch('http://117.237.13.35:5000/api/dashboards/admin/stats', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -685,7 +803,7 @@ async function fetchPrincipalAnalytics() {
 async function fetchEmergencyAlerts() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('/api/dashboards/principal/critical', {
+        const res = await fetch('http://117.237.13.35:5000/api/dashboards/principal/critical', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -714,7 +832,7 @@ async function fetchEmergencyAlerts() {
 async function loadPrincipalProfile() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('/api/users/profile', {
+        const res = await fetch('http://117.237.13.35:5000/api/users/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -805,7 +923,7 @@ if (profileForm) {
             if (fileInput.files[0]) formData.append('profile_image', fileInput.files[0]);
 
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch('/api/users/profile', {
+            const res = await fetch('http://117.237.13.35:5000/api/users/profile', {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData

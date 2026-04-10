@@ -65,17 +65,20 @@ const processNotification = async (job) => {
     throw new Error(`Unknown job type: ${job.name}`);
 };
 
-const notificationWorker = new Worker('notifications', processNotification, { 
-    connection,
-    concurrency: 5 // Process 5 notifications concurrently
-});
+let notificationWorker = null;
+if (connection && process.env.USE_REDIS === 'true') {
+    notificationWorker = new Worker('notifications', processNotification, { 
+        connection,
+        concurrency: 5 // Process 5 notifications concurrently
+    });
 
-notificationWorker.on('completed', (job) => {
-    logger.info(`[Job:${job.id}] Notification completed successfully.`);
-});
+    notificationWorker.on('completed', (job) => {
+        logger.info(`[Job:${job.id}] Notification completed successfully.`);
+    });
 
-notificationWorker.on('failed', (job, err) => {
-    logger.error(`[Job:${job.id}] Notification failed:`, err);
-});
+    notificationWorker.on('failed', (job, err) => {
+        logger.error(`[Job:${job.id}] Notification failed:`, err);
+    });
+}
 
 module.exports = { notificationWorker, processNotification };

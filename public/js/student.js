@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const response = await fetch('/api/complaints/submit', {
+            const response = await fetch('http://117.237.13.35:5000/api/complaints/submit', {
                 method: 'POST',
                 headers: { 
                     // Note: Browser automatically sets Content-Type to multipart/form-data with boundary when using FormData
@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function fetchComplaints() {
         try {
             const token = localStorage.getItem('scrs_token');
-            const response = await fetch(`/api/complaints/student/${user.student_id}`, {
+            const response = await fetch(`http://117.237.13.35:5000/api/complaints/student/${user.student_id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();

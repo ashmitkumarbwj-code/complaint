@@ -9,18 +9,35 @@ if (!fs.existsSync(galleryDir)) {
 }
 
 const db = require('../config/db');
+const logger = require('../utils/logger');
 
 /**
  * @route   GET /api/gallery
- * @desc    Get all gallery images from DB
+ * @desc    Get all gallery images from DB (Authenticated)
  */
 exports.getGallery = async (req, res) => {
     try {
-        const [images] = await db.tenantExecute(req, 'SELECT * FROM gallery_images ORDER BY created_at DESC');
+        // Use db.execute because gallery_images has no tenant_id currently.
+        const [images] = await db.execute('SELECT * FROM gallery_images ORDER BY created_at DESC');
         res.json({ success: true, images });
     } catch (error) {
         logger.error('Get gallery error:', error);
         res.status(500).json({ success: false, message: 'Error fetching gallery images' });
+    }
+};
+
+/**
+ * @route   GET /api/dashboards/public/gallery
+ * @desc    Get public gallery images
+ */
+exports.getPublicGallery = async (req, res) => {
+    try {
+        // Global fetch since there's no tenant_id natively in this table
+        const [images] = await db.execute('SELECT * FROM gallery_images ORDER BY created_at DESC');
+        res.json({ success: true, images });
+    } catch (error) {
+        logger.error('Get public gallery error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching images' });
     }
 };
 

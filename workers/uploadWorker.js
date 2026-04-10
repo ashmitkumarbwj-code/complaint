@@ -54,17 +54,20 @@ const processUpload = async (job) => {
     throw new Error(`Unknown job type: ${job.name}`);
 };
 
-const uploadWorker = new Worker('uploads', processUpload, { 
-    connection,
-    concurrency: 3 // Up to 3 parallel uploads
-});
+let uploadWorker = null;
+if (connection && process.env.USE_REDIS === 'true') {
+    uploadWorker = new Worker('uploads', processUpload, { 
+        connection,
+        concurrency: 3 // Up to 3 parallel uploads
+    });
 
-uploadWorker.on('completed', (job) => {
-    logger.info(`[Job:${job.id}] Upload completed successfully.`);
-});
+    uploadWorker.on('completed', (job) => {
+        logger.info(`[Job:${job.id}] Upload completed successfully.`);
+    });
 
-uploadWorker.on('failed', (job, err) => {
-    logger.error(`[Job:${job.id}] Upload failed:`, err);
-});
+    uploadWorker.on('failed', (job, err) => {
+        logger.error(`[Job:${job.id}] Upload failed:`, err);
+    });
+}
 
 module.exports = { uploadWorker, processUpload };

@@ -48,14 +48,14 @@ async function fetchDashboardData() {
 
     try {
         // Fetch Stats
-        const statsRes = await fetch(`/api/dashboards/authority/stats/${user.department_id}`, {
+        const statsRes = await fetch(`http://117.237.13.35:5000/api/dashboards/authority/stats/${user.department_id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const statsData = await statsRes.json();
         if (statsData.success) updateStatsUI(statsData.stats);
 
         // Fetch Complaints
-        const compRes = await fetch(`/api/dashboards/authority/complaints/${user.department_id}`, {
+        const compRes = await fetch(`http://117.237.13.35:5000/api/dashboards/authority/complaints/${user.department_id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const compData = await compRes.json();
@@ -159,7 +159,7 @@ async function updateComplaintStatus(id, newStatus) {
     const notes = document.getElementById('admin-notes').value;
 
     try {
-        const res = await fetch(`/api/complaints/status/${id}`, {
+        const res = await fetch(`http://117.237.13.35:5000/api/complaints/status/${id}`, {
             method: 'PATCH',
             headers: { 
                 'Authorization': `Bearer ${token}`,

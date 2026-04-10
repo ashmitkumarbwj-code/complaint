@@ -345,9 +345,10 @@ body {
     border-radius: 50%;
     box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
     border: 2px solid var(--gold);
-    background-color: var(--white);
     padding: 3px;
     flex-shrink: 0;
+    /* Blend mode helps if logo has white background */
+    mix-blend-mode: lighten; 
 }
 
 .college-header h2 {

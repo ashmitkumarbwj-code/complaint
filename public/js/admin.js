@@ -102,7 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch(`/api/admin/complaints/${id}/status`, {
+            const res = await fetch(`http://117.237.13.35:5000/api/admin/complaints/${id}/status`, {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function fetchStats() {
         try {
             const token = localStorage.getItem('scrs_token');
-            const statsRes = await fetch('/api/stats/admin', {
+            const statsRes = await fetch('http://117.237.13.35:5000/api/stats/admin', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const stats = await statsRes.json();
@@ -304,7 +304,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             // Fallback: fetch directly if not yet populated
             const token = localStorage.getItem('scrs_token');
-            fetch('/api/admin/departments', { headers: { 'Authorization': `Bearer ${token}` } })
+            fetch('http://117.237.13.35:5000/api/admin/departments', { headers: { 'Authorization': `Bearer ${token}` } })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
@@ -340,7 +340,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch(`/api/admin/complaints/${forwardTargetId}/forward`, {
+            const res = await fetch(`http://117.237.13.35:5000/api/admin/complaints/${forwardTargetId}/forward`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -374,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function fetchDeptManagement() {
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch('/api/departments', {
+            const res = await fetch('http://117.237.13.35:5000/api/departments', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -445,7 +445,7 @@ document.addEventListener("DOMContentLoaded", () => {
             title.textContent = 'Edit Department';
             try {
                 const token = localStorage.getItem('scrs_token');
-                const res = await fetch(`/api/departments/${deptId}`, {
+                const res = await fetch(`http://117.237.13.35:5000/api/departments/${deptId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
@@ -532,7 +532,7 @@ document.addEventListener("DOMContentLoaded", () => {
             historyList.innerHTML = '<li style="color:var(--text-muted); font-size:0.8rem;">Loading history...</li>';
             try {
                 const token = localStorage.getItem('scrs_token');
-                const res = await fetch(`/api/complaints/${id}/history`, {
+                const res = await fetch(`http://117.237.13.35:5000/api/complaints/${id}/history`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
@@ -573,7 +573,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch(`/api/departments/${deptId}`, {
+            const res = await fetch(`http://117.237.13.35:5000/api/departments/${deptId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -615,7 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch('/api/departments/available-staff', {
+            const res = await fetch('http://117.237.13.35:5000/api/departments/available-staff', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -637,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch(`/api/departments/${activeDeptIdForMembers}/members`, {
+            const res = await fetch(`http://117.237.13.35:5000/api/departments/${activeDeptIdForMembers}/members`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -661,7 +661,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch(`/api/departments/${deptId}/members/${userId}`, {
+            const res = await fetch(`http://117.237.13.35:5000/api/departments/${deptId}/members/${userId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -752,7 +752,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function fetchStaff() {
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch('/api/admin/staff', {
+            const res = await fetch('http://117.237.13.35:5000/api/admin/staff', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -779,7 +779,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function fetchStudents() {
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch('/api/admin/students', {
+            const res = await fetch('http://117.237.13.35:5000/api/admin/students', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -811,7 +811,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function loadDepartments() {
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch('/api/admin/departments', {
+            const res = await fetch('http://117.237.13.35:5000/api/admin/departments', {
                 headers: { 'Authorization': token ? `Bearer ${token}` : '' }
             });
             const data = await res.json();
@@ -833,7 +833,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function loadGallery() {
         try {
-            const res = await fetch('/api/gallery');
+            const res = await fetch('http://117.237.13.35:5000/api/gallery');
             const data = await res.json();
             if (data.success) {
                 const grid = document.getElementById('gallery-grid');
@@ -864,7 +864,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.updateGalleryTitle = async (id, title) => {
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch(`/api/gallery/${id}/title`, {
+            const res = await fetch(`http://117.237.13.35:5000/api/gallery/${id}/title`, {
                 method: 'PATCH',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -895,7 +895,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             try {
                 const token = localStorage.getItem('scrs_token');
-                const res = await fetch('/api/admin/add-student', {
+                const res = await fetch('http://117.237.13.35:5000/api/admin/add-student', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -934,7 +934,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             try {
                 const token = localStorage.getItem('scrs_token');
-                const res = await fetch('/api/admin/add-staff', {
+                const res = await fetch('http://117.237.13.35:5000/api/admin/add-staff', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -998,7 +998,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 try {
                     const token = localStorage.getItem('scrs_token');
-                    const res = await fetch('/api/gallery/upload', {
+                    const res = await fetch('http://117.237.13.35:5000/api/gallery/upload', {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${token}` },
                         body: formData
@@ -1025,7 +1025,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!confirm(`Are you sure you want to delete this image?`)) return;
         try {
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch(`/api/gallery/${id}`, {
+            const res = await fetch(`http://117.237.13.35:5000/api/gallery/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });

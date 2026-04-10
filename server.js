@@ -57,28 +57,29 @@ app.use(helmet({
   contentSecurityPolicy: false // disabled for simple CDN loading of GSAP and Charts
 }));
 
-// Strict CORS Configuration
+// Strict CORS Configuration for Vercel/EC2 split
 const frontendUrls = process.env.FRONTEND_URLS ? process.env.FRONTEND_URLS.split(',').map(u => u.trim()) : [];
 
 const allowedOrigins = [
     ...frontendUrls,
     process.env.BASE_URL,
+    'http://localhost:3000',
     'http://127.0.0.1:3000'
 ].filter(Boolean);
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, or Postman)
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            callback(new Error('Not allowed by CORS'));
+            callback(new Error('CORS error / blocked by policy'));
         }
     },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true // CRITICAL: Allows Vercel frontend to pass tokens/cookies to EC2
 }));
 
 // Body parser
@@ -131,9 +132,12 @@ app.use((req, res, next) => {
     }
 });
 
-// Initialize Background Workers (BullMQ) if Redis is available
+// CRITICAL: Check if running in Vercel Serverless environment
+const isServerless = process.env.VERCEL === '1';
+
+// Initialize Background Workers (BullMQ) if Redis is available and not on Vercel
 const { getIsAvailable } = require('./config/redis');
-if (getIsAvailable()) {
+if (!isServerless && getIsAvailable()) {
     require('./workers/index');
 
     // BullBoard Integration for Queue Monitoring
@@ -192,55 +196,59 @@ app.use((err, req, res, next) => {
 const complaintControllerCore = require('./controllers/complaintController');
 const escalationService = require('./utils/escalationService');
 const backupService = require('./utils/backupService');
-
 const resyncWorker = require('./workers/resyncWorker');
 
-// Run database backup daily
-setInterval(async () => {
-    try {
-        await backupService.runBackup();
-        await backupService.cleanupOldBackups();
-    } catch (err) {
-        logger.error('[Cron] Daily Backup/Cleanup Failed:', err);
-    }
-}, 24 * 60 * 60 * 1000);
-
-// Run Resilience Re-sync every 10 minutes
-setInterval(async () => {
-    await resyncWorker.processPendingResyncs();
-}, 10 * 60 * 1000);
-
-// Run media cleanup job daily
-setInterval(async () => {
-    await complaintControllerCore.cleanupOldMedia();
-}, 24 * 60 * 60 * 1000);
-
-// Run SLA Escalation Job every hour
-setInterval(async () => {
-    await escalationService.processEscalations();
-}, 1 * 60 * 60 * 1000);
-
-// Run OTP Database Cleanup Job every hour
-setInterval(async () => {
-    try {
-        const db = require('./config/db');
-        const [result] = await db.execute('DELETE FROM otps WHERE expires_at < NOW() OR is_used = 1');
-        if (result.affectedRows > 0) {
-            logger.info(`[OTP Job] Cleaned up ${result.affectedRows} expired/used OTPs`);
+if (!isServerless) {
+    // Run database backup daily
+    setInterval(async () => {
+        try {
+            await backupService.runBackup();
+            await backupService.cleanupOldBackups();
+        } catch (err) {
+            logger.error('[Cron] Daily Backup/Cleanup Failed:', err);
         }
-    } catch (e) {
-        logger.error('[OTP Job] Cleanup failed', e);
-    }
-}, 1 * 60 * 60 * 1000);
+    }, 24 * 60 * 60 * 1000);
 
-// Run initial checks 5 seconds after server start
-setTimeout(async () => {
-    await complaintControllerCore.cleanupOldMedia();
-    await escalationService.processEscalations();
-}, 5000);
+    // Run Resilience Re-sync every 10 minutes
+    setInterval(async () => {
+        await resyncWorker.processPendingResyncs();
+    }, 10 * 60 * 1000);
 
+    // Run media cleanup job daily
+    setInterval(async () => {
+        await complaintControllerCore.cleanupOldMedia();
+    }, 24 * 60 * 60 * 1000);
 
-// Start Server
-http.listen(PORT, () => {
-    logger.info(`Smart Campus server started on port ${PORT} (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
-});
+    // Run SLA Escalation Job every hour
+    setInterval(async () => {
+        await escalationService.processEscalations();
+    }, 1 * 60 * 60 * 1000);
+
+    // Run OTP Database Cleanup Job every hour
+    setInterval(async () => {
+        try {
+            const db = require('./config/db');
+            const [result] = await db.execute('DELETE FROM otps WHERE expires_at < NOW() OR is_used = 1');
+            if (result.affectedRows > 0) {
+                logger.info(`[OTP Job] Cleaned up ${result.affectedRows} expired/used OTPs`);
+            }
+        } catch (e) {
+            logger.error('[OTP Job] Cleanup failed', e);
+        }
+    }, 1 * 60 * 60 * 1000);
+
+    // Run initial checks 5 seconds after server start
+    setTimeout(async () => {
+        await complaintControllerCore.cleanupOldMedia();
+        await escalationService.processEscalations();
+    }, 5000);
+
+    // Start Server
+    http.listen(PORT, () => {
+        logger.info(`Smart Campus server started on port ${PORT} (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
+    });
+} else {
+    logger.warn('Vercel Serverless mode detected: Background workers, chron jobs, and listeners are disabled.');
+}
+
+module.exports = app;

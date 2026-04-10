@@ -226,49 +226,109 @@ function initChart() {
 }
 
 function renderChart(canvas) {
-    new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-            datasets: [
-                {
-                    label: 'Resolved Issues (Green Bar)',
-                    data: [120, 190, 250, 310],
-                    backgroundColor: '#2ea043', /* Green */
-                    borderRadius: 4
-                },
-                {
-                    label: 'Unresolved Issues (Red Bar)',
-                    data: [45, 30, 15, 5],
-                    backgroundColor: '#f85149', /* Red */
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            animation: {
-                duration: 2000,
-                easing: 'easeOutQuart'
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(255,255,255,0.1)' },
-                    ticks: { color: '#adb5bd' }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#adb5bd' }
-                }
-            },
-            plugins: {
-                legend: {
-                    labels: { color: '#ffffff', font: { family: 'Inter' } }
-                }
+    // Create a loading overlay inside the parent container
+    const parent = canvas.parentElement;
+
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'chart-loading-overlay';
+    loadingOverlay.style.cssText = `
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 1rem; border-radius: 12px;
+        background: rgba(11, 19, 43, 0.5);
+        z-index: 5;
+    `;
+    loadingOverlay.innerHTML = `
+        <div style="width: 36px; height: 36px; border: 3px solid rgba(212,175,55,0.2); border-top-color: #d4af37; border-radius: 50%; animation: chartSpin 0.9s linear infinite;"></div>
+        <p style="color: #adb5bd; font-size: 0.85rem; font-family: Inter, sans-serif;">Loading live data...</p>
+        <style>@keyframes chartSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>
+    `;
+    parent.appendChild(loadingOverlay);
+    canvas.style.opacity = '0';
+
+    fetch('http://117.237.13.35:5000/api/dashboards/public/weekly-stats')
+        .then(res => res.json())
+        .then(data => {
+            loadingOverlay.remove();
+
+            const hasData = data.success &&
+                (data.resolved.some(v => v > 0) || data.unresolved.some(v => v > 0));
+
+            if (!hasData) {
+                // Show empty state instead of blank chart
+                const emptyEl = document.createElement('div');
+                emptyEl.style.cssText = `
+                    position: absolute; inset: 0;
+                    display: flex; flex-direction: column;
+                    align-items: center; justify-content: center;
+                    gap: 0.75rem;
+                `;
+                emptyEl.innerHTML = `
+                    <i class="fa-solid fa-chart-bar" style="font-size: 2rem; color: rgba(255,255,255,0.15);"></i>
+                    <p style="color: #adb5bd; font-size: 0.9rem; font-family: Inter, sans-serif;">No complaint data yet — check back soon.</p>
+                `;
+                parent.appendChild(emptyEl);
+                return;
             }
-        }
-    });
+
+            canvas.style.transition = 'opacity 0.6s ease';
+            canvas.style.opacity = '1';
+
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: data.weeks,
+                    datasets: [
+                        {
+                            label: 'Resolved',
+                            data: data.resolved,
+                            backgroundColor: '#2ea043',
+                            borderRadius: 5
+                        },
+                        {
+                            label: 'Unresolved',
+                            data: data.unresolved,
+                            backgroundColor: '#f85149',
+                            borderRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 2000, easing: 'easeOutQuart' },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.08)' },
+                            ticks: { color: '#adb5bd' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#adb5bd' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff', font: { family: 'Inter', size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} complaints`
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(err => {
+            console.error('[Chart] Error rendering chart:', err);
+            loadingOverlay.innerHTML = `
+                <i class="fa-solid fa-triangle-exclamation" style="color: #f85149; font-size: 1.5rem;"></i>
+                <p style="color: #adb5bd; font-size: 0.85rem; font-family: Inter, sans-serif;">Chart unavailable. Please refresh.</p>
+            `;
+        });
 }
 
 /* =========================================================================
@@ -277,7 +337,7 @@ function renderChart(canvas) {
 function initCounters() {
     const runCounters = async () => {
         try {
-            const res = await fetch('/api/dashboards/public/stats');
+            const res = await fetch('http://117.237.13.35:5000/api/dashboards/public/stats');
             const data = await res.json();
             
             if (data.success) {
@@ -320,7 +380,7 @@ function initDynamicGallery() {
     let currentSlide = 0;
     let slideInterval;
 
-    fetch('/api/gallery')
+    fetch('http://117.237.13.35:5000/api/gallery/public')
         .then(response => response.json())
         .then(data => {
             if (data.success && data.images && data.images.length > 0) {

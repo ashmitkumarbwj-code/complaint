@@ -6,9 +6,11 @@ class CacheService {
         this.client = null;
         this.isConnected = false;
         
-        // Only connect if REDIS_URL or REDIS_HOST is configured, otherwise silently skip
-        // This prevents local dev from crashing if Redis is not installed
-        if (process.env.REDIS_URL || process.env.REDIS_HOST) {
+        // Only connect when both USE_REDIS=true AND REDIS_HOST/URL is configured.
+        // This prevents local dev from crashing if Redis is not installed.
+        const useRedis = process.env.USE_REDIS === 'true';
+
+        if (useRedis && (process.env.REDIS_URL || process.env.REDIS_HOST)) {
             this.client = new Redis(process.env.REDIS_URL || {
                 host: process.env.REDIS_HOST || '127.0.0.1',
                 port: process.env.REDIS_PORT || 6379,
@@ -25,7 +27,7 @@ class CacheService {
                 this.isConnected = false;
             });
         } else {
-            logger.warn('[Redis] No Redis configuration found. Caching will be disabled.');
+            logger.warn('[Redis] Caching disabled (USE_REDIS != true). All cache ops are no-ops.');
         }
     }
 

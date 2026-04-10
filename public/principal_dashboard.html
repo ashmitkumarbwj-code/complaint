@@ -217,6 +217,11 @@
             .sidebar { transform: translateX(-100%); }
             .main-content { margin-left: 0; }
         }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -233,7 +238,7 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="sidebar-header" style="padding: 1.5rem 1rem;">
-            <img src="images/branding/logo.png" alt="Logo" style="height: 60px; margin-bottom: 0.8rem; border-radius: 50%; border: 2px solid var(--gold); background: white; padding: 2px;">
+            <img src="images/branding/logo.png" alt="Logo" style="height: 60px; margin-bottom: 0.8rem; border-radius: 50%; border: 2px solid var(--gold); padding: 2px;">
             <h2 style="font-size: 0.9rem; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin: 0;">Govt. College Dharamshala</h2>
         </div>
         <nav class="sidebar-nav">
@@ -401,6 +406,32 @@
                     <div class="stat-icon" style="color:#10b981;background:rgba(16,185,129,0.1);"><i class="fa-solid fa-circle-check"></i></div>
                     <div class="stat-value" id="analytics-resolved">0</div>
                     <div class="stat-label">Resolved</div>
+                </div>
+            </div>
+
+            <div class="card glass-panel gsap-reveal" style="margin-bottom: 2rem; padding: 2rem; --d: 0.1s">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <h3 class="card-title" style="margin-bottom: 0.2rem;"><i class="fa-solid fa-chart-simple" style="margin-right:0.6rem; color:var(--gold-color);"></i>Weekly Performance Trend</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary);">Real-time tracking of Resolved vs Unresolved issues over the past 4 weeks.</p>
+                    </div>
+                    <div id="weekly-chart-refresh-indicator" style="display:none; font-size: 0.75rem; color: var(--text-secondary); align-items: center; gap: 0.4rem;">
+                        <i class="fa-solid fa-rotate fa-spin" style="color: var(--gold-color);"></i> Refreshing...
+                    </div>
+                </div>
+                <div style="height: 350px; position: relative;">
+                    <!-- Loading State -->
+                    <div id="weekly-chart-loading" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; z-index: 10; background: rgba(11,19,43,0.6); border-radius: 12px;">
+                        <div style="width: 40px; height: 40px; border: 3px solid rgba(212,175,55,0.2); border-top-color: var(--gold-color); border-radius: 50%; animation: spin 0.9s linear infinite;"></div>
+                        <p style="color: var(--text-secondary); font-size: 0.85rem;">Loading complaint data...</p>
+                    </div>
+                    <!-- Empty State -->
+                    <div id="weekly-chart-empty" style="position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; z-index: 10;">
+                        <i class="fa-solid fa-chart-bar" style="font-size: 2.5rem; color: rgba(255,255,255,0.15);"></i>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">No complaint data for the last 4 weeks.</p>
+                        <p style="color: rgba(255,255,255,0.3); font-size: 0.8rem;">Data will appear here as complaints are submitted.</p>
+                    </div>
+                    <canvas id="weeklyPerformanceChart"></canvas>
                 </div>
             </div>
 

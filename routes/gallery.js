@@ -33,7 +33,16 @@ const upload = multer({
 });
 
 // @route   GET /api/gallery
-router.get('/', galleryController.getGallery);
+// Public access handled inside controller (checks auth)
+router.get('/', (req, res, next) => {
+    // We don't use the 'auth' middleware here so it can be public.
+    // The controller will use req.user if it exists.
+    next();
+}, galleryController.getGallery);
+
+// @route   GET /api/gallery/public
+// Explicit public route
+router.get('/public', galleryController.getPublicGallery);
 
 // @route   POST /api/gallery/upload
 router.post('/upload', auth, checkRole(['Admin']), upload.single('file'), galleryController.uploadImage);

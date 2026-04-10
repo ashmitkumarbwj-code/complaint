@@ -12,13 +12,19 @@ if (missing.length > 0) {
 }
 
 // ─── 2. Connection Pool Configuration ────────────────────────────────────────
+// Prevent Lambda function container explosion on Vercel
+let connLimit = parseInt(process.env.DB_POOL_SIZE || '10', 10);
+if (process.env.VERCEL === '1') {
+    connLimit = parseInt(process.env.SERVERLESS_DB_POOL_SIZE || '1', 10); 
+}
+
 const poolConfig = {
     host:              process.env.DB_HOST,
     user:              process.env.DB_USER,
     password:          process.env.DB_PASSWORD,
     database:          process.env.DB_NAME,
     waitForConnections: true,
-    connectionLimit:   parseInt(process.env.DB_POOL_SIZE || '10', 10),
+    connectionLimit:   connLimit,
     queueLimit:        0,          // Unlimited queue — requests wait, never fail silently
     enableKeepAlive:   true,       // Sends a TCP keep-alive to prevent idle disconnections
     keepAliveInitialDelay: 10000   // Start keep-alive pings after 10 seconds idle
