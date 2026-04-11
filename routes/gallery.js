@@ -33,12 +33,8 @@ const upload = multer({
 });
 
 // @route   GET /api/gallery
-// Public access handled inside controller (checks auth)
-router.get('/', (req, res, next) => {
-    // We don't use the 'auth' middleware here so it can be public.
-    // The controller will use req.user if it exists.
-    next();
-}, galleryController.getGallery);
+// Restrict the full image list (with metadata) to Admins only
+router.get('/', auth, checkRole(['Admin']), galleryController.getGallery);
 
 // @route   GET /api/gallery/public
 // Explicit public route
