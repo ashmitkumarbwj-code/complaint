@@ -26,7 +26,7 @@ async function nextStep(step) {
             savedIdentifier = email;
 
             try {
-                const response = await fetch('http://117.237.13.35:5000/api/auth/request-activation', {
+                const response = await fetch(`${API_BASE}/api/auth/request-activation`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -48,7 +48,7 @@ async function nextStep(step) {
             
             // 1. Validate against DB first
             try {
-                const checkRes = await fetch('http://117.237.13.35:5000/api/auth/validate-activation', {
+                const checkRes = await fetch(`${API_BASE}/api/auth/validate-activation`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ role, mobile_number: mobile, roll_number: rollNumber, tenant_id: 1 })
@@ -72,7 +72,7 @@ async function nextStep(step) {
         if (selectedMethod === 'email') {
             const email = document.getElementById('email').value.trim();
             try {
-                const response = await fetch('http://117.237.13.35:5000/api/auth/verify-otp', {
+                const response = await fetch(`${API_BASE}/api/auth/verify-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ method: 'email', email, otp, tenant_id: 1 })
@@ -116,7 +116,7 @@ async function finishActivation() {
             payload.otp = document.getElementById('otp-code').value.trim();
         }
 
-        const response = await fetch('http://117.237.13.35:5000/api/auth/complete-activation', {
+        const response = await fetch(`${API_BASE}/api/auth/complete-activation`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

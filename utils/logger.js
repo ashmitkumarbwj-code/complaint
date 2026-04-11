@@ -15,17 +15,19 @@ const DailyRotateFile = require('winston-daily-rotate-file');
 const path = require('path');
 const fs = require('fs');
 
-// ── Ensure the logs/ directory exists ────────────────────────────────────────
+const isServerless = process.env.VERCEL === '1';
+
+// ── Ensure the logs/ directory exists (EC2 ONLY) ──────────────────────────────
 const logsDir = path.join(__dirname, '..', 'logs');
-if (!fs.existsSync(logsDir)) {
+if (!isServerless && !fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
 }
 
 // ── Custom log formats ────────────────────────────────────────────────────────
 const timestampedFormat = format.combine(
     format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    format.errors({ stack: true }),      // include stack trace on Error objects
-    format.splat(),                       // support printf-style %s substitutions
+    format.errors({ stack: true }),      
+    format.splat(),                       
     format.printf(({ timestamp, level, message, stack }) => {
         return stack
             ? `[${timestamp}] ${level.toUpperCase()}: ${message}\n${stack}`
@@ -38,7 +40,6 @@ const jsonFormat = format.combine(
     format.errors({ stack: true }),
     format.splat(),
     format((info) => {
-        // Attempt to get context from traceMiddleware
         try {
             const { getStore } = require('../middleware/traceMiddleware');
             const store = getStore();
@@ -46,60 +47,59 @@ const jsonFormat = format.combine(
                 return { ...info, ...store };
             }
         } catch (e) {
-            // Middleware might not be loaded yet or outside req context
+            // Context undefined
         }
         return info;
     })(),
     format.json()
 );
 
-// ── Daily-rotate transport factory ───────────────────────────────────────────
 const makeRotatingTransport = (filename, level) =>
     new DailyRotateFile({
         filename:      path.join(logsDir, `${filename}-%DATE%.log`),
         datePattern:   'YYYY-MM-DD',
-        zippedArchive: true,       // compress old log files
-        maxSize:       '20m',      // rotate if a single file exceeds 20 MB
-        maxFiles:      '14d',      // keep 14 days of logs
+        zippedArchive: true,       
+        maxSize:       '20m',      
+        maxFiles:      '14d',     
         level,
         format:        jsonFormat
     });
 
+// Map environment-aware pipelines
+const transportsList = [];
+const anomalyHandlers = [];
+
+if (!isServerless) {
+    transportsList.push(
+        makeRotatingTransport('access', 'info'),
+        makeRotatingTransport('error', 'error')
+    );
+    anomalyHandlers.push(
+        new DailyRotateFile({
+            filename:    path.join(logsDir, 'error-%DATE%.log'),
+            datePattern: 'YYYY-MM-DD',
+            maxFiles:    '14d',
+            format:      jsonFormat
+        })
+    );
+}
+
 // ── Main application logger ───────────────────────────────────────────────────
 const logger = createLogger({
     level: process.env.LOG_LEVEL || 'info',
-    transports: [
-        // All levels (info and above) → combined / access
-        makeRotatingTransport('access', 'info'),
-        // Only warn / error → dedicated error log
-        makeRotatingTransport('error', 'error'),
-    ],
-    exceptionHandlers: [
-        // Uncaught exceptions also land in the error log
-        new DailyRotateFile({
-            filename:    path.join(logsDir, 'error-%DATE%.log'),
-            datePattern: 'YYYY-MM-DD',
-            maxFiles:    '14d',
-            format:      jsonFormat
-        })
-    ],
-    rejectionHandlers: [
-        // Unhandled promise rejections too
-        new DailyRotateFile({
-            filename:    path.join(logsDir, 'error-%DATE%.log'),
-            datePattern: 'YYYY-MM-DD',
-            maxFiles:    '14d',
-            format:      jsonFormat
-        })
-    ],
+    transports: transportsList.length > 0 ? transportsList : [new transports.Console()],
+    exceptionHandlers: anomalyHandlers,
+    rejectionHandlers: anomalyHandlers,
     exitOnError: false
 });
 
-// ── Console transport (coloured, only in non-production) ─────────────────────
-if (process.env.NODE_ENV !== 'production') {
-    logger.add(new transports.Console({
-        format: format.combine(format.colorize(), timestampedFormat)
-    }));
+// ── Fallback Console Transport ────────────────────────────────────────────────
+if (isServerless || process.env.NODE_ENV !== 'production') {
+    if (transportsList.length > 0) {
+        logger.add(new transports.Console({
+            format: format.combine(format.colorize(), timestampedFormat)
+        }));
+    }
 }
 
 // ── Morgan stream adapter ─────────────────────────────────────────────────────

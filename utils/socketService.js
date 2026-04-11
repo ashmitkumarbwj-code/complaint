@@ -5,9 +5,7 @@ module.exports = {
         const { Server } = require('socket.io');
 
         // ─── Restrict CORS to the configured origin ───────────────────────────
-        const allowedOrigin = process.env.BASE_URL
-            ? [process.env.BASE_URL, 'http://localhost:3000']
-            : '*';   // Fallback to wildcard only in local dev (no BASE_URL set)
+        const allowedOrigin = '*';
 
         io = new Server(server, {
             cors: {

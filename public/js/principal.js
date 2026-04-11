@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchCriticalComplaints();
 
     // 4. Socket.io setup
-    const socket = io();
+    const socket = io(API_BASE);
     socket.emit('join', 'principal_room');
 
     socket.on('emergency_alert', (data) => {
@@ -95,7 +95,7 @@ function setupNav() {
 async function fetchDashboardStats() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('http://117.237.13.35:5000/api/dashboards/principal/stats', {
+        const res = await fetch(`${API_BASE}/api/dashboards/principal/stats`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -115,7 +115,7 @@ async function fetchDashboardStats() {
 async function fetchCriticalComplaints() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('http://117.237.13.35:5000/api/dashboards/principal/critical', {
+        const res = await fetch(`${API_BASE}/api/dashboards/principal/critical`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -292,7 +292,7 @@ async function loadComplaintHistory(id) {
 
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch(`http://117.237.13.35:5000/api/complaints/${id}/history`, {
+        const res = await fetch(`${API_BASE}/api/complaints/${id}/history`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -330,7 +330,7 @@ document.getElementById('btn-clear-next').addEventListener('click', async () => 
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Clearing...';
 
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch(`http://117.237.13.35:5000/api/complaints/status/${complaintId}`, {
+        const res = await fetch(`${API_BASE}/api/complaints/status/${complaintId}`, {
             method: 'PATCH',
             headers: { 
                 'Authorization': `Bearer ${token}`,
@@ -595,7 +595,7 @@ async function fetchWeeklyPerformance() {
 
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('http://117.237.13.35:5000/api/dashboards/weekly-stats', {
+        const res = await fetch(`${API_BASE}/api/dashboards/weekly-stats`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -667,7 +667,7 @@ function updateCharts(departments) {
 async function fetchAllComplaintsForPrincipal() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('http://117.237.13.35:5000/api/complaints/all', {
+        const res = await fetch(`${API_BASE}/api/complaints/all`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -710,7 +710,7 @@ function renderAllComplaints(complaints) {
 async function fetchDeptPerformance() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('http://117.237.13.35:5000/api/departments/stats/all', {
+        const res = await fetch(`${API_BASE}/api/departments/stats/all`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -782,7 +782,7 @@ async function fetchDeptPerformance() {
 async function fetchPrincipalAnalytics() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('http://117.237.13.35:5000/api/dashboards/admin/stats', {
+        const res = await fetch(`${API_BASE}/api/dashboards/admin/stats`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -803,7 +803,7 @@ async function fetchPrincipalAnalytics() {
 async function fetchEmergencyAlerts() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('http://117.237.13.35:5000/api/dashboards/principal/critical', {
+        const res = await fetch(`${API_BASE}/api/dashboards/principal/critical`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();

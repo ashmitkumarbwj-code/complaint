@@ -23,7 +23,7 @@ async function nextStep(step) {
         }
 
         try {
-            const response = await fetch('http://117.237.13.35:5000/api/auth/request-reset', {
+            const response = await fetch(`${API_BASE}/api/auth/request-reset`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -54,7 +54,7 @@ async function nextStep(step) {
         }
 
         try {
-            const response = await fetch('http://117.237.13.35:5000/api/auth/verify-otp', {
+            const response = await fetch(`${API_BASE}/api/auth/verify-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -101,7 +101,7 @@ async function finishReset() {
     }
 
     try {
-        const response = await fetch('http://117.237.13.35:5000/api/auth/reset-password', {
+        const response = await fetch(`${API_BASE}/api/auth/reset-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

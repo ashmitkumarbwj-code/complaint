@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
         tlHero.from(".visual-card", { x: 50, opacity: 0, duration: 1, ease: "power3.out"}, "-=0.8");
 
         try {
-            const res = await fetch('http://117.237.13.35:5000/api/dashboards/public/stats?tenant_id=1');
+            const res = await fetch(`${API_BASE}/api/dashboards/public/stats?tenant_id=1`);
             const data = await res.json();
             if (data.success) {
                 const total = data.solved + data.unresolved;

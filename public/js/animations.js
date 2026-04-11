@@ -247,7 +247,7 @@ function renderChart(canvas) {
     parent.appendChild(loadingOverlay);
     canvas.style.opacity = '0';
 
-    fetch('http://117.237.13.35:5000/api/dashboards/public/weekly-stats')
+    fetch(`${API_BASE}/api/dashboards/public/weekly-stats`)
         .then(res => res.json())
         .then(data => {
             loadingOverlay.remove();
@@ -337,7 +337,7 @@ function renderChart(canvas) {
 function initCounters() {
     const runCounters = async () => {
         try {
-            const res = await fetch('http://117.237.13.35:5000/api/dashboards/public/stats');
+            const res = await fetch(`${API_BASE}/api/dashboards/public/stats`);
             const data = await res.json();
             
             if (data.success) {
@@ -380,7 +380,7 @@ function initDynamicGallery() {
     let currentSlide = 0;
     let slideInterval;
 
-    fetch('http://117.237.13.35:5000/api/gallery/public')
+    fetch(`${API_BASE}/api/gallery/public`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.images && data.images.length > 0) {
