@@ -5,7 +5,7 @@ module.exports = {
         const { Server } = require('socket.io');
 
         // ─── Restrict CORS to the configured origin ───────────────────────────
-        const allowedOrigin = '*';
+        const allowedOrigin = 'https://smart-complaint-and-response-system.vercel.app';
 
         io = new Server(server, {
             cors: {

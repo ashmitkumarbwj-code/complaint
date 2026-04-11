@@ -57,18 +57,21 @@ app.use(helmet({
   contentSecurityPolicy: false // disabled for simple CDN loading of GSAP and Charts
 }));
 
-// Strict CORS Configuration for Vercel/EC2 split
-const frontendUrls = process.env.FRONTEND_URLS ? process.env.FRONTEND_URLS.split(',').map(u => u.trim()) : [];
-
 const allowedOrigins = [
-    ...frontendUrls,
-    process.env.BASE_URL,
+    'https://smart-complaint-and-response-system.vercel.app',
     'http://localhost:3000',
     'http://127.0.0.1:3000'
-].filter(Boolean);
+];
 
 app.use(cors({
-    origin: "*",
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS error / blocked by production policy'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true 
