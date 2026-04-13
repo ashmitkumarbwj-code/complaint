@@ -1,20 +1,20 @@
 const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
-    // Get token from header
-    const authHeader = req.header('Authorization');
+    // 1. Get token from Cookie (Priority - Secure)
+    // 2. Fallback to Authorization Header (Bearer <token>)
+    let token = req.cookies?.accessToken;
+
+    if (!token) {
+        const authHeader = req.header('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1];
+        }
+    }
     
-    if (!authHeader) {
+    if (!token) {
         return res.status(401).json({ success: false, message: 'No token, authorization denied' });
     }
-
-    // Header format: Bearer <token>
-    const tokenParts = authHeader.split(' ');
-    if (tokenParts.length !== 2 || tokenParts[0] !== 'Bearer') {
-        return res.status(401).json({ success: false, message: 'Auth format should be Bearer <token>' });
-    }
-
-    const token = tokenParts[1];
 
     try {
         if (!process.env.JWT_SECRET) {

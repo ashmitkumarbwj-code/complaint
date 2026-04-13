@@ -1,183 +1,136 @@
 'use strict';
 
 require('dotenv').config();
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
-// ─── 1. Strict Environment Variable Validation ────────────────────────────────
-const REQUIRED_VARS = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+// ─── 1. Environment Validation ───────────────────────────────────────────────
+const REQUIRED_VARS = ['DATABASE_URL'];
 const missing = REQUIRED_VARS.filter(v => process.env[v] === undefined);
-if (missing.length > 0) {
+
+if (missing.length > 0 && !process.env.PGHOST) {
     console.error(`[DB FATAL] Missing required environment variables: ${missing.join(', ')}`);
-    process.exit(1);    // Crash fast — never run with an unconfigured DB in production
+    process.exit(1);
 }
 
-// ─── 2. Connection Pool Configuration ────────────────────────────────────────
-// Prevent Lambda function container explosion on Vercel
-let connLimit = parseInt(process.env.DB_POOL_SIZE || '10', 10);
-if (process.env.VERCEL === '1') {
-    connLimit = parseInt(process.env.SERVERLESS_DB_POOL_SIZE || '1', 10); 
-}
+// ─── 2. Pool Configuration ───────────────────────────────────────────────────
+const isNeon = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('neon.tech');
 
 const poolConfig = {
-    host:              process.env.DB_HOST,
-    user:              process.env.DB_USER,
-    password:          process.env.DB_PASSWORD,
-    database:          process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit:   connLimit,
-    queueLimit:        0,          // Unlimited queue — requests wait, never fail silently
-    enableKeepAlive:   true,       // Sends a TCP keep-alive to prevent idle disconnections
-    keepAliveInitialDelay: 10000   // Start keep-alive pings after 10 seconds idle
+    connectionString: process.env.DATABASE_URL,
+    host:             process.env.PGHOST || process.env.DB_HOST,
+    user:             process.env.PGUSER || process.env.DB_USER,
+    password:         process.env.PGPASSWORD || process.env.DB_PASSWORD,
+    database:         process.env.PGDATABASE || process.env.DB_NAME,
+    port:             process.env.PGPORT || 5432,
+    max:              parseInt(process.env.DB_POOL_SIZE || '10', 10),
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
 };
 
-let pool = mysql.createPool(poolConfig);
-
-// ─── 3. Automatic Reconnection Handler ───────────────────────────────────────
-//
-// mysql2 pools expose an 'error' event on the underlying connection handle
-// for protocol-level errors (e.g. ECONNRESET, PROTOCOL_CONNECTION_LOST).
-// We listen to the pool's internal acquire/error lifecycle and recreate the
-// pool when a fatal error is detected.
-//
-function handlePoolError(err) {
-    if (err.fatal) {
-        console.error(`[DB ERROR] Fatal pool error (${err.code}). Recreating pool in 5 seconds...`, err.message);
-        setTimeout(() => {
-            pool = mysql.createPool(poolConfig);
-            attachPoolErrorHandler(pool);
-            console.log('[DB] Pool recreated successfully.');
-        }, 5000);
-    } else {
-        console.warn(`[DB WARN] Non-fatal pool error: ${err.code} – ${err.message}`);
-    }
+if (isNeon || process.env.PGSSL === 'true') {
+    poolConfig.ssl = { rejectUnauthorized: false };
 }
 
-function attachPoolErrorHandler(targetPool) {
-    // mysql2 promise pools expose the underlying core pool
-    targetPool.pool.on('connection', (conn) => {
-        conn.on('error', handlePoolError);
-    });
-}
+const pool = new Pool(poolConfig);
 
-attachPoolErrorHandler(pool);
-
-// ─── 4. Startup Connectivity Check ───────────────────────────────────────────
-(async () => {
-    try {
-        const conn = await pool.getConnection();
-        console.log(`[DB] Connected to '${process.env.DB_NAME}' on ${process.env.DB_HOST}`);
-        conn.release();
-    } catch (err) {
-        console.error(`[DB FATAL] Cannot connect to database on startup: ${err.message}`);
-        process.exit(1);
-    }
-})();
-
-// ─── 5. Parameterized Query Helper (SQL Injection Safe) ───────────────────────
+// ─── 3. Native Database Methods ──────────────────────────────────────────────
 /**
- * Execute a parameterized SQL query.
- *
- * @param {string}  sql    - SQL string with `?` placeholders
- * @param {Array}   params - Values that replace the `?` placeholders
- * @returns {Promise<Array>} - [rows, fields]
- *
- * @example
- *   const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
- *   const [result] = await db.query(
- *       'UPDATE users SET password_hash = ? WHERE mobile_number = ?',
- *       [hash, mobile]
- *   );
+ * Execute a query with PG-native positional parameters ($1, $2...)
+ * Returns [rows, resultObject] for a balanced transition, 
+ * or { rows, rowCount } for pure PG.
+ * Given the large codebase, we will standardize on returning [rows, meta] 
+ * temporarily but WITHOUT the MySQL-mimicking hacks.
  */
 async function query(sql, params = []) {
-    if (!Array.isArray(params)) {
-        throw new TypeError('[DB] Query params must be an Array. Never interpolate values directly into SQL strings.');
-    }
+    const start = Date.now();
     try {
-        return await pool.execute(sql, params);     // `execute` uses prepared statements internally
+        const result = await pool.query(sql, params);
+        // Standard shape: [rows, resultFull]
+        return [result.rows, result];
     } catch (err) {
-        console.error('[DB QUERY ERROR]', {
-            message: err.message,
-            code:    err.code,
-            sql:     sql.replace(/\s+/g, ' ').trim().substring(0, 200)   // Truncated for log safety
-        });
-        throw err;  // Re-throw so callers can handle appropriately
+        console.error(`[DB ERROR] Query: ${sql}\nParams: ${JSON.stringify(params)}\nError: ${err.message}`);
+        throw err;
     }
 }
 
-// ─── Exports ──────────────────────────────────────────────────────────────────
 /**
- * Automated Tenant Isolation Wrapper (Golden Rule Enforcement)
- * Automatically appends 'AND tenant_id = ?' to SQL queries using context from req.user.
- * 
- * @param {Object} req - Express request object (must have req.user.tenant_id)
- * @param {string} sql - Original SQL string
- * @param {Array}  params - Original query parameters
+ * tenantExecute: Native PG with Tenant Isolation
+ * Now expects native PG placeholders ($n) in 'sql'
  */
 async function tenantExecute(req, sql, params = []) {
     if (!req.user || !req.user.tenant_id) {
-        logger.error('[SECURITY FATAL] Tenant context missing on scoped query!');
-        throw new Error('[DB SEC] Tenant context missing in request. Query blocked to prevent leakage.');
+        throw new Error('[DB SEC] Tenant context missing.');
     }
     
     const tenantId = req.user.tenant_id;
     let modifiedSql = sql.trim();
 
-    // identify if it already has a WHERE clause
+    // Isolation Injection (simplified for native PG)
     const hasWhere = /\bWHERE\b/i.test(modifiedSql);
-    const isSelect = /\bSELECT\b/i.test(modifiedSql);
-    const isUpdate = /\bUPDATE\b/i.test(modifiedSql);
-    const isDelete = /\bDELETE\b/i.test(modifiedSql);
+    const isIsolatedKeyword = /\b(UPDATE|DELETE|SELECT)\b/i.test(modifiedSql);
 
-    if (isSelect || isUpdate || isDelete) {
+    if (isIsolatedKeyword) {
+        // Find the right injection point before GROUP/ORDER/LIMIT
+        const injectionTarget = /GROUP BY|ORDER BY|LIMIT/i.exec(modifiedSql);
+        const injectionPoint = injectionTarget ? injectionTarget.index : modifiedSql.length;
+        
+        const prefix = modifiedSql.slice(0, injectionPoint).trim();
+        const suffix = modifiedSql.slice(injectionPoint).trim();
+
+        // Count existing $ placeholders to find the next index
+        const placeholderCount = (modifiedSql.match(/\$\d+/g) || []).length;
+        const tenantPlaceholder = `$${placeholderCount + 1}`;
+
         if (hasWhere) {
-            // Find common trailing clauses to insert BEFORE them
-            if (/\bGROUP BY\b/i.test(modifiedSql)) {
-                modifiedSql = modifiedSql.replace(/\bGROUP BY\b/i, `AND tenant_id = ? GROUP BY`);
-            } else if (/\bORDER BY\b/i.test(modifiedSql)) {
-                modifiedSql = modifiedSql.replace(/\bORDER BY\b/i, `AND tenant_id = ? ORDER BY`);
-            } else if (/\bLIMIT\b/i.test(modifiedSql)) {
-                modifiedSql = modifiedSql.replace(/\bLIMIT\b/i, `AND tenant_id = ? LIMIT`);
-            } else {
-                modifiedSql += ` AND tenant_id = ?`;
-            }
+            modifiedSql = `${prefix} AND tenant_id = ${tenantPlaceholder} ${suffix}`;
         } else {
-            modifiedSql += ` WHERE tenant_id = ?`;
+            modifiedSql = `${prefix} WHERE tenant_id = ${tenantPlaceholder} ${suffix}`;
         }
+        
+        return await query(modifiedSql, [...params, tenantId]);
     }
 
-    // Add tenantId to the END of the params
-    return await pool.execute(modifiedSql, [...params, tenantId]);
+    return await query(modifiedSql, params);
 }
 
 /**
- * Validate Tenant ID from Request Body/Query (For Auth flows)
+ * Native Transaction Wrapper
  */
-function getTenantId(req) {
-    const tenantId = req.body.tenant_id || req.query.tenant_id;
-    if (!tenantId) {
-        throw new Error('Tenant ID is required for this operation.');
-    }
-    return tenantId;
+async function getTransaction() {
+    const client = await pool.connect();
+    
+    // Pure PG extension
+    client.queryNative = client.query;
+    
+    // Convenience for our [rows, meta] pattern
+    client.execute = async (sql, params = []) => {
+        const result = await client.query(sql, params);
+        return [result.rows, result];
+    };
+
+    client.beginTransaction = () => client.query('BEGIN');
+    client.commit = () => client.query('COMMIT');
+    client.rollback = () => client.query('ROLLBACK');
+    
+    return client;
 }
 
-// ─── Exports ──────────────────────────────────────────────────────────────────
+// ─── 4. Startup ──────────────────────────────────────────────────────────────
+(async () => {
+    try {
+        const client = await pool.connect();
+        console.log(`[DB/PG] Engine: PostgreSQL (Native Mode)`);
+        client.release();
+    } catch (err) {
+        console.error(`[DB/PG FATAL] Connection failed: ${err.message}`);
+    }
+})();
+
 module.exports = {
-    // The raw pool — use for background jobs (explicit tenant passing required)
     pool,
-
-    // Raw execution (User with Admin access or non-tenant tables)
-    execute: (sql, params) => pool.execute(sql, params),
-
-    // The Golden Rule: Use this for 99% of controller logic
-    tenantExecute,
-
-    // Aliased query helper with logging
     query,
-
-    // Helper for Auth flows
-    getTenantId,
-
-    then: undefined 
+    execute: query, // Transition alias
+    tenantExecute,
+    getTransaction,
+    getTenantId: (req) => req.user?.tenant_id
 };
-
-

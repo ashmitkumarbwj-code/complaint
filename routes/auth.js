@@ -40,8 +40,9 @@ router.post('/request-otp',         otpLimiter,    authController.requestOTP);
 router.post('/verify-otp',          otpLimiter,    v.validateVerifyOTP,           authController.verifyOTP);
 router.post('/resend-otp',          otpLimiter,    authController.resendOTP);
 
-router.post('/activate-staff',      otpLimiter,    v.validateActivateStaff,       authController.activateStaff);
-router.post('/verify-firebase',     loginLimiter,  v.validateVerifyFirebase,      authController.verifyFirebase);
+router.post('/activate-staff',               otpLimiter,    v.validateActivateStaff,       authController.activateStaff);
+router.post('/verify-firebase',              loginLimiter,  v.validateVerifyFirebase,      authController.verifyFirebase);
+router.post('/firebase-complete-activation', loginLimiter,                                 authController.firebaseCompleteActivation);
 
 router.post('/refresh',             authController.refreshToken);
 router.post('/logout',              authController.logout);

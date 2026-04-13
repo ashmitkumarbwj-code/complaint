@@ -1,12 +1,95 @@
 const db = require('../config/db');
 const logger = require('../utils/logger');
+const { connection: redis, getIsAvailable: getRedisAvailable } = require('../config/redis');
+
+/**
+ * @desc Get Premium Dashboard Analytics for Admin/Principal
+ * Aggregates: Summary cards, Status Breakdown, Daily Trends (30d), and Dept stats.
+ * Uses Redis caching (5 min TTL) for performance.
+ */
+exports.getDashboardStats = async (req, res) => {
+    try {
+        const tenant_id = req.user.tenant_id || 1;
+        const cacheKey = `dashboard_stats:${tenant_id}`;
+
+        // 1. Try Cache First
+        if (getRedisAvailable()) {
+            const cachedData = await redis.get(cacheKey);
+            if (cachedData) {
+                return res.json(JSON.parse(cachedData));
+            }
+        }
+
+        // 2. Aggregate Data from DB
+        const summaryQuery = `
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN status = 'Pending' THEN 1 END) as pending,
+                COUNT(CASE WHEN status = 'Resolved' THEN 1 END) as resolved
+            FROM complaints
+            WHERE tenant_id = $1
+        `;
+        const studentsQuery = `
+            SELECT COUNT(*) as count FROM users WHERE tenant_id = $1 AND role = 'Student'
+        `;
+        const statusDistributionQuery = `
+            SELECT status, COUNT(*) as count FROM complaints WHERE tenant_id = $1 GROUP BY status
+        `;
+        const dailyTrendsQuery = `
+            SELECT created_at::DATE as date, COUNT(*) as count 
+            FROM complaints 
+            WHERE tenant_id = $1 AND created_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+            GROUP BY created_at::DATE 
+            ORDER BY date ASC
+        `;
+        const departmentStatsQuery = `
+            SELECT d.name, COUNT(c.id) as count 
+            FROM departments d
+            LEFT JOIN complaints c ON d.id = c.department_id
+            WHERE d.tenant_id = $1
+            GROUP BY d.id, d.name
+        `;
+
+        const [summary] = await db.execute(summaryQuery, [tenant_id]);
+        const [students] = await db.execute(studentsQuery, [tenant_id]);
+        const [statusDistribution] = await db.execute(statusDistributionQuery, [tenant_id]);
+        const [dailyTrends] = await db.execute(dailyTrendsQuery, [tenant_id]);
+        const [departmentStats] = await db.execute(departmentStatsQuery, [tenant_id]);
+
+        const dashboardData = {
+            success: true,
+            summary: {
+                total: summary[0].total,
+                pending: summary[0].pending,
+                resolved: summary[0].resolved,
+                active_students: students[0].count
+            },
+            statusDistribution,
+            dailyTrends,
+            departmentStats
+        };
+
+        // 3. Store in Cache (5 Min TTL)
+        if (getRedisAvailable()) {
+            await redis.setex(cacheKey, 300, JSON.stringify(dashboardData));
+        }
+
+        res.json(dashboardData);
+
+    } catch (err) {
+        logger.error('[Dashboard] getDashboardStats error:', err.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+// ─── LEGACY / AUTHORITY METHODS (RESTORED) ───────────────────────────────────
 
 exports.getPrincipalDashboardStats = async (req, res) => {
     try {
-        const [totalToday] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints WHERE DATE(created_at) = CURDATE()');
-        const [pending] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints WHERE status = "Pending"');
-        const [escalated] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints WHERE status = "Escalated"');
-        const [resolvedToday] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints WHERE status = "Resolved" AND DATE(updated_at) = CURDATE()');
+        const [totalToday] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints WHERE created_at::DATE = CURRENT_DATE');
+        const [pending] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Pending'");
+        const [escalated] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Escalated'");
+        const [resolvedToday] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Resolved' AND updated_at::DATE = CURRENT_DATE");
 
         res.json({
             success: true,
@@ -45,10 +128,9 @@ exports.getPrincipalCriticalComplaints = async (req, res) => {
 exports.getAuthorityStats = async (req, res) => {
     const { department_id } = req.params;
     try {
-        // Membership Lock
         if (req.user.role === 'Staff' || req.user.role === 'HOD') {
             const [membership] = await db.tenantExecute(req,
-                'SELECT 1 FROM department_members WHERE department_id = ? AND user_id = ?',
+                'SELECT 1 FROM department_members WHERE department_id = $1 AND user_id = $2',
                 [department_id, req.user.id]
             );
             if (membership.length === 0) return res.status(403).json({ success: false, message: 'Access Denied' });
@@ -62,7 +144,7 @@ exports.getAuthorityStats = async (req, res) => {
                 SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) as resolved,
                 SUM(CASE WHEN status = 'Rejected' THEN 1 ELSE 0 END) as rejected
             FROM complaints
-            WHERE department_id = ?
+            WHERE department_id = $1
         `, [department_id]);
 
         res.json({ success: true, stats: stats[0] });
@@ -77,7 +159,7 @@ exports.getAuthorityComplaints = async (req, res) => {
     try {
         if (req.user.role === 'Staff' || req.user.role === 'HOD') {
             const [membership] = await db.tenantExecute(req,
-                'SELECT 1 FROM department_members WHERE department_id = ? AND user_id = ?',
+                'SELECT 1 FROM department_members WHERE department_id = $1 AND user_id = $2',
                 [department_id, req.user.id]
             );
             if (membership.length === 0) return res.status(403).json({ success: false, message: 'Access Denied' });
@@ -89,7 +171,7 @@ exports.getAuthorityComplaints = async (req, res) => {
             JOIN students s ON c.student_id = s.id
             JOIN users u ON s.user_id = u.id
             JOIN departments d ON c.department_id = d.id
-            WHERE c.department_id = ?
+            WHERE c.department_id = $1
             ORDER BY 
                 CASE WHEN c.priority = 'High' AND c.status != 'Resolved' THEN 1 ELSE 2 END,
                 c.created_at DESC
@@ -104,8 +186,8 @@ exports.getAuthorityComplaints = async (req, res) => {
 exports.getAdminStats = async (req, res) => {
     try {
         const [total] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints');
-        const [pending] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints WHERE status = "Pending"');
-        const [resolved] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints WHERE status = "Resolved"');
+        const [pending] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Pending'");
+        const [resolved] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Resolved'");
         const [deptStats] = await db.tenantExecute(req, `
             SELECT d.name, COUNT(c.id) as total, 
             SUM(CASE WHEN c.status = 'Resolved' THEN 1 ELSE 0 END) as resolved
@@ -161,25 +243,23 @@ exports.getWeeklyStats = async (req, res) => {
     try {
         const [rows] = await db.tenantExecute(req, `
             SELECT 
-                FLOOR(DATEDIFF(NOW(), created_at) / 7) as weeks_ago,
+                FLOOR(EXTRACT(DAY FROM (CURRENT_TIMESTAMP - created_at)) / 7) as weeks_ago,
                 SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) as resolved,
                 SUM(CASE WHEN status IN ('Pending', 'In Progress', 'Escalated') THEN 1 ELSE 0 END) as unresolved
             FROM complaints
-            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 4 WEEK)
+            WHERE created_at >= CURRENT_DATE - INTERVAL '4 weeks'
             GROUP BY weeks_ago
             ORDER BY weeks_ago DESC
         `);
 
         // Format for Chart.js
         const result = {
-            weeks: ["Week 4", "Week 3", "Week 2", "Week 1"], // Friendly labels
+            weeks: ["Week 4", "Week 3", "Week 2", "Week 1"],
             resolved: [0, 0, 0, 0],
             unresolved: [0, 0, 0, 0]
         };
 
         rows.forEach(row => {
-            // weeks_ago: 0 = current week (Week 1), 1 = previous week (Week 2), etc.
-            // Map to our result arrays (index 3 is Week 1, index 0 is Week 4)
             const index = 3 - row.weeks_ago;
             if (index >= 0 && index < 4) {
                 result.resolved[index] = row.resolved;
@@ -194,20 +274,16 @@ exports.getWeeklyStats = async (req, res) => {
     }
 };
 
-/**
- * @route   GET /api/dashboards/public/weekly-stats
- * @desc    Get public weekly stats for landing page (Tenant 1 default)
- */
 exports.getPublicWeeklyStats = async (req, res) => {
     try {
         const tenantId = req.query.tenant_id || 1;
         const [rows] = await db.execute(`
             SELECT 
-                FLOOR(DATEDIFF(NOW(), created_at) / 7) as weeks_ago,
+                FLOOR(EXTRACT(DAY FROM (CURRENT_TIMESTAMP - created_at)) / 7) as weeks_ago,
                 SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) as resolved,
                 SUM(CASE WHEN status IN ('Pending', 'In Progress', 'Escalated') THEN 1 ELSE 0 END) as unresolved
             FROM complaints
-            WHERE tenant_id = ? AND created_at >= DATE_SUB(CURDATE(), INTERVAL 4 WEEK)
+            WHERE tenant_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '4 weeks'
             GROUP BY weeks_ago
             ORDER BY weeks_ago DESC
         `, [tenantId]);
@@ -234,33 +310,25 @@ exports.getPublicWeeklyStats = async (req, res) => {
 };
 
 exports.getPublicStats = async (req, res) => {
-
     try {
         const tenantId = req.query.tenant_id;
-
-        // If tenant_id provided, show filtered stats.
-        // Otherwise, show system-wide stats (but keep it generic).
         let totalQuery = 'SELECT COUNT(*) as count FROM complaints';
-        let resolvedQuery = 'SELECT COUNT(*) as count FROM complaints WHERE status = "Resolved"';
+        let resolvedQuery = 'SELECT COUNT(*) as count FROM complaints WHERE status = \'Resolved\'';
         let params = [];
 
         if (tenantId) {
-            totalQuery += ' WHERE tenant_id = ?';
-            resolvedQuery += ' AND tenant_id = ?';
+            totalQuery += ' WHERE tenant_id = $1';
+            resolvedQuery += ' AND tenant_id = $1';
             params = [tenantId];
         }
 
         const [total] = await db.execute(totalQuery, params);
         const [resolved] = await db.execute(resolvedQuery, params);
 
-        const solvedCount = resolved[0].count;
-        const totalCount = total[0].count;
-        const unresolvedCount = totalCount - solvedCount;
-
         res.json({
             success: true,
-            solved: solvedCount,
-            unresolved: unresolvedCount
+            solved: resolved[0].count,
+            unresolved: total[0].count - resolved[0].count
         });
     } catch (error) {
         logger.error('[Dashboard] getPublicStats error:', error);

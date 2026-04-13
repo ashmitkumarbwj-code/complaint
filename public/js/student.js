@@ -1,67 +1,62 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const user = JSON.parse(localStorage.getItem('scrs_user'));
-    
-    if (!user || user.role !== 'Student') {
-        window.location.href = 'login.html';
-        return;
-    }
+document.addEventListener("DOMContentLoaded", async () => {
+    // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
+    const userProfile = await window.validateSession('Student');
+    if (!userProfile) return;
+
+    // Sync localStorage for UI consistency, but server is the source of truth
+    const user = JSON.parse(localStorage.getItem('scrs_user')) || userProfile;
 
     document.getElementById('welcome-text').textContent = `Hello, ${user.username}!`;
 
     const complaintForm = document.getElementById('complaint-form');
     const complaintList = document.getElementById('complaint-list');
 
-    // Load initial complaints
-    fetchComplaints();
-
     // Handle Submission
-    complaintForm.addEventListener('submit', async (e) => {
+    complaintForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const btn = complaintForm.querySelector('button');
-        const token = localStorage.getItem('scrs_token');
-        
-        btn.textContent = 'Submitting...';
-        btn.disabled = true;
+        const submitBtn = complaintForm.querySelector('button[type="submit"]');
+        const origHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Submitting...';
 
         const formData = new FormData();
-        formData.append('student_id', user.student_id);
-        formData.append('title', document.getElementById('complaint-title').value);
-        formData.append('category', document.getElementById('complaint-category').value);
-        formData.append('location', document.getElementById('complaint-location').value);
-        formData.append('description', document.getElementById('complaint-description').value);
-        formData.append('priority', document.getElementById('complaint-priority').value);
-        
-        const mediaFile = document.getElementById('complaint-media').files[0];
-        if (mediaFile) {
-            formData.append('media', mediaFile);
+        formData.append("student_id", user.student_id); // we need this otherwise it breaks
+        formData.append("title", document.getElementById("complaint-title").value);
+        formData.append("category", document.getElementById("complaint-category").value);
+        formData.append("priority", document.getElementById("complaint-priority").value);
+        formData.append("location", document.getElementById("complaint-location").value);
+        formData.append("description", document.getElementById("complaint-description").value);
+
+        const fileInput = document.getElementById("image");
+        if (fileInput.files[0]) {
+            formData.append("image", fileInput.files[0]); // ⚠️ name must match backend
         }
 
         try {
-            const response = await fetch(`${API_BASE}/api/complaints/submit`, {
-                method: 'POST',
-                headers: { 
-                    // Note: Browser automatically sets Content-Type to multipart/form-data with boundary when using FormData
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
+            const res = await fetch(`${API_BASE}/api/complaints`, {
+                method: "POST",
+                body: formData,
+                credentials: "include" // 🔥 MUST
             });
 
-            const data = await response.json();
+            const data = await res.json();
+            console.log("Response:", data);
 
-            if (data.success) {
-                alert('Complaint submitted!');
+            if (res.ok && data.success) {
+                showToast("Complaint submitted ✅", "success");
                 complaintForm.reset();
                 fetchComplaints();
             } else {
-                alert('Submission failed: ' + data.message);
+                showToast(data.message || "Failed ❌", "error");
             }
-        } catch (error) {
-            console.error('Submission error:', error);
-            alert('Error submitting complaint');
+
+        } catch (err) {
+            console.error(err);
+            showToast("Server error ❌", "error");
         } finally {
-            btn.textContent = 'Submit Complaint';
-            btn.disabled = false;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origHtml;
         }
     });
 
@@ -80,10 +75,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchComplaints() {
         try {
-            const token = localStorage.getItem('scrs_token');
+            // Skeleton loader for student list
+            complaintList.innerHTML = `
+                <div class="skeleton-card" style="height: 150px; border-radius: 12px; margin-bottom: 1.5rem;"></div>
+                <div class="skeleton-card" style="height: 150px; border-radius: 12px; opacity: 0.6; margin-bottom: 1.5rem;"></div>
+            `;
+
             const response = await fetch(`${API_BASE}/api/complaints/student/${user.student_id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include' // ← httpOnly cookie auth
             });
+            if (!response.ok) { 
+                console.error('[Student] fetchComplaints failed:', response.status); 
+                showToast('Failed to load your reports.', 'error');
+                return; 
+            }
             const data = await response.json();
 
             if (data.success) {
@@ -91,6 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } catch (error) {
             console.error('Error fetching complaints:', error);
+            showToast('Network error while loading reports.', 'error');
         }
     }
 
@@ -140,7 +146,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-function logout() {
+async function logout() {
+    try {
+        await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (_) {}
     localStorage.removeItem('scrs_token');
     localStorage.removeItem('scrs_user');
     window.location.href = 'login.html';

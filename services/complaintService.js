@@ -7,7 +7,7 @@ class ComplaintService {
     async checkSpam(studentId, tenantId) {
         const MAX_COMPLAINTS_PER_HOUR = 5;
         const [spamRows] = await db.execute(
-            'SELECT COUNT(*) as count FROM complaints WHERE student_id = ? AND tenant_id = ? AND created_at > NOW() - INTERVAL 1 HOUR',
+            'SELECT COUNT(*) as count FROM complaints WHERE student_id = $1 AND tenant_id = $2 AND created_at > CURRENT_TIMESTAMP - INTERVAL \'1 hour\'',
             [studentId, tenantId]
         );
         return spamRows[0].count >= MAX_COMPLAINTS_PER_HOUR;
@@ -18,10 +18,10 @@ class ComplaintService {
      */
     async getTargetDepartment(category, tenantId) {
         const [rows] = await db.execute(
-            'SELECT department_id FROM department_categories WHERE category = ? AND tenant_id = ? LIMIT 1',
+            'SELECT department_id FROM department_categories WHERE category = $1 AND tenant_id = $2 LIMIT 1',
             [category, tenantId]
         );
-        return rows.length > 0 ? rows[0].department_id : 1; // 1 = College Administration (fallback)
+        return rows.length > 0 ? rows[0].department_id : 1; 
     }
 
     /**
@@ -31,10 +31,10 @@ class ComplaintService {
         const { student_id, title, department_id, category, description, location, priority, local_file_path } = complaintData;
         const [result] = await db.tenantExecute({ user: { tenant_id: tenantId } },
             `INSERT INTO complaints (tenant_id, student_id, title, department_id, category, description, location, priority, local_file_path) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
             [tenantId, student_id, title, department_id, category, description, location, priority, local_file_path || null]
         );
-        return result.insertId;
+        return result.rows[0].id;
     }
 
     /**
@@ -52,39 +52,42 @@ class ComplaintService {
             JOIN departments d ON c.department_id = d.id
             JOIN students s ON c.student_id = s.id
             JOIN users u ON s.user_id = u.id
-            WHERE c.tenant_id = ?
+            WHERE c.tenant_id = $1
         `;
         const params = [tenantId];
+        let pCount = 1;
 
-        // 1. Ownership/Membership Enforcement (The Lock)
+        // 1. Ownership/Membership Enforcement
         if (role === 'Student') {
-            query += ' AND c.student_id = ?';
+            pCount++;
+            query += ` AND c.student_id = $${pCount}`;
             params.push(sessionStudentId);
         } else if (role === 'Staff' || role === 'HOD') {
-            // Staff can only see complaints assigned to departments they belong to
+            pCount++;
             query += ` AND c.department_id IN (
-                SELECT department_id FROM department_members WHERE user_id = ?
+                SELECT department_id FROM department_members WHERE user_id = $${pCount}
             )`;
             params.push(user.id);
         }
-        // Admin/Principal have no extra filters within the tenant
 
         // 2. User-applied Filters
         if (status) {
-            query += ' AND c.status = ?';
+            pCount++;
+            query += ` AND c.status = $${pCount}`;
             params.push(status);
         }
         if (department_id) {
-            query += ' AND c.department_id = ?';
+            pCount++;
+            query += ` AND c.department_id = $${pCount}`;
             params.push(department_id);
         }
         if (student_id && ['Admin', 'Principal'].includes(role)) {
-            // Only Admins can filter by OTHER students' IDs
-            query += ' AND c.student_id = ?';
+            pCount++;
+            query += ` AND c.student_id = $${pCount}`;
             params.push(student_id);
         }
 
-        query += ' ORDER BY c.created_at DESC LIMIT ? OFFSET ?';
+        query += ` ORDER BY c.created_at DESC LIMIT $${pCount + 1} OFFSET $${pCount + 2}`;
         params.push(parseInt(limit), parseInt(offset));
 
         const [rows] = await db.execute(query, params);
@@ -92,32 +95,35 @@ class ComplaintService {
         // Anonymity Logic
         const canSeeRealNames = ['Admin', 'Principal', 'HOD'].includes(role);
         const data = rows.map(c => {
-            // Only hide names if not Admin/Principal/HOD AND it's not the student's own complaint
+            if (!c.media_url && c.local_file_path) {
+                const pureFilename = c.local_file_path.split(/[\\/]/).pop();
+                c.media_url = '/uploads/' + pureFilename;
+            }
             if (!canSeeRealNames && c.student_id !== sessionStudentId) {
                 return { ...c, student_name: 'Anonymous Student', student_id: 'HIDDEN' };
             }
             return c;
         });
         
-        // Get total count (must apply same filters)
-        let countQuery = `
-            SELECT COUNT(*) as total FROM complaints c 
-            WHERE c.tenant_id = ?
-        `;
+        // Total count
+        let countQuery = `SELECT COUNT(*) as total FROM complaints c WHERE c.tenant_id = $1`;
         const countParams = [tenantId];
+        let cpCount = 1;
 
         if (role === 'Student') {
-            countQuery += ' AND c.student_id = ?';
+            cpCount++;
+            countQuery += ` AND c.student_id = $${cpCount}`;
             countParams.push(sessionStudentId);
         } else if (role === 'Staff' || role === 'HOD') {
+            cpCount++;
             countQuery += ` AND c.department_id IN (
-                SELECT department_id FROM department_members WHERE user_id = ?
+                SELECT department_id FROM department_members WHERE user_id = $${cpCount}
             )`;
             countParams.push(user.id);
         }
 
-        if (status) { countQuery += ' AND c.status = ?'; countParams.push(status); }
-        if (department_id) { countQuery += ' AND c.department_id = ?'; countParams.push(department_id); }
+        if (status) { cpCount++; countQuery += ` AND c.status = $${cpCount}`; countParams.push(status); }
+        if (department_id) { cpCount++; countQuery += ` AND c.department_id = $${cpCount}`; countParams.push(department_id); }
         
         const [countRows] = await db.execute(countQuery, countParams);
 
@@ -134,15 +140,115 @@ class ComplaintService {
 
 
     /**
-     * Update complaint status
+     * Hardened Update Status Logic (The Gatekeeper)
+     * Handles: Concurrency, Workflow Validation, Re-open Windows, Audit Logs & Transactions.
      */
-    async updateStatus(complaintId, status, tenantId) {
-        const [result] = await db.execute(
-            'UPDATE complaints SET status = ? WHERE id = ? AND tenant_id = ?',
-            [status, complaintId, tenantId]
-        );
-        return result.affectedRows > 0;
+    async updateStatus(req, { complaintId, newStatus, adminNotes, actionType = 'STATUS_CHANGE' }) {
+        const { id: actorId, role: actorRole, tenant_id } = req.user;
+        const connection = await db.getTransaction();
+
+        try {
+            await connection.beginTransaction();
+
+            const [rows] = await connection.execute(
+                'SELECT status, lock_version, student_id, resolved_at, reopened_count, department_id FROM complaints WHERE id = $1 AND tenant_id = $2 FOR UPDATE',
+                [complaintId, tenant_id]
+            );
+
+            if (rows.length === 0) throw new Error('COMPLAINT_NOT_FOUND');
+            const complaint = rows[0];
+
+            if (req.body.lock_version !== undefined && parseInt(req.body.lock_version) !== complaint.lock_version) {
+                throw new Error('VERSION_CONFLICT');
+            }
+
+            if (actorRole === 'Staff' || actorRole === 'HOD') {
+                const [membership] = await connection.execute(
+                    'SELECT 1 FROM department_members WHERE department_id = $1 AND user_id = $2',
+                    [complaint.department_id, actorId]
+                );
+                if (membership.length === 0) throw new Error('DPT_MEMBERSHIP_REQUIRED');
+            }
+
+            if (newStatus !== complaint.status) {
+                const workflow = require('../utils/workflowEngine');
+                if (!workflow.isValidTransition(complaint.status, newStatus, actorRole)) {
+                    throw new Error('INVALID_TRANSITION');
+                }
+                if (newStatus === 'Reopened' || (complaint.status === 'Resolved' && newStatus === 'Pending')) {
+                    if (actorRole === 'Student') {
+                        if (complaint.reopened_count >= 1) throw new Error('MAX_REOPEN_EXCEEDED');
+                        if (!workflow.isWithinReopenWindow(complaint.resolved_at)) throw new Error('REOPEN_WINDOW_EXPIRED');
+                    }
+                }
+                if (workflow.isReasonRequired(newStatus) && (!adminNotes || adminNotes.trim().length < 10)) {
+                    throw new Error('REASON_REQUIRED');
+                }
+            } else if (actionType === 'STATUS_CHANGE') {
+                if (!adminNotes || adminNotes.trim() === (complaint.admin_notes || '').trim()) {
+                    await connection.rollback();
+                    return { success: true, message: 'Already in target state', noOp: true };
+                }
+            }
+
+            let updateSql = 'UPDATE complaints SET status = $1, admin_notes = $2, lock_version = lock_version + 1 ';
+            const updateParams = [newStatus, adminNotes || null];
+            let upCount = 2;
+
+            if (newStatus === 'Resolved') {
+                updateSql += ', resolved_at = CURRENT_TIMESTAMP ';
+            }
+            if (newStatus === 'Reopened' || (complaint.status === 'Resolved' && newStatus === 'Pending')) {
+                updateSql += ', reopened_count = reopened_count + 1 ';
+            }
+
+            upCount++;
+            updateSql += ` WHERE id = $${upCount}`;
+            updateParams.push(complaintId);
+            
+            upCount++;
+            updateSql += ` AND tenant_id = $${upCount}`;
+            updateParams.push(tenant_id);
+
+            // Strict Concurrency Lock: Include current lock_version in where clause
+            upCount++;
+            updateSql += ` AND lock_version = $${upCount}`;
+            updateParams.push(complaint.lock_version);
+
+            const updateResult = await connection.execute(updateSql, updateParams);
+            
+            if (updateResult.rowCount === 0) {
+                throw new Error('VERSION_CONFLICT');
+            }
+
+            const audit = require('../utils/auditService');
+            await audit.logAction(connection, {
+                complaint_id: complaintId,
+                actor_user_id: actorId,
+                actor_role: actorRole,
+                action_type: newStatus === complaint.status ? 'COMMENT_ADDED' : actionType,
+                from_status: complaint.status,
+                to_status: newStatus,
+                note: adminNotes,
+                visibility: actorRole === 'Student' ? 'STUDENT_VISIBLE' : 'STAFF_ONLY',
+                metadata: {
+                    prev_version: complaint.lock_version,
+                    new_version: complaint.lock_version + 1
+                },
+                req
+            });
+
+            await connection.commit();
+            return { success: true, data: { new_status: newStatus, lock_version: complaint.lock_version + 1 } };
+
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
     }
 }
 
 module.exports = new ComplaintService();
+

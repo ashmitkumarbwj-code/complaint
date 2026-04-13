@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
             if (data.success) {
                 const total = data.solved + data.unresolved;
-                gsap.to(document.getElementById("count-total"), { innerHTML: total, duration: 2, snap: { innerHTML: 1 }, ease: "power1.inOut" });
+                gsap.to(document.getElementById("count-total", { credentials: 'include' }), { innerHTML: total, duration: 2, snap: { innerHTML: 1 , credentials: 'include' }, ease: "power1.inOut" });
                 gsap.to(document.getElementById("count-resolved"), { innerHTML: data.solved, duration: 2.5, snap: { innerHTML: 1 }, ease: "power1.inOut" });
             }
         } catch (err) { console.error(err); }

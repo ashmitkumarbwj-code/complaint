@@ -3,7 +3,6 @@ const { connection } = require('../config/redis');
 const logger = require('../utils/logger');
 const nodemailer = require('nodemailer');
 
-// Reuse Transporter and Twilio Client exactly as they were in notificationService
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
@@ -13,6 +12,7 @@ const transporter = nodemailer.createTransport({
         pass: process.env.SMTP_PASS,
     },
 });
+
 let twilioClient = null;
 const sid = process.env.TWILIO_ACCOUNT_SID;
 if (sid && sid.startsWith('AC')) {
@@ -26,59 +26,63 @@ if (sid && sid.startsWith('AC')) {
 }
 
 const processNotification = async (job) => {
-    logger.info(`[Job:${job.id}] Processing notification job of type: ${job.name}`);
+    const otp_mode = process.env.OTP_MODE || 'mock';
+    
+    // Extract OTP if present in message/text
+    const rawData = job.data.text || job.data.message || '';
+    const otpMatch = rawData.match(/\b\d{6}\b/);
+    const otp = otpMatch ? otpMatch[0] : 'XXXXXX';
+    const identifier = job.data.to || 'UNKNOWN';
+
+    if (otp_mode === 'mock') {
+        console.log(`
+    ============================
+    🔐 MOCK OTP GENERATED
+    Identifier: ${identifier}
+    OTP: ${otp}
+    ============================
+        `);
+        // If it's an email and we have real credentials, we still send it for convenience 
+        // unless it's strictly SMS which is usually the one people want to mock.
+        if (job.name === 'email' && process.env.SMTP_USER && !process.env.SMTP_USER.includes('your_email')) {
+             await transporter.sendMail({
+                from: `"Smart Campus SCRS" <${process.env.SMTP_USER}>`,
+                to: job.data.to,
+                subject: job.data.subject,
+                text: job.data.text,
+            });
+        }
+        return 'Mock handled';
+    }
 
     if (job.name === 'email') {
-        const { to, subject, text, tenantId } = job.data;
-        if (!process.env.SMTP_USER || process.env.SMTP_USER.includes('your_email')) {
-            logger.info(`[Job:${job.id}] [Tenant:${tenantId || 'GLOBAL'}] [MOCK EMAIL] To: ${to} | Subject: ${subject}`);
-            return 'Mock email sent';
-        }
-
+        const { to, subject, text } = job.data;
+        if (!process.env.SMTP_USER || process.env.SMTP_USER.includes('your_email')) return 'Mock Email';
         const info = await transporter.sendMail({
             from: `"Smart Campus SCRS" <${process.env.SMTP_USER}>`,
-            to,
-            subject,
-            text,
+            to, subject, text,
         });
-        logger.info(`[Job:${job.id}] [Tenant:${tenantId || 'GLOBAL'}] Email sent: ${info.messageId}`);
         return info.messageId;
     }
 
     if (job.name === 'sms') {
-        const { to, message, tenantId } = job.data;
+        const { to, message } = job.data;
         if (!twilioClient) {
-            logger.info(`[Job:${job.id}] [Tenant:${tenantId || 'GLOBAL'}] [MOCK SMS] To: ${to}`);
-            return 'Mock SMS sent';
+            logger.warn(`[SMS] Live mode but Twilio Client missing. Mocking fallback.`);
+            console.log(`🔐 [FALLBACK MOCK] To: ${to} | OTP: ${otp}`);
+            return 'Fallback Mock';
         }
-
         const msg = await twilioClient.messages.create({
             body: message,
             from: process.env.TWILIO_PHONE_NUMBER,
             to,
         });
-        logger.info(`[Job:${job.id}] [Tenant:${tenantId || 'GLOBAL'}] SMS sent: ${msg.sid}`);
         return msg.sid;
     }
-
-
-    throw new Error(`Unknown job type: ${job.name}`);
 };
 
-let notificationWorker = null;
 if (connection && process.env.USE_REDIS === 'true') {
-    notificationWorker = new Worker('notifications', processNotification, { 
-        connection,
-        concurrency: 5 // Process 5 notifications concurrently
-    });
-
-    notificationWorker.on('completed', (job) => {
-        logger.info(`[Job:${job.id}] Notification completed successfully.`);
-    });
-
-    notificationWorker.on('failed', (job, err) => {
-        logger.error(`[Job:${job.id}] Notification failed:`, err);
-    });
+    new Worker('notifications', processNotification, { connection, concurrency: 5 });
 }
 
-module.exports = { notificationWorker, processNotification };
+module.exports = { processNotification };

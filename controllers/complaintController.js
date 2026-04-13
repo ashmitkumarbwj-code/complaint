@@ -4,6 +4,7 @@ const socketService = require('../utils/socketService');
 const logger = require('../utils/logger');
 const { uploadQueue } = require('../utils/queueService');
 const db = require('../config/db'); // Kept temporarily for remaining unrefactored methods
+const priorityEngine = require('../utils/priorityEngine');
 
 exports.submitComplaint = async (req, res) => {
     const { title, category, location, description, priority } = req.body;
@@ -22,26 +23,32 @@ exports.submitComplaint = async (req, res) => {
             return res.status(429).json({ success: false, message: "Too many complaints. Try again later." });
         }
 
-        // 2. Routing
-        const department_id = await complaintService.getTargetDepartment(category, tenantId);
+        // 2. Routing AI & Priority Detection
+        const analysis = priorityEngine.analyze(title, description, priority);
+        const finalPriority = analysis.priority;
+        const targetDeptId = await complaintService.getTargetDepartment(category, tenantId);
 
         // 3. Save to Database via Service
         const complaintId = await complaintService.submitComplaint({
             student_id, 
             title: title || category, 
-            department_id, 
+            department_id: targetDeptId, 
             category, 
             description, 
             location, 
-            priority,
-            local_file_path: req.file ? req.file.path : null
+            priority: finalPriority,
+            local_file_path: req.file ? req.file.filename : null
         }, tenantId);
 
         // 4. Audit Logging - Using raw pool since it's an internal system action
-        await db.pool.execute(
+        const auditNote = analysis.isAutoAssigned 
+            ? `AI Auto-escalated priority to ${finalPriority}` 
+            : 'Auto-routed by system based on category';
+
+        await db.execute(
             `INSERT INTO complaint_departments (tenant_id, complaint_id, department_id, assigned_by, notes, is_current) 
-             VALUES (?, ?, ?, NULL, 'Auto-routed by system based on category', 1)`,
-            [tenantId, complaintId, department_id]
+             VALUES ($1, $2, $3, NULL, $4, 1)`,
+            [tenantId, complaintId, targetDeptId, auditNote]
         );
 
         // 5. Queue File Upload (Zero-Trust Job) with Resilience Fallback
@@ -54,8 +61,8 @@ exports.submitComplaint = async (req, res) => {
                 });
                 
                 // Update status to processing
-                await db.pool.execute(
-                    'UPDATE complaints SET processing_status = ? WHERE id = ?',
+                await db.execute(
+                    'UPDATE complaints SET processing_status = $1 WHERE id = $2',
                     ['processing', complaintId]
                 );
                 
@@ -63,8 +70,8 @@ exports.submitComplaint = async (req, res) => {
             } catch (err) {
                 // REDIS DOWN FALLBACK: Mark for re-sync
                 logger.error(`[RESILIENCE] Redis down! Marking complaint ${complaintId} for local resync.`, err);
-                await db.pool.execute(
-                    'UPDATE complaints SET processing_status = ? WHERE id = ?',
+                await db.execute(
+                    'UPDATE complaints SET processing_status = $1 WHERE id = $2',
                     ['pending_resync', complaintId]
                 );
             }
@@ -95,56 +102,55 @@ exports.getStudentComplaints = async (req, res) => {
 
 exports.updateStatus = async (req, res) => {
     const { complaint_id } = req.params;
-    const { status, admin_notes } = req.body;
-    const { id: user_id, role, tenant_id } = req.user;
+    const { status, admin_notes, action_type } = req.body;
 
     try {
-        // Membership Lock: Only Admins OR Staff assigned to the target department can update status
-        const [complaint] = await db.tenantExecute(req, 'SELECT department_id, student_id FROM complaints WHERE id = ?', [complaint_id]);
-        if (complaint.length === 0) return res.status(404).json({ success: false, message: 'Complaint not found.' });
-        
-        const targetDeptId = complaint[0].department_id;
-        const targetStudentId = complaint[0].student_id;
+        const result = await complaintService.updateStatus(req, {
+            complaintId: complaint_id,
+            newStatus: status,
+            adminNotes: admin_notes,
+            actionType: action_type || 'STATUS_CHANGE'
+        });
 
-        if (role === 'Staff' || role === 'HOD') {
-            const [membership] = await db.tenantExecute(req, 
-                'SELECT 1 FROM department_members WHERE department_id = ? AND user_id = ?', 
-                [targetDeptId, user_id]
-            );
-            if (membership.length === 0) {
-                return res.status(403).json({ success: false, message: 'Access denied: Not assigned to this department.' });
-            }
+        // Socket & Notifications are now partially handled or triggered from here
+        // (Service handles DB, Controller handles UI side-effects)
+        if (!result.noOp) {
+            socketService.emitStatusUpdate(complaint_id, status, null); // targetStudentId can be added in service data return
         }
 
-        // Apply Update using tenantExecute (Golden Rule)
-        await db.tenantExecute(req,
-            'UPDATE complaints SET status = ?, admin_notes = ?, resolved_at = ? WHERE id = ?',
-            [status, admin_notes || null, status === 'Resolved' ? new Date() : null, complaint_id]
-        );
+        res.json({ 
+            success: true, 
+            message: result.message || 'Update successful',
+            data: result.data 
+        });
 
-        socketService.emitStatusUpdate(complaint_id, status, targetStudentId);
-
-        // Notify Student via email
-        try {
-            const [rows] = await db.tenantExecute(req, `
-                SELECT u.email FROM users u
-                JOIN students s ON u.id = s.user_id 
-                WHERE s.id = ?
-            `, [targetStudentId]);
-            
-            if (rows.length > 0) {
-                notifier.notifyStudent(rows[0].email, complaint_id, status);
-            }
-        } catch (notifierErr) {
-            logger.warn('[Complaint] Status notification warning:', notifierErr);
-        }
-
-        res.json({ success: true, message: 'Status updated successfully' });
     } catch (error) {
-        logger.error('[Complaint] updateStatus error:', error);
-        res.status(500).json({ success: false, message: 'Update failed' });
+        logger.error('[Complaint] updateStatus error:', error.message);
+
+        // Security / Workflow Mapping to structured API responses
+        const errorMap = {
+            'COMPLAINT_NOT_FOUND': { status: 404, code: 'NOT_FOUND', msg: 'Complaint not found.' },
+            'VERSION_CONFLICT': { status: 409, code: 'CONCURRENCY_CONFLICT', msg: 'Data has changed. Please refresh and try again.' },
+            'INVALID_TRANSITION': { status: 400, code: 'BAD_WORKFLOW', msg: 'Invalid status transition for your role.' },
+            'REASON_REQUIRED': { status: 422, code: 'VALIDATION_ERROR', msg: 'A detailed reason/note is required for this action.' },
+            'MAX_REOPEN_EXCEEDED': { status: 403, code: 'LIMIT_EXCEEDED', msg: 'Complaint has already been reopened once.' },
+            'REOPEN_WINDOW_EXPIRED': { status: 403, code: 'WINDOW_EXPIRED', msg: 'Reopening window has passed (7 days max).' },
+            'DPT_MEMBERSHIP_REQUIRED': { status: 403, code: 'FORBIDDEN', msg: 'You are not assigned to this department.' }
+        };
+
+        const canned = errorMap[error.message];
+        if (canned) {
+            return res.status(canned.status).json({
+                success: false,
+                code: canned.code,
+                message: canned.msg
+            });
+        }
+
+        res.status(500).json({ success: false, message: 'Internal server error during update.' });
     }
 };
+
 
 exports.getAllComplaints = async (req, res) => {
     try {
@@ -175,7 +181,7 @@ exports.cleanupOldMedia = async () => {
             SELECT id, media_url 
             FROM complaints 
             WHERE media_url IS NOT NULL 
-            AND created_at < NOW() - INTERVAL 30 DAY
+            AND created_at < CURRENT_TIMESTAMP - INTERVAL '30 days'
         `);
 
         if (rows.length === 0) {
@@ -197,7 +203,7 @@ exports.cleanupOldMedia = async () => {
                 await cloudinary.uploader.destroy(publicId);
                 
                 // Remove reference from database
-                await db.execute('UPDATE complaints SET media_url = NULL WHERE id = ?', [complaint.id]);
+                await db.execute('UPDATE complaints SET media_url = NULL WHERE id = $1', [complaint.id]);
                 logger.info(`[Cleanup] Deleted media for complaint #${complaint.id}`);
             } catch (err) {
                 logger.error(`[Cleanup] Failed to delete media for complaint #${complaint.id}:`, err);
@@ -220,11 +226,11 @@ exports.getComplaintHistory = async (req, res) => {
     try {
         // Senior Security Verification
         if (role === 'Staff' || role === 'HOD') {
-            const [complaint] = await db.execute('SELECT department_id FROM complaints WHERE id = ?', [id]);
+            const [complaint] = await db.execute('SELECT department_id FROM complaints WHERE id = $1', [id]);
             if (complaint.length === 0) return res.status(404).json({ success: false, message: 'Complaint not found' });
             
             const [membership] = await db.execute(
-                'SELECT 1 FROM department_members WHERE department_id = ? AND user_id = ?',
+                'SELECT 1 FROM department_members WHERE department_id = $1 AND user_id = $2',
                 [complaint[0].department_id, user_id]
             );
             if (membership.length === 0) {
@@ -242,7 +248,7 @@ exports.getComplaintHistory = async (req, res) => {
             FROM complaint_departments cd
             JOIN departments d ON cd.department_id = d.id
             LEFT JOIN users u ON cd.assigned_by = u.id
-            WHERE cd.complaint_id = ?
+            WHERE cd.complaint_id = $1
             ORDER BY cd.assigned_at DESC
         `, [id]);
 

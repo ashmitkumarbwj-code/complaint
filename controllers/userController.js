@@ -45,32 +45,32 @@ exports.updateProfile = async (req, res) => {
         const updates = [];
 
         if (username) {
-            updates.push('username = ?');
             params.push(username);
+            updates.push(`username = $${params.length}`);
         }
 
         if (profile_image) {
-            updates.push('profile_image = ?');
             params.push(profile_image);
+            updates.push(`profile_image = $${params.length}`);
         }
 
         if (password && password.length >= 8) {
             const hashedPassword = await bcrypt.hash(password, 10);
-            updates.push('password_hash = ?');
             params.push(hashedPassword);
+            updates.push(`password_hash = $${params.length}`);
         }
 
         if (updates.length === 0 && !req.file) {
             return res.status(400).json({ success: false, message: 'No changes provided' });
         }
 
-        query += updates.join(', ') + ' WHERE id = ?';
         params.push(userId);
+        query += updates.join(', ') + ` WHERE id = $${params.length}`;
 
         await db.tenantExecute(req, query, params);
 
         // Fetch updated user data to return
-        const [rows] = await db.tenantExecute(req, 'SELECT id, username, email, role, profile_image FROM users WHERE id = ?', [userId]);
+        const [rows] = await db.tenantExecute(req, 'SELECT id, username, email, role, profile_image FROM users WHERE id = $1', [userId]);
         const updatedUser = rows[0];
 
         res.json({
@@ -90,12 +90,11 @@ exports.updateProfile = async (req, res) => {
  */
 exports.getProfile = async (req, res) => {
     try {
-        const [rows] = await db.tenantExecute(req, 'SELECT id, username, email, role, profile_image, mobile_number FROM users WHERE id = ?', [req.user.id]);
+        const [rows] = await db.tenantExecute(req, 'SELECT id, username, email, role, profile_image, mobile_number FROM users WHERE id = $1', [req.user.id]);
         if (rows.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
         res.json({ success: true, user: rows[0] });
     } catch (error) {
         logger.error('Get profile error:', error);
         res.status(500).json({ success: false, message: 'Error fetching profile' });
     }
-};
 

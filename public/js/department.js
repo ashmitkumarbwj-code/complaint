@@ -4,12 +4,13 @@
 
 let allComplaints = [];
 
-document.addEventListener("DOMContentLoaded", () => {
-    const user = JSON.parse(localStorage.getItem('scrs_user'));
-    if (!user || (user.role !== 'Staff' && user.role !== 'HOD')) {
-        window.location.href = 'login.html';
-        return;
-    }
+document.addEventListener("DOMContentLoaded", async () => {
+    // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
+    const userProfile = await window.validateSession(['Staff', 'HOD']);
+    if (!userProfile) return;
+
+    // Sync localStorage for UI consistency, but server is the source of truth
+    const user = JSON.parse(localStorage.getItem('scrs_user')) || userProfile;
 
     // Set UI Details
     document.getElementById('header-dept').textContent = `${user.department_name || 'Department'} Dashboard`;
@@ -44,27 +45,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function fetchDashboardData() {
     const user = JSON.parse(localStorage.getItem('scrs_user'));
-    const token = localStorage.getItem('scrs_token');
 
     try {
         // Fetch Stats
         const statsRes = await fetch(`${API_BASE}/api/dashboards/authority/stats/${user.department_id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include' // ← httpOnly cookie auth
         });
+        if (!statsRes.ok) { console.error('[Dept] Stats fetch failed:', statsRes.status); return; }
         const statsData = await statsRes.json();
         if (statsData.success) updateStatsUI(statsData.stats);
 
         // Fetch Complaints
         const compRes = await fetch(`${API_BASE}/api/dashboards/authority/complaints/${user.department_id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include'
         });
+        if (!compRes.ok) { console.error('[Dept] Complaints fetch failed:', compRes.status); return; }
         const compData = await compRes.json();
         if (compData.success) {
             allComplaints = compData.complaints;
             renderComplaints(allComplaints);
         }
     } catch (err) {
-        console.error('Error fetching dashboard data:', err);
+        console.error('[Dept] Error fetching dashboard data:', err);
     }
 }
 
@@ -72,7 +74,7 @@ function updateStatsUI(stats) {
     document.getElementById('stat-total').textContent = stats.total_complaints || 0;
     document.getElementById('stat-pending').textContent = stats.pending || 0;
     document.getElementById('stat-progress').textContent = stats.in_progress || 0;
-    document.getElementById('stat-resolved').textContent = stats.resolved_today || 0;
+    document.getElementById('stat-resolved').textContent = stats.resolved || 0; // field is 'resolved', not 'resolved_today'
 }
 
 function renderComplaints(complaints) {
@@ -151,34 +153,46 @@ function viewDetails(c) {
         </div>
     `;
 
-    modal.style.display = 'flex';
+    window.showModal('detailsModal');
 }
 
 async function updateComplaintStatus(id, newStatus) {
-    const token = localStorage.getItem('scrs_token');
     const notes = document.getElementById('admin-notes').value;
+    const btn = event ? event.target : null;
+    const origHtml = btn ? btn.innerHTML : '';
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+    }
 
     try {
         const res = await fetch(`${API_BASE}/api/complaints/status/${id}`, {
             method: 'PATCH',
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+            credentials: 'include', // ← httpOnly cookie auth
             body: JSON.stringify({ status: newStatus, admin_notes: notes })
         });
         const data = await res.json();
         if (data.success) {
+            showToast(`Complaint #${id} marked as ${newStatus}`, 'success');
             closeModal();
             fetchDashboardData();
+        } else {
+            showToast(data.message || 'Update failed', 'error');
         }
     } catch (err) {
-        alert('Failed to update status');
+        showToast('Failed to update status', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
     }
 }
 
 function closeModal() {
-    document.getElementById('detailsModal').style.display = 'none';
+    window.closeModal('detailsModal');
 }
 
 function timeSince(date) {
@@ -196,7 +210,10 @@ function timeSince(date) {
     return Math.floor(seconds) + " seconds";
 }
 
-function logout() {
+async function logout() {
+    try {
+        await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (_) {}
     localStorage.removeItem('scrs_token');
     localStorage.removeItem('scrs_user');
     window.location.href = 'login.html';

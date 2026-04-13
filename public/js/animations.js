@@ -257,7 +257,7 @@ function renderChart(canvas) {
 
             if (!hasData) {
                 // Show empty state instead of blank chart
-                const emptyEl = document.createElement('div');
+                const emptyEl = document.createElement('div', { credentials: 'include' });
                 emptyEl.style.cssText = `
                     position: absolute; inset: 0;
                     display: flex; flex-direction: column;
@@ -337,14 +337,14 @@ function renderChart(canvas) {
 function initCounters() {
     const runCounters = async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/dashboards/public/stats`);
+            const res = await fetch(`${API_BASE}/api/dashboards/public/stats`, { credentials: 'include' });
             const data = await res.json();
             
             if (data.success) {
                 const total = data.solved + data.unresolved;
                 const efficiency = total > 0 ? Math.round((data.solved / total) * 100) : 0;
 
-                gsap.to(".counter-total", { innerHTML: total, duration: 2, snap: { innerHTML: 1 }, ease: "power1.inOut" });
+                gsap.to(".counter-total", { innerHTML: total, duration: 2, snap: { innerHTML: 1 , credentials: 'include' }, ease: "power1.inOut" });
                 gsap.to(".counter-resolved", { innerHTML: data.solved, duration: 2.5, snap: { innerHTML: 1 }, ease: "power1.inOut" });
                 gsap.to(".counter-efficiency", { innerHTML: efficiency, duration: 2.5, snap: { innerHTML: 1 }, ease: "power1.inOut", onUpdate: function() {
                     document.querySelector('.counter-efficiency').innerHTML += '%';
@@ -380,7 +380,7 @@ function initDynamicGallery() {
     let currentSlide = 0;
     let slideInterval;
 
-    fetch(`${API_BASE}/api/gallery/public`)
+    fetch(`${API_BASE}/api/gallery/public`, { credentials: 'include' })
         .then(response => response.json())
         .then(data => {
             if (data.success && data.images && data.images.length > 0) {

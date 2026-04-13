@@ -36,9 +36,9 @@ exports.getAllDepartments = async (req, res) => {
             ORDER BY d.name ASC
         `);
 
-        // Fetch categories for each department
+        // Fetch categories for each department (Refactored for Postgres STRING_AGG)
         const [catRows] = await db.tenantExecute(req, `
-            SELECT department_id, GROUP_CONCAT(category ORDER BY category SEPARATOR ',') AS categories
+            SELECT department_id, STRING_AGG(category, ',' ORDER BY category) AS categories
             FROM department_categories
             WHERE 1=1
             GROUP BY department_id
@@ -88,7 +88,7 @@ exports.getAllDeptStats = async (req, res) => {
         `);
 
         const [catRows] = await db.tenantExecute(req, `
-            SELECT department_id, GROUP_CONCAT(category ORDER BY category SEPARATOR ',') AS categories
+            SELECT department_id, STRING_AGG(category, ',' ORDER BY category) AS categories
             FROM department_categories
             WHERE 1=1
             GROUP BY department_id
@@ -124,7 +124,7 @@ exports.getDepartmentById = async (req, res) => {
         const cached = await cacheService.get(`deps:${id}:${req.user.tenant_id}`);
         if (cached) return res.json({ success: true, department: cached });
 
-        const [deptRows] = await db.tenantExecute(req, 'SELECT * FROM departments WHERE id = ?', [id]);
+        const [deptRows] = await db.tenantExecute(req, 'SELECT * FROM departments WHERE id = $1', [id]);
         if (deptRows.length === 0) {
             return res.status(404).json({ success: false, message: 'Department not found' });
         }
@@ -134,13 +134,13 @@ exports.getDepartmentById = async (req, res) => {
             SELECT dm.user_id, dm.role_in_dept, dm.assigned_at, u.username, u.email, u.role
             FROM department_members dm
             JOIN users u ON dm.user_id = u.id
-            WHERE dm.department_id = ?
+            WHERE dm.department_id = $1
             ORDER BY dm.role_in_dept DESC, u.username ASC
         `, [id]);
 
         // Get categories
         const [cats] = await db.tenantExecute(req, 
-            'SELECT category FROM department_categories WHERE department_id = ?', [id]
+            'SELECT category FROM department_categories WHERE department_id = $1', [id]
         );
 
         // Get complaint stats
@@ -150,7 +150,7 @@ exports.getDepartmentById = async (req, res) => {
                 SUM(CASE WHEN status = 'Pending'     THEN 1 ELSE 0 END) AS pending,
                 SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) AS in_progress,
                 SUM(CASE WHEN status = 'Resolved'    THEN 1 ELSE 0 END) AS resolved
-            FROM complaints WHERE department_id = ?
+            FROM complaints WHERE department_id = $1
         `, [id]);
 
         const deptData = {
@@ -177,24 +177,24 @@ exports.createDepartment = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Department name is required' });
     }
 
-    const conn = await db.getConnection();
+    const conn = await db.getTransaction();
     try {
         await conn.beginTransaction();
 
         const [result] = await conn.execute(
-            'INSERT INTO departments (tenant_id, name, description, email, head) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO departments (tenant_id, name, description, email, head) VALUES ($1, $2, $3, $4, $5) RETURNING id',
             [req.user.tenant_id, name.trim(), description || null, email || null, head || null]
         );
-        const deptId = result.insertId;
+        const deptId = result.rows[0].id;
 
-        // Insert category mappings
+        // Insert category mappings (Refactored for Postgres ON CONFLICT)
         if (Array.isArray(categories) && categories.length > 0) {
             const validCats = categories.filter(c => ALL_CATEGORIES.includes(c));
             if (validCats.length > 0) {
-                const placeholders = validCats.map(() => '(?, ?, ?)').join(', ');
-                const vals = validCats.flatMap(c => [req.user.tenant_id, deptId, c]);
+                const placeholders = validCats.map((_, i) => `($1, $2, $${i + 3})`).join(', ');
+                const vals = [req.user.tenant_id, deptId, ...validCats];
                 await conn.execute(
-                    `INSERT IGNORE INTO department_categories (tenant_id, department_id, category) VALUES ${placeholders}`,
+                    `INSERT INTO department_categories (tenant_id, department_id, category) VALUES ${placeholders} ON CONFLICT DO NOTHING`,
                     vals
                 );
             }
@@ -221,25 +221,25 @@ exports.updateDepartment = async (req, res) => {
     const { id } = req.params;
     const { name, description, email, head, categories } = req.body;
 
-    const conn = await db.getConnection();
+    const conn = await db.getTransaction();
     try {
         await conn.beginTransaction();
 
         // Update basic fields
         await conn.execute(
-            'UPDATE departments SET name = ?, description = ?, email = ?, head = ? WHERE id = ? AND tenant_id = ?',
+            'UPDATE departments SET name = $1, description = $2, email = $3, head = $4 WHERE id = $5 AND tenant_id = $6',
             [name, description || null, email || null, head || null, id, req.user.tenant_id]
         );
 
         // Replace categories
         if (Array.isArray(categories)) {
-            await conn.execute('DELETE FROM department_categories WHERE department_id = ? AND tenant_id = ?', [id, req.user.tenant_id]);
+            await conn.execute('DELETE FROM department_categories WHERE department_id = $1 AND tenant_id = $2', [id, req.user.tenant_id]);
             const validCats = categories.filter(c => ALL_CATEGORIES.includes(c));
             if (validCats.length > 0) {
-                const placeholders = validCats.map(() => '(?, ?, ?)').join(', ');
-                const vals = validCats.flatMap(c => [req.user.tenant_id, id, c]);
+                const placeholders = validCats.map((_, i) => `($1, $2, $${i + 3})`).join(', ');
+                const vals = [req.user.tenant_id, id, ...validCats];
                 await conn.execute(
-                    `INSERT IGNORE INTO department_categories (tenant_id, department_id, category) VALUES ${placeholders}`,
+                    `INSERT INTO department_categories (tenant_id, department_id, category) VALUES ${placeholders} ON CONFLICT DO NOTHING`,
                     vals
                 );
             }
@@ -274,15 +274,16 @@ exports.addMember = async (req, res) => {
     try {
         // Verify user exists and is Staff/HOD
         const [userRows] = await db.tenantExecute(req, 
-            "SELECT id, username, role FROM users WHERE id = ? AND role IN ('Staff','HOD')",
+            "SELECT id, username, role FROM users WHERE id = $1 AND role IN ('Staff','HOD')",
             [user_id]
         );
         if (userRows.length === 0) {
             return res.status(404).json({ success: false, message: 'Staff user not found' });
         }
 
+        // Refactored for Postgres UPSERT
         await db.tenantExecute(req, 
-            'INSERT INTO department_members (tenant_id, department_id, user_id, role_in_dept) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE role_in_dept = VALUES(role_in_dept)',
+            'INSERT INTO department_members (tenant_id, department_id, user_id, role_in_dept) VALUES ($1, $2, $3, $4) ON CONFLICT (tenant_id, department_id, user_id) DO UPDATE SET role_in_dept = EXCLUDED.role_in_dept',
             [req.user.tenant_id, id, user_id, role_in_dept || 'Staff']
         );
 
@@ -302,11 +303,11 @@ exports.addMember = async (req, res) => {
 exports.removeMember = async (req, res) => {
     const { id, user_id } = req.params;
     try {
-        const [result] = await db.tenantExecute(req, 
-            'DELETE FROM department_members WHERE department_id = ? AND user_id = ?',
+        const [dbResult, result] = await db.tenantExecute(req, 
+            'DELETE FROM department_members WHERE department_id = $1 AND user_id = $2',
             [id, user_id]
         );
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ success: false, message: 'Member not found in this department' });
         }
         

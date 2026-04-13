@@ -3,14 +3,31 @@
  * Govt. College Dharamshala
  */
 
-document.addEventListener("DOMContentLoaded", () => {
-    // 1. Auth & Initial Checks
-    const user = JSON.parse(localStorage.getItem('scrs_user'));
-    const token = localStorage.getItem('scrs_token');
-    
-    if (!user || user.role !== 'Admin' || !token) {
-        window.location.href = 'login.html';
-        return;
+document.addEventListener("DOMContentLoaded", async () => {
+    // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
+    // This allows both Admin and Principal roles since both use this dashboard logic
+    const userProfile = await window.validateSession(['Admin', 'Principal']);
+    if (!userProfile) return; // Exit if validation fails (handled by redirect)
+
+    // Sync localStorage for UI consistency, but server is the source of truth
+    const user = JSON.parse(localStorage.getItem('scrs_user')) || userProfile;
+
+    // 1.1 Populate SaaS Sidebar Profile
+    if (user) {
+        document.getElementById('user-display-name').textContent = user.name || 'Admin';
+        document.getElementById('user-display-role').textContent = user.role;
+        document.getElementById('user-avatar-initial').textContent = (user.name || 'A')[0].toUpperCase();
+        document.getElementById('welcome-user-name').textContent = user.name || 'Admin';
+
+        // Role-based Navigation Guard
+        if (user.role !== 'Principal') {
+            const principalOnlyTabs = ['tab-staff', 'tab-students'];
+            document.querySelectorAll('.nav-item').forEach(item => {
+                if (principalOnlyTabs.includes(item.dataset.tab)) {
+                    item.style.display = 'none';
+                }
+            });
+        }
     }
 
     // 2. Initialize Three.js Background
@@ -20,19 +37,130 @@ document.addEventListener("DOMContentLoaded", () => {
     const socket = io(API_BASE);
     socket.emit('join', 'admin');
 
+    // 3.1 Initialize Live Incident Map
+    window.incidentMap = null;
+    window.heatLayer = null;
+    window.markerLayer = null;
+
+    function initHeatmap() {
+        if (!document.getElementById('map')) return;
+        window.incidentMap = L.map('map').setView([31.1048, 77.1734], 16);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap © CARTO'
+        }).addTo(window.incidentMap);
+        window.markerLayer = L.layerGroup().addTo(window.incidentMap);
+    }
+    initHeatmap();
+
+    window.plotComplaintsOnMap = function(complaints) {
+        if (!window.incidentMap) return;
+        
+        // Clear previous layers
+        window.markerLayer.clearLayers();
+        if (window.heatLayer) window.incidentMap.removeLayer(window.heatLayer);
+
+        const locationMap = {
+            "Main Hall": [31.1048, 77.1734],
+            "Lab": [31.1055, 77.1742],
+            "Hostel": [31.1060, 77.1750],
+            "Library": [31.1050, 77.1740],
+            "Cafeteria": [31.1040, 77.1720]
+        };
+
+        const heatPoints = [];
+
+        complaints.forEach((c, idx) => {
+            // Fuzzy location matching for hackathon demo
+            let locString = (c.location || "").toLowerCase();
+            let coords = null;
+            if (locString.includes('hall')) coords = locationMap["Main Hall"];
+            else if (locString.includes('lab')) coords = locationMap["Lab"];
+            else if (locString.includes('hostel') || locString.includes('room')) coords = locationMap["Hostel"];
+            else if (locString.includes('library')) coords = locationMap["Library"];
+            else if (locString.includes('cafe') || locString.includes('mess')) coords = locationMap["Cafeteria"];
+            else {
+                // Generate a slight random offset around central campus for unknown locations
+                coords = [31.1048 + (Math.random() - 0.5) * 0.003, 77.1734 + (Math.random() - 0.5) * 0.003];
+            }
+
+            const color = c.priority === 'Emergency' ? '#ef4444' : c.priority === 'High' ? '#f59e0b' : '#3b82f6';
+            
+            L.circleMarker(coords, {
+                radius: 8,
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.8,
+                weight: 1
+            })
+            .bindPopup(`<b style="color:#000;">${c.title || c.category}</b><br><span style="color:#444;">${c.location}</span><br><span style="color:${color};font-weight:bold;">${c.priority}</span>`)
+            .addTo(window.markerLayer);
+
+            heatPoints.push([coords[0], coords[1], c.priority === 'Emergency' ? 1.0 : 0.5]);
+        });
+
+        if (typeof L.heatLayer !== 'undefined') {
+            window.heatLayer = L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 16 }).addTo(window.incidentMap);
+        }
+    };
+
+    // Live Activity Feed Log Array
+    window.activityQueue = [];
+    
+    function logActivity(text, type = 'new', time = 'Just now') {
+        const feed = document.getElementById('activity-feed');
+        if (!feed) return;
+        
+        let iconHtml = '<i class="fa-solid fa-file-circle-plus"></i>';
+        if (type === 'resolved') iconHtml = '<i class="fa-solid fa-check"></i>';
+        if (type === 'assigned') iconHtml = '<i class="fa-solid fa-share"></i>';
+        if (type === 'emergency') iconHtml = '<i class="fa-solid fa-triangle-exclamation"></i>';
+
+        const rawHtml = `
+            <div class="feed-item">
+                <div class="feed-icon ${type}">${iconHtml}</div>
+                <div class="feed-content">
+                    <p>${text}</p>
+                    <small>${time}</small>
+                </div>
+            </div>
+        `;
+        
+        // Remove empty state
+        if (feed.innerHTML.includes('Listening for campus events')) feed.innerHTML = '';
+        
+        feed.insertAdjacentHTML('afterbegin', rawHtml);
+        
+        // Keep only top 10 items
+        if (feed.children.length > 10) {
+            feed.removeChild(feed.lastElementChild);
+        }
+    }
+
     socket.on('new_complaint', (data) => {
-        showToast('New complaint received!');
+        const isEmg = data.priority === 'Emergency' || data.priority === 'High';
+        showToast('New dynamic alert from AI engine.', isEmg ? 'error' : 'info');
+        logActivity(`New ${isEmg ? '<b>Emergency</b>' : 'complaint'} logged: ${data.category}`, isEmg ? 'emergency' : 'new', new Date().toLocaleTimeString());
+        
+        // LIVE Update Map
+        if (window.plotComplaintsOnMap && window.lastFetchedComplaints) {
+            window.lastFetchedComplaints.unshift(data);
+            window.plotComplaintsOnMap(window.lastFetchedComplaints);
+            showToast("🔥 Spatial map live updated", "info");
+        }
+
         fetchStats();
         fetchComplaints();
     });
 
     socket.on('status_updated', (data) => {
+        logActivity(`Action triggered: Status updated directly in system.`, 'resolved', new Date().toLocaleTimeString());
         fetchStats();
         fetchComplaints();
     });
 
     // 4. Initial Fetches
     fetchStats();
+    loadDashboardAnalytics(); // New analytics suite
     fetchComplaints();
     fetchStaff();
     fetchStudents();
@@ -40,9 +168,59 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchDeptManagement();
     loadGallery();
 
+    // 4.1 SaaS Navigation Logic
+    const navItems = document.querySelectorAll('.nav-item');
+    const tabs = document.querySelectorAll('.admin-tab-content');
+    const sectionTitle = document.getElementById('current-section-title');
+    const sectionSubtitle = document.getElementById('current-section-subtitle');
+
+    const meta = {
+        'tab-dashboard': { title: 'Dashboard Overview', sub: 'Real-time campus pulse' },
+        'tab-complaints': { title: 'Complaints Management', sub: 'Live resolution stream' },
+        'tab-departments': { title: 'Academic Departments', sub: 'Routing and structure' },
+        'tab-staff': { title: 'Faculty & Administration', sub: 'Staff permissions and roles' },
+        'tab-students': { title: 'Student Registry', sub: 'Identity and credentials' },
+        'tab-gallery': { title: 'Homepage Gallery', sub: 'Public slider control' }
+    };
+
+    function switchTab(tabId) {
+        // Update Sidebar UI
+        navItems.forEach(item => {
+            item.classList.toggle('active', item.dataset.tab === tabId);
+        });
+
+        // Update Content UI
+        tabs.forEach(tab => {
+            tab.classList.toggle('active', tab.id === tabId);
+        });
+
+        // Update Header
+        if (meta[tabId]) {
+            sectionTitle.textContent = meta[tabId].title;
+            sectionSubtitle.textContent = meta[tabId].sub;
+        }
+
+        // Trigger fetches on tab switch for live data
+        if (tabId === 'tab-dashboard') loadDashboardAnalytics();
+        if (tabId === 'tab-departments') fetchDeptManagement();
+        if (tabId === 'tab-complaints') fetchComplaints();
+        if (tabId === 'tab-gallery') loadGallery();
+    }
+
+    navItems.forEach(item => {
+        item.addEventListener('click', () => switchTab(item.dataset.tab));
+    });
+
     // 5. Global Functions
-    window.logout = () => {
-        localStorage.removeItem('scrs_token');
+    window.logout = async () => {
+        try {
+            await fetch(`${API_BASE}/api/auth/logout`, { 
+                method: 'POST',
+                credentials: 'include' 
+            });
+        } catch (err) {
+            console.error('Logout request failed:', err);
+        }
         localStorage.removeItem('scrs_user');
         window.location.href = 'login.html';
     };
@@ -60,8 +238,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.viewID = (url) => {
         const modal = document.getElementById('idModal');
         const img = document.getElementById('modalImg');
-        img.src = url;
-        modal.style.display = 'flex';
+        if (img) img.src = url;
+        window.showModal('idModal');
     };
 
     // 5.1 Gallery Cropping Logic
@@ -69,7 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedFile = null;
 
     window.closeCropModal = () => {
-        document.getElementById('cropModal').style.display = 'none';
+        window.closeModal('cropModal');
         if (cropper) {
             cropper.destroy();
             cropper = null;
@@ -101,13 +279,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (btnReject) btnReject.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         
         try {
-            const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/admin/complaints/${id}/status`, {
                 method: 'PUT',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
                 body: JSON.stringify({ status: status.toLowerCase() })
             });
 
@@ -131,48 +306,146 @@ document.addEventListener("DOMContentLoaded", () => {
     window.showConfirmModal = (title, message, onConfirm) => {
         document.getElementById('confirmTitle').innerText = title;
         document.getElementById('confirmMessage').innerHTML = message;
-        document.getElementById('confirmModal').style.display = 'flex';
+        window.showModal('confirmModal');
         document.getElementById('confirmActionBtn').onclick = onConfirm;
     };
 
     window.closeConfirmModal = () => {
-        document.getElementById('confirmModal').style.display = 'none';
+        window.closeModal('confirmModal');
     };
 
-    window.showToast = (message, type = 'info') => {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `glass-panel toast toast-${type}`;
-        toast.style.padding = '1rem 1.5rem';
-        toast.style.marginBottom = '1rem';
-        toast.style.borderLeft = `4px solid ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#f59e0b'}`;
-        toast.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info'}"></i>
-                <span>${message}</span>
-            </div>
-        `;
-        container.appendChild(toast);
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            setTimeout(() => toast.remove(), 500);
-        }, 3000);
+    // Removed embedded showToast
+
+    // 8.1 Premium Analytics Engine
+    let dashboardCharts = {
+        trends: null,
+        status: null,
+        dept: null
     };
 
-    // 8. Fetch Functions
+    window.loadDashboardAnalytics = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/dashboards/stats`, { credentials: 'include' });
+            const data = await res.json();
+            
+            if (data.success) {
+                renderTrendsChart(data.dailyTrends);
+                renderStatusPieChart(data.statusDistribution);
+                renderDeptBarChart(data.departmentStats);
+                
+                // Also update the summary count cards
+                animateNumber('stat-total', data.summary.total);
+                animateNumber('stat-pending', data.summary.pending);
+                animateNumber('stat-resolved', data.summary.resolved);
+                
+                if (document.getElementById('stat-students')) {
+                    animateNumber('stat-students', data.summary.active_students);
+                }
+            }
+        } catch (err) {
+            console.error('Analytics fetch failed:', err);
+        }
+    };
+
+    function renderTrendsChart(trends) {
+        const ctx = document.getElementById('trendsChart').getContext('2d');
+        if (dashboardCharts.trends) dashboardCharts.trends.destroy();
+
+        // Target Hackathon Requirement: "Default to last 7 days"
+        // We slice the 30-day backend payload to just the last 7 days here.
+        const recentTrends = trends.length > 7 ? trends.slice(-7) : trends;
+
+        dashboardCharts.trends = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: recentTrends.map(t => new Date(t.date).toLocaleDateString(undefined, {weekday:'short', day:'numeric'})),
+                datasets: [{
+                    label: 'Complaints',
+                    data: recentTrends.map(t => t.count),
+                    borderColor: '#d4af37',
+                    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#d4af37',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#adb5bd' } },
+                    x: { grid: { display: false }, ticks: { color: '#adb5bd' } }
+                }
+            }
+        });
+    }
+
+    function renderStatusPieChart(distribution) {
+        const ctx = document.getElementById('statusPieChart').getContext('2d');
+        if (dashboardCharts.status) dashboardCharts.status.destroy();
+
+        dashboardCharts.status = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: distribution.map(d => d.status),
+                datasets: [{
+                    data: distribution.map(d => d.count),
+                    backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#adb5bd', padding: 20, font: { size: 10 } } }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+
+    function renderDeptBarChart(stats) {
+        const ctx = document.getElementById('deptBarChart').getContext('2d');
+        if (dashboardCharts.dept) dashboardCharts.dept.destroy();
+
+        dashboardCharts.dept = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: stats.map(s => s.name.split(' ')[0]), // Shorten names
+                datasets: [{
+                    label: 'Complaints',
+                    data: stats.map(s => s.count),
+                    backgroundColor: 'rgba(58, 134, 255, 0.6)',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#adb5bd' } },
+                    x: { grid: { display: false }, ticks: { color: '#adb5bd' } }
+                }
+            }
+        });
+    }
+
+    // 8. Fetch Stats — wrapper kept alive for socket listeners + status update handlers
     async function fetchStats() {
         try {
-            const token = localStorage.getItem('scrs_token');
-            const statsRes = await fetch(`${API_BASE}/api/stats/admin`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const statsRes = await fetch(`${API_BASE}/api/stats/admin`, { credentials: 'include' });
             const stats = await statsRes.json();
             if (stats.success) {
                 animateNumber('stat-total', stats.stats.total);
                 animateNumber('stat-pending', stats.stats.pending);
                 animateNumber('stat-resolved', stats.stats.resolved);
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error('[Stats]', err); }
     }
 
     function animateNumber(id, endValue) {
@@ -205,39 +478,54 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchComplaints() {
         try {
-            const token = localStorage.getItem('scrs_token');
             const status = document.getElementById('filter-status')?.value || '';
             const dept = document.getElementById('filter-dept')?.value || '';
             
-            let url = `/api/complaints/all?page=${window.currentCompPage}&limit=10`; // Smaller limit for testing
+            let url = `${API_BASE}/api/complaints/all?page=${window.currentCompPage}&limit=10`;
             if (status) url += `&status=${encodeURIComponent(status)}`;
             if (dept) url += `&department_id=${encodeURIComponent(dept)}`;
+            
+            // Skeleton Loader Polish
+            document.getElementById('complaints-tbody').innerHTML = `<tr><td colspan="7" style="padding: 2rem;">
+                <div class="skeleton-row"></div>
+                <div class="skeleton-row" style="margin-top:10px; width:70%;"></div>
+                <div class="skeleton-row" style="margin-top:10px; width:40%;"></div>
+            </td></tr>`;
 
-            const compRes = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const compRes = await fetch(url, { credentials: 'include' });
+            if (!compRes.ok) { console.error('Complaints fetch failed:', compRes.status); return; }
             const compData = await compRes.json();
             if (compData.success) {
-                renderTable(compData.complaints);
+                window.lastFetchedComplaints = compData.complaints;
+                if (window.plotComplaintsOnMap) window.plotComplaintsOnMap(compData.complaints);
                 
+                renderTable(compData.complaints);
                 if (compData.pagination) {
                     totalCompPages = compData.pagination.totalPages || 1;
                     const info = document.getElementById('comp-page-info');
-                    if(info) info.textContent = `Page ${window.currentCompPage} of ${totalCompPages}`;
+                    if (info) info.textContent = `Page ${window.currentCompPage} of ${totalCompPages}`;
                 }
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error('[Complaints]', err); }
     }
+    window.fetchComplaints = fetchComplaints; // expose to HTML onchange handlers
 
     function renderTable(complaints) {
         const tbody = document.getElementById('complaints-tbody');
         tbody.innerHTML = complaints.map(c => {
             const isVideo = c.media_url && (c.media_url.endsWith('.mp4') || c.media_url.endsWith('.mov') || c.media_url.includes('/video/upload/'));
             
+            // Priority Visual Indicator (Smart Feature)
+            const prioClass = c.priority === 'Emergency' ? 'spi-high' : c.priority === 'High' ? 'spi-medium' : 'spi-low';
+            const aiBadge = ['Emergency', 'High'].includes(c.priority) ? `<span class="ai-badge" title="AI Priority Engine">⚡ AI Escalate</span>` : '';
+            const rowClass = ['Emergency', 'High'].includes(c.priority) ? 'fade-in ai-glowing-row' : 'fade-in';
+
             return `
-            <tr class="fade-in">
+            <tr class="${rowClass}">
                 <td>#${c.id}</td>
-                <td style="font-weight: 700; color: var(--gold);">${c.title || 'Untitled'}</td>
+                <td style="font-weight: 700; color: var(--gold);">${c.title || 'Untitled'} ${aiBadge}
+                    <div style="margin-top: 4px;"><span class="smart-priority-indicator ${prioClass}">${c.priority || 'Medium'}</span></div>
+                </td>
                 <td>${c.student_name || 'Student #' + c.student_id}</td>
                 <td><span style="font-size:0.8rem; opacity:0.8;">${c.category} @ ${c.location}</span></td>
                 <td><span class="status-badge status-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span></td>
@@ -278,7 +566,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
         
-        modal.style.display = 'flex';
+        window.showModal('idModal');
     };
 
     // Additional fetch functions (Staff, Students, Departments, Gallery) reused from original
@@ -303,8 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 .join('');
         } else {
             // Fallback: fetch directly if not yet populated
-            const token = localStorage.getItem('scrs_token');
-            fetch(`${API_BASE}/api/admin/departments`, { headers: { 'Authorization': `Bearer ${token}` } })
+            fetch(`${API_BASE}/api/admin/departments`, { credentials: 'include' })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
@@ -315,11 +602,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
         }
 
-        document.getElementById('forwardModal').style.display = 'flex';
+        window.showModal('forwardModal');
     };
 
     window.closeForwardModal = () => {
-        document.getElementById('forwardModal').style.display = 'none';
+        window.closeModal('forwardModal');
         forwardTargetId = null;
     };
 
@@ -342,10 +629,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/admin/complaints/${forwardTargetId}/forward`, {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
                 body: JSON.stringify({ department_id: deptId, admin_notes: notes || null })
             });
             const data = await res.json();
@@ -373,9 +658,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchDeptManagement() {
         try {
-            const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/departments`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const data = await res.json();
             if (data.success) {
@@ -444,9 +728,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (deptId) {
             title.textContent = 'Edit Department';
             try {
-                const token = localStorage.getItem('scrs_token');
                 const res = await fetch(`${API_BASE}/api/departments/${deptId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    credentials: 'include'
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -464,11 +747,11 @@ document.addEventListener("DOMContentLoaded", () => {
             title.textContent = 'Add New Department';
         }
 
-        modal.style.display = 'flex';
+        window.showModal('deptModal');
     };
 
     window.closeDeptModal = () => {
-        document.getElementById('deptModal').style.display = 'none';
+        window.closeModal('deptModal');
         currentDeptId = null;
     };
 
@@ -489,16 +772,13 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
 
         try {
-            const token = localStorage.getItem('scrs_token');
             const method = currentDeptId ? 'PUT' : 'POST';
-            const url = currentDeptId ? `/api/departments/${currentDeptId}` : '/api/departments';
+            const url = currentDeptId ? `${API_BASE}/api/departments/${currentDeptId}` : `${API_BASE}/api/departments`;
 
             const res = await fetch(url, {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
                 body: JSON.stringify({ name, description, email, categories })
             });
             const data = await res.json();
@@ -522,48 +802,53 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Members Management ---
     let activeDeptIdForMembers = null;
 
-    window.openForwardModal = async (id) => {
-        document.getElementById('forward-complaint-id').value = id;
-        document.getElementById('forward-modal-title').textContent = `Forward Complaint #${id}`;
-        
-        // Load history
-        const historyList = document.getElementById('forward-history-list');
-        if (historyList) {
-            historyList.innerHTML = '<li style="color:var(--text-muted); font-size:0.8rem;">Loading history...</li>';
-            try {
-                const token = localStorage.getItem('scrs_token');
-                const res = await fetch(`${API_BASE}/api/complaints/${id}/history`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                if (data.success && data.history.length > 0) {
-                    historyList.innerHTML = data.history.map(h => `
-                        <li style="margin-bottom:0.5rem; font-size:0.8rem; border-left:2px solid ${h.is_current ? 'var(--gold-color)' : 'rgba(255,255,255,0.1)'}; padding-left:0.5rem;">
-                            <div style="font-weight:600; color:${h.is_current ? 'var(--gold-color)' : 'white'};">${h.department_name} ${h.is_current ? '(Current)' : ''}</div>
-                            <div style="color:var(--text-secondary); font-size:0.75rem;">${new Date(h.assigned_at).toLocaleString()} by ${h.assigned_by_name || 'System'}</div>
-                            <div style="font-style:italic; color:rgba(255,255,255,0.5);">${h.notes || 'No notes'}</div>
-                        </li>
-                    `).join('');
-                } else {
-                    historyList.innerHTML = '<li style="color:var(--text-muted); font-size:0.8rem;">No reassignment history</li>';
-                }
-            } catch (err) { historyList.innerHTML = 'Error loading history'; }
+    // ── Forward Complaint Modal (single clean implementation) ──────────────────
+    window.openForwardModal = (complaintId) => {
+        forwardTargetId = complaintId;
+        document.getElementById('forward-notes').value = '';
+
+        const deptSelect = document.getElementById('forward-dept-select');
+        const staffDept  = document.getElementById('staff-dept');
+
+        // Fast path: re-use already-loaded department options from staff form
+        if (staffDept && staffDept.options.length > 1) {
+            deptSelect.innerHTML = Array.from(staffDept.options)
+                .filter(o => o.value !== '')
+                .map(o => `<option value="${o.value}">${o.text}</option>`)
+                .join('');
+        } else {
+            // Fallback: fetch departments directly
+            deptSelect.innerHTML = '<option>Loading departments...</option>';
+            fetch(`${API_BASE}/api/admin/departments`, { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        deptSelect.innerHTML = data.departments
+                            .map(d => `<option value="${d.id}">${d.name}</option>`)
+                            .join('');
+                    } else {
+                        deptSelect.innerHTML = '<option>Could not load departments</option>';
+                    }
+                })
+                .catch(() => { deptSelect.innerHTML = '<option>Error loading departments</option>'; });
         }
 
-        document.getElementById('forwardModal').style.display = 'flex';
+        window.showModal('forwardModal');
     };    
+
+
 
     window.openMembersModal = (deptId, deptName) => {
         activeDeptIdForMembers = deptId;
         document.getElementById('membersModalTitle').textContent = `Manage Staff - ${deptName}`;
-        document.getElementById('membersModal').style.display = 'flex';
+        window.showModal('membersModal');
         
         fetchDeptMembers(deptId);
         populateAvailableStaff();
     };
 
     window.closeMembersModal = () => {
-        document.getElementById('membersModal').style.display = 'none';
+        window.closeModal('membersModal');
         activeDeptIdForMembers = null;
     };
 
@@ -572,9 +857,8 @@ document.addEventListener("DOMContentLoaded", () => {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:1rem;">Loading...</td></tr>';
 
         try {
-            const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/departments/${deptId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const data = await res.json();
             if (data.success) {
@@ -614,9 +898,8 @@ document.addEventListener("DOMContentLoaded", () => {
         select.innerHTML = '<option value="">Loading staff...</option>';
 
         try {
-            const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/departments/available-staff`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const data = await res.json();
             if (data.success) {
@@ -636,13 +919,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/departments/${activeDeptIdForMembers}/members`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
                 body: JSON.stringify({ user_id, role_in_dept })
             });
             const data = await res.json();
@@ -660,10 +940,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!confirm('Are you sure you want to remove this staff member from this department?')) return;
 
         try {
-            const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/departments/${deptId}/members/${userId}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const data = await res.json();
             if (data.success) {
@@ -751,9 +1030,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Reuse existing fetch functions from admin.html script section
     async function fetchStaff() {
         try {
-            const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/admin/staff`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const data = await res.json();
             if (data.success) {
@@ -778,9 +1056,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchStudents() {
         try {
-            const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/admin/students`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const data = await res.json();
             if (data.success) {
@@ -810,9 +1087,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function loadDepartments() {
         try {
-            const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/admin/departments`, {
-                headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+                credentials: 'include'
             });
             const data = await res.json();
             if (data.success) {
@@ -833,15 +1109,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function loadGallery() {
         try {
-            const res = await fetch(`${API_BASE}/api/gallery`);
+            const user = JSON.parse(localStorage.getItem('scrs_user'));
+            const res = await fetch(`${API_BASE}/api/gallery`, {
+                credentials: 'include'
+            });
             const data = await res.json();
             if (data.success) {
                 const grid = document.getElementById('gallery-grid');
                 if(!grid) return;
                 grid.innerHTML = data.images.map(img => `
-                    <div class="glass-panel fade-in" style="padding: 12px; position: relative; display: flex; flex-direction: column; gap: 10px;">
-                        <div style="height: 150px; border-radius: 8px; overflow: hidden;">
-                            <img src="${img.url}" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div class="glass-panel fade-in gallery-item" data-id="${img.id}" style="padding: 12px; position: relative; display: flex; flex-direction: column; gap: 10px; border: 1px solid ${img.is_featured ? 'var(--gold)' : 'rgba(255,255,255,0.05)'};">
+                        <div style="height: 150px; border-radius: 8px; overflow: hidden; position: relative;">
+                            <img src="${API_BASE}/${img.url}" style="width: 100%; height: 100%; object-fit: cover; opacity: ${img.is_featured ? '1' : '0.5'};">
+                            ${!img.is_featured ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 20px; font-size: 0.75rem;">Hidden</div>' : ''}
+                            <div style="position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; border: 1px solid rgba(255,255,255,0.1);">
+                                <span>Order:</span>
+                                <input type="number" value="${img.display_order || 0}" 
+                                    onchange="updateDisplayOrder(${img.id}, this.value)"
+                                    ${user.role !== 'Principal' ? 'disabled' : ''}
+                                    style="width: 35px; background: transparent; border: none; color: var(--gold); font-weight: bold; text-align: center;">
+                            </div>
                         </div>
                         <div class="form-group" style="margin: 0;">
                             <input type="text" class="form-control" value="${img.title || ''}" 
@@ -850,26 +1137,89 @@ document.addEventListener("DOMContentLoaded", () => {
                                 style="font-size: 0.85rem; padding: 5px 8px; background: rgba(0,0,0,0.2);">
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.05);">
-                            <span style="font-size: 0.70rem; color: var(--text-muted);">${new Date(img.created_at).toLocaleDateString()}</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label class="featured-toggle" title="${user.role === 'Principal' ? 'Toggle Homepage Visibility' : 'Principal Only'}">
+                                    <input type="checkbox" ${img.is_featured ? 'checked' : ''} 
+                                        ${user.role !== 'Principal' ? 'disabled' : ''}
+                                        onchange="toggleFeatured(${img.id}, this.checked)">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span style="font-size: 0.70rem; color: var(--text-muted);">${new Date(img.created_at).toLocaleDateString()}</span>
+                            </div>
+                            ${user.role === 'Principal' ? `
                             <button class="action-btn btn-reject" onclick="deleteGalleryImage(${img.id})" style="padding: 4px 8px; font-size: 0.75rem;">
                                 <i class="fa-solid fa-trash"></i> Delete
-                            </button>
+                            </button>` : ''}
                         </div>
                     </div>
                 `).join('');
+
+                // 🚀 Initialize Sortable (Principal Only)
+                if (user.role === 'Principal' && typeof Sortable !== 'undefined') {
+                    Sortable.create(grid, {
+                        animation: 150,
+                        ghostClass: 'sortable-ghost',
+                        chosenClass: 'sortable-chosen',
+                        draggable: '.gallery-item',
+                        onEnd: async () => {
+                            const newOrder = Array.from(grid.querySelectorAll('.gallery-item')).map((item, index) => ({
+                                id: parseInt(item.dataset.id),
+                                display_order: index + 1
+                            }));
+                            saveGalleryOrder(newOrder);
+                        }
+                    });
+                }
             }
         } catch (err) { console.error(err); }
     }
 
+    window.toggleFeatured = async (id, is_featured) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/gallery/${id}/featured`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
+                body: JSON.stringify({ is_featured })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message, 'success'); // Uses dynamic message from server
+                await loadGallery();
+            } else {
+                showToast(data.message || 'Toggle failed', 'error');
+                await loadGallery(); // Revert UI
+            }
+        } catch (err) { 
+            showToast('Update failed', 'error');
+            await loadGallery(); 
+        }
+    };
+
+    window.updateDisplayOrder = async (id, display_order) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/gallery/${id}/display-order`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
+                body: JSON.stringify({ display_order })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Display order updated', 'success');
+                // No full reload needed to keep focus, but optional
+            } else {
+                showToast(data.message || 'Update failed', 'error');
+            }
+        } catch (err) { showToast('Update failed', 'error'); }
+    };
+
     window.updateGalleryTitle = async (id, title) => {
         try {
-            const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/gallery/${id}/title`, {
                 method: 'PATCH',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
                 body: JSON.stringify({ title })
             });
             const data = await res.json();
@@ -894,13 +1244,10 @@ document.addEventListener("DOMContentLoaded", () => {
             };
 
             try {
-                const token = localStorage.getItem('scrs_token');
                 const res = await fetch(`${API_BASE}/api/admin/add-student`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
+                    headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                    credentials: 'include',
                     body: JSON.stringify(formData)
                 });
                 const data = await res.json();
@@ -933,13 +1280,10 @@ document.addEventListener("DOMContentLoaded", () => {
             };
 
             try {
-                const token = localStorage.getItem('scrs_token');
                 const res = await fetch(`${API_BASE}/api/admin/add-staff`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
+                    headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                    credentials: 'include',
                     body: JSON.stringify(staffData)
                 });
                 const data = await res.json();
@@ -968,7 +1312,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const image = document.getElementById('imageToCrop');
             image.src = e.target.result;
             document.getElementById('gallery-title-input').value = '';
-            document.getElementById('cropModal').style.display = 'flex';
+            window.showModal('cropModal');
             
             if (cropper) cropper.destroy();
             cropper = new Cropper(image, {
@@ -997,10 +1341,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 formData.append('title', document.getElementById('gallery-title-input').value);
 
                 try {
-                    const token = localStorage.getItem('scrs_token');
                     const res = await fetch(`${API_BASE}/api/gallery/upload`, {
                         method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` },
+                        credentials: 'include',
                         body: formData
                     });
                     const data = await res.json();
@@ -1021,19 +1364,107 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    window.deleteGalleryImage = async (id) => {
-        if (!confirm(`Are you sure you want to delete this image?`)) return;
+    window.saveGalleryOrder = async (order) => {
         try {
-            const token = localStorage.getItem('scrs_token');
+            const res = await fetch(`${API_BASE}/api/gallery/reorder`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
+                body: JSON.stringify({ order })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('New display order saved!', 'success');
+            } else {
+                showToast(data.message || 'Failed to save order', 'error');
+                loadGallery(); // Revert on failure
+            }
+        } catch (err) { 
+            showToast('Sync error', 'error');
+            loadGallery();
+        }
+    };
+
+    window.deleteGalleryImage = async (id) => {
+        if (!confirm('Are you sure you want to delete this image? One careless click = broken homepage slider!')) return;
+        try {
             const res = await fetch(`${API_BASE}/api/gallery/${id}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             const data = await res.json();
             if (data.success) {
                 showToast('Image removed from gallery', 'success');
-                loadGallery();
+                await loadGallery(); // Instant update
+            } else {
+                showToast(data.message || 'Delete failed', 'error');
             }
         } catch (err) { showToast('Delete failed', 'error'); }
     };
+
+    // ==========================================
+    // USER REQUESTED UX WIRING
+    // ==========================================
+
+    // Search bar logic
+    const searchInput = document.getElementById("search");
+    if(searchInput) {
+        searchInput.addEventListener("input", function(e) {
+            console.log("Searching:", e.target.value);
+            // Basic functional demo of filter mapping
+            const rows = document.querySelectorAll("tbody tr");
+            const term = e.target.value.toLowerCase();
+            rows.forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(term) ? "" : "none";
+            });
+        });
+    }
+
+    // Notification icon logic
+    const notifBtn = document.getElementById("notifBtn");
+    const notifDropdown = document.getElementById("notifDropdown");
+    if(notifBtn && notifDropdown) {
+        notifBtn.addEventListener("click", (e) => {
+            notifDropdown.style.display = notifDropdown.style.display === "none" ? "block" : "none";
+            e.stopPropagation();
+        });
+        
+        // Click outside to close
+        document.addEventListener("click", (e) => {
+            if(!notifBtn.contains(e.target) && !notifDropdown.contains(e.target)) {
+                notifDropdown.style.display = "none";
+            }
+        });
+    }
+
+    // Modal UI Handlers
+    window.closeConfirmModal = () => window.closeModal("confirmModal");
+    window.resetForm = () => {
+        const title = document.getElementById("gallery-title-input");
+        const notes = document.getElementById("forward-notes");
+        if(title) title.value = "";
+        if(notes) notes.value = "";
+    };
+    window.closeForwardModal = () => {
+        window.closeModal("forwardModal");
+        window.resetForm();
+    };
+
+    // Generic Confirm Stub
+    window.confirmAction = () => {
+        console.log("Confirm action triggered.");
+        window.closeConfirmModal();
+    };
+
+    // Generic Button Clicks (Testing purposes)
+    document.querySelectorAll("button").forEach(btn => {
+        if(!btn.dataset.uiWired) {
+            btn.addEventListener("click", () => {
+                console.log("Button clicked:", btn.innerText.trim());
+            });
+            btn.dataset.uiWired = "true";
+        }
+    });
+
 });
+

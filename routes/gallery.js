@@ -43,10 +43,19 @@ router.get('/public', galleryController.getPublicGallery);
 // @route   POST /api/gallery/upload
 router.post('/upload', auth, checkRole(['Admin']), upload.single('file'), galleryController.uploadImage);
 
-// @route   PATCH /api/gallery/:id/title
-router.patch('/:id/title', auth, checkRole(['Admin']), galleryController.updateTitle);
+// @route   PATCH /api/gallery/:id/featured
+router.patch('/:id/featured', auth, checkRole(['Admin', 'Principal']), galleryController.toggleFeatured);
+
+// @route   PATCH /api/gallery/:id/display-order
+router.patch('/:id/display-order', auth, checkRole(['Admin', 'Principal']), galleryController.updateDisplayOrder);
+
+// @route   POST /api/gallery/reorder
+router.post('/reorder', auth, checkRole(['Admin', 'Principal']), galleryController.reorderImages);
 
 // @route   DELETE /api/gallery/:id
-router.delete('/:id', auth, checkRole(['Admin']), galleryController.deleteImage);
+router.delete('/:id', auth, checkRole(['Admin', 'Principal']), galleryController.deleteImage);
+
+// @route   PATCH /api/gallery/:id/title  ← was missing, caused title updates to 404
+router.patch('/:id/title', auth, checkRole(['Admin', 'Principal']), galleryController.updateTitle);
 
 module.exports = router;

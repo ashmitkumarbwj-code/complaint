@@ -6,7 +6,7 @@ const auth = require('../middleware/authMiddleware');
 const v = require('../middleware/validators');
 const checkRole = require('../middleware/roleMiddleware');
 
-const { complaintLimiter } = require('../middleware/rateLimiter');
+const { complaintLimiter, statusUpdateLimiter } = require('../middleware/rateLimiter');
 
 // Multer setup (using disk storage so background workers can process files)
 // Limits: 10 MB max, JPEG/PNG/MP4/MOV only
@@ -39,11 +39,11 @@ const upload = multer({
 });
 
 // Submit: auth → rateLimit → multer (parse file) → file validation → body validation → controller
-router.post('/submit',
+router.post('/',
     auth,
     complaintLimiter,
     (req, res, next) => {
-        upload.single('media')(req, res, (err) => {
+        upload.single('image')(req, res, (err) => {
             if (err instanceof multer.MulterError) {
                 // A Multer error occurred when uploading.
                 return res.status(422).json({ success: false, message: `Upload error: ${err.message}` });
@@ -70,9 +70,10 @@ router.get('/student/:student_id',
 // Get all complaints (admin/HOD/principal)
 router.get('/all', auth, checkRole(['Admin', 'Principal']), complaintController.getAllComplaints);
 
-// Update complaint status
+// Update complaint status (Hardened with statusUpdateLimiter)
 router.patch('/status/:complaint_id',
     auth,
+    statusUpdateLimiter,
     v.validateUpdateStatus,
     complaintController.updateStatus
 );

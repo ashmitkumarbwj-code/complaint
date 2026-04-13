@@ -15,4 +15,7 @@ router.get('/public/weekly-stats', dashboardController.getPublicWeeklyStats);
 router.get('/gallery', dashboardController.getGallery);
 router.get('/public/stats', dashboardController.getPublicStats);
 
+// ─── NEW PREMIUM ANALYTICS ──────────────────────────────────────────────
+router.get('/stats', auth, checkRole(['Admin', 'Principal']), dashboardController.getDashboardStats);
+
 module.exports = router;

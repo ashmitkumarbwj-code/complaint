@@ -66,7 +66,7 @@
         }
     </style>
 </head>
-<body>
+<body style="display: none;">
     <div class="student-dashboard-bg"></div>
     <div class="student-overlay"></div>
 
@@ -131,7 +131,7 @@
                     <div class="form-group mb-4">
                         <label class="form-label" style="font-weight: 700; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin-bottom: 0.75rem; display: block; opacity: 0.8;">Upload Evidence (Optional)</label>
                         <div class="file-upload-zone">
-                            <input type="file" id="complaint-media" accept="image/*,video/*">
+                            <input type="file" id="image" accept="image/*,video/*">
                             <i class="fa-solid fa-cloud-arrow-up"></i>
                             <span>Drop an image or click to browse</span>
                         </div>
@@ -178,7 +178,9 @@
     </style>
 
     <script src="js/interactive-bubbles.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/student.js"></script>
+    <script src="js/uiUtils.js"></script>
 </body>
 </html>

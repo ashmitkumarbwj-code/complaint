@@ -43,17 +43,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const password = passwordInput.value;
 
         if (!identifier || !password) {
-            alert('Please fill in all fields.');
+            showToast('Please fill in all fields.', 'error');
             return;
         }
 
-        btnLogin.textContent = 'Logging in...';
+        const origHtml = btnLogin.innerHTML;
+        btnLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Logging in...';
         btnLogin.disabled = true;
 
         try {
             const response = await fetch(`${API_BASE}/api/auth/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include', // 🔥 Mandatory for HttpOnly cookies
                 body: JSON.stringify({ 
                     role: currentRole, 
                     identifier, 
@@ -65,21 +67,29 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
 
             if (data.success) {
-                // Store user info and token
-                localStorage.setItem('scrs_user', JSON.stringify(data.user));
-                localStorage.setItem('scrs_token', data.token);
+                // Store only UI-friendly metadata. 
+                // Sensitive data/roles are now verified via server handshake on every load.
+                const uiUser = {
+                    name: data.user.username || data.user.name,
+                    avatar: data.user.profile_image,
+                    dept: data.user.department_name
+                };
+                localStorage.setItem('scrs_user', JSON.stringify(uiUser));
                 
-                // Redirect
-                window.location.href = data.redirect;
+                // Keep a small hint for redirection logic, but it's not used for access control
+                localStorage.setItem('scrs_role_hint', data.user.role);
+                
+                // Redirect using server-provided path
+                window.location.href = data.redirect || 'admin.html';
             } else {
-                alert(data.message || 'Login failed');
-                btnLogin.textContent = 'Login to Portal';
+                showToast(data.message || 'Login failed', 'error');
+                btnLogin.innerHTML = origHtml;
                 btnLogin.disabled = false;
             }
         } catch (error) {
             console.error('Login error:', error);
-            alert('An error occurred during login.');
-            btnLogin.textContent = 'Login to Portal';
+            showToast('An error occurred during login.', 'error');
+            btnLogin.innerHTML = origHtml;
             btnLogin.disabled = false;
         }
     });

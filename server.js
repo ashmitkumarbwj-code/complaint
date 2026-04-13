@@ -3,6 +3,7 @@ const express = require('express');
 const path    = require('path');
 const helmet  = require('helmet');
 const cors    = require('cors');
+const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const morgan  = require('morgan');
 const logger  = require('./utils/logger');
@@ -29,6 +30,7 @@ const app = express();
 
 // 1. High-Priority Tracing (MUST be first)
 app.use(traceMiddleware);
+app.use(cookieParser());
 
 // Global Rate Limiting
 const limiter = rateLimit({
@@ -57,24 +59,25 @@ app.use(helmet({
   contentSecurityPolicy: false // disabled for simple CDN loading of GSAP and Charts
 }));
 
-const allowedOrigins = [
-    'https://smart-complaint-and-response-system.vercel.app',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000'
-];
+const allowedOrigins = process.env.FRONTEND_URLS
+  ? process.env.FRONTEND_URLS.split(',')
+  : [];
 
 app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('CORS error / blocked by production policy'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true 
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      logger.warn(`❌ CORS BLOCKED: ${origin}`);
+      callback(new Error('CORS error / blocked by production policy'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true 
 }));
 
 // Body parser
@@ -83,6 +86,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 const authRoutes = require('./routes/auth');

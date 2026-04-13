@@ -1,12 +1,10 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Check Authentication
-    const user = JSON.parse(localStorage.getItem('scrs_user'));
-    const token = localStorage.getItem('scrs_token');
+document.addEventListener('DOMContentLoaded', async () => {
+    // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
+    const userProfile = await window.validateSession('Principal');
+    if (!userProfile) return;
 
-    if (!token || !user || user.role !== 'Principal') {
-        window.location.href = 'login.html?role=Principal';
-        return;
-    }
+    // Sync localStorage for UI consistency, but server is the source of truth
+    const user = JSON.parse(localStorage.getItem('scrs_user')) || userProfile;
 
     // 2. Wire up navigation
     setupNav();
@@ -96,7 +94,7 @@ async function fetchDashboardStats() {
     try {
         const token = localStorage.getItem('scrs_token');
         const res = await fetch(`${API_BASE}/api/dashboards/principal/stats`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include', headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
 
@@ -116,7 +114,7 @@ async function fetchCriticalComplaints() {
     try {
         const token = localStorage.getItem('scrs_token');
         const res = await fetch(`${API_BASE}/api/dashboards/principal/critical`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include', headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
 
@@ -213,7 +211,7 @@ let activeNode = null;
 
 window.startSequentialReview = function(id) {
     if (!window.__reviewQueue || window.__reviewQueue.size === 0) {
-        alert('No pending complaints to review.');
+        showToast('No pending complaints to review.', 'error');
         return;
     }
 
@@ -222,18 +220,18 @@ window.startSequentialReview = function(id) {
         activeNode = window.__reviewQueue.head;
     }
 
-    document.getElementById('review-modal').classList.add('active');
+    window.showModal('review-modal');
     renderActiveComplaint();
 };
 
 window.closeReviewModal = function() {
-    document.getElementById('review-modal').classList.remove('active');
+    window.closeModal('review-modal');
 };
 
 function renderActiveComplaint() {
     if (!activeNode) {
         closeReviewModal();
-        alert('All selected complaints have been reviewed!');
+        showToast('All selected complaints have been reviewed!', 'success');
         return;
     }
 
@@ -293,7 +291,7 @@ async function loadComplaintHistory(id) {
     try {
         const token = localStorage.getItem('scrs_token');
         const res = await fetch(`${API_BASE}/api/complaints/${id}/history`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include', headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
 
@@ -332,7 +330,7 @@ document.getElementById('btn-clear-next').addEventListener('click', async () => 
         const token = localStorage.getItem('scrs_token');
         const res = await fetch(`${API_BASE}/api/complaints/status/${complaintId}`, {
             method: 'PATCH',
-            headers: { 
+            credentials: 'include', headers: { 
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
@@ -352,7 +350,7 @@ document.getElementById('btn-clear-next').addEventListener('click', async () => 
                 fetchCriticalComplaints();
             }});
         } else {
-            alert('Failed to update status');
+            showToast('Failed to update status', 'error');
         }
     } catch (err) {
         console.error('Clear error:', err);
@@ -596,7 +594,7 @@ async function fetchWeeklyPerformance() {
     try {
         const token = localStorage.getItem('scrs_token');
         const res = await fetch(`${API_BASE}/api/dashboards/weekly-stats`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include', headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -668,7 +666,7 @@ async function fetchAllComplaintsForPrincipal() {
     try {
         const token = localStorage.getItem('scrs_token');
         const res = await fetch(`${API_BASE}/api/complaints/all`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include', headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (data.success) {
@@ -711,7 +709,7 @@ async function fetchDeptPerformance() {
     try {
         const token = localStorage.getItem('scrs_token');
         const res = await fetch(`${API_BASE}/api/departments/stats/all`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include', headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (!data.success || !data.departments) return;
@@ -783,7 +781,7 @@ async function fetchPrincipalAnalytics() {
     try {
         const token = localStorage.getItem('scrs_token');
         const res = await fetch(`${API_BASE}/api/dashboards/admin/stats`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include', headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (!data.success || !data.stats) return;
@@ -804,7 +802,7 @@ async function fetchEmergencyAlerts() {
     try {
         const token = localStorage.getItem('scrs_token');
         const res = await fetch(`${API_BASE}/api/dashboards/principal/critical`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include', headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (!data.success) return;
@@ -833,7 +831,7 @@ async function loadPrincipalProfile() {
     try {
         const token = localStorage.getItem('scrs_token');
         const res = await fetch('http://117.237.13.35:5000/api/users/profile', {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include', headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         
@@ -905,11 +903,11 @@ if (profileForm) {
 
         // Validation
         if (password && password.length < 8) {
-            alert('Password must be at least 8 characters');
+            showToast('Password must be at least 8 characters', 'error');
             return;
         }
         if (password && password !== confirmMsg) {
-            alert('Passwords do not match');
+            showToast('Passwords do not match', 'error');
             return;
         }
 
@@ -925,7 +923,7 @@ if (profileForm) {
             const token = localStorage.getItem('scrs_token');
             const res = await fetch('http://117.237.13.35:5000/api/users/profile', {
                 method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` },
+                credentials: 'include', headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
 
@@ -946,13 +944,13 @@ if (profileForm) {
                 document.getElementById('profile-password').value = '';
                 document.getElementById('profile-confirm-password').value = '';
                 
-                alert('Profile updated successfully!');
+                showToast('Profile updated successfully!', 'success');
             } else {
                 alert(data.message || 'Update failed');
             }
         } catch (err) {
             console.error('Submit error:', err);
-            alert('Server error occurred');
+            showToast('Server error occurred', 'error');
         } finally {
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;

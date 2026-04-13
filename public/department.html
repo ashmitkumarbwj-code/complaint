@@ -63,14 +63,10 @@
         .badge-resolved { background: rgba(46, 213, 115, 0.1); color: #2ed573; }
         .badge-high { border: 1px solid #ff4757; color: #ff4757; }
 
-        /* Modal Styles */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px); }
-        .modal-content { background: var(--surface-light); width: 90%; max-width: 600px; border-radius: 20px; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); }
-        .modal-body p { margin-bottom: 1rem; color: var(--text-secondary); line-height: 1.6; }
         .status-actions { display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
-<body>
+<body style="display: none;">
     <div class="container py-4">
         <header class="d-flex justify-content-between align-items-center mb-5">
             <div class="d-flex align-items-center gap-3">
@@ -135,7 +131,7 @@
                         </tr>
                     </thead>
                     <tbody id="complaints-tbody">
-                        <tr><td colspan="7" class="text-center py-5"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                        <tr><td colspan="8" class="text-center py-5"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -160,8 +156,10 @@
 
     <script src="js/interactive-bubbles.js"></script>
     <script src="js/mediaUtils.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/department.js"></script>
 
+    <script src="js/uiUtils.js"></script>
 </body>
 </html>

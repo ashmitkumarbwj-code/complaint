@@ -9,14 +9,14 @@ async function nextStep(step) {
         if (selectedMethod === 'email') {
             const email = document.getElementById('email').value.trim();
             if (!email) {
-                alert('Please enter your Registered College Email');
+                showToast('Please enter your Registered College Email', 'error');
                 return;
             }
             payload.email = email;
         } else {
             const mobile = document.getElementById('mobile-number').value.trim();
             if (!mobile) {
-                alert('Please enter your Registered Mobile Number');
+                showToast('Please enter your Registered Mobile Number', 'error');
                 return;
             }
             payload.mobile_number = mobile;
@@ -25,7 +25,7 @@ async function nextStep(step) {
         try {
             const response = await fetch(`${API_BASE}/api/auth/request-reset`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
                 body: JSON.stringify(payload)
             });
 
@@ -36,38 +36,32 @@ async function nextStep(step) {
                 alert(data.message);
             }
         } catch (err) {
-            alert('Request failed. Please try again.');
+            showToast('Request failed. Please try again.', 'error');
         }
     } else if (step === 2) {
         const otp = document.getElementById('otp-code').value.trim();
+        const identifier = selectedMethod === 'email' ? document.getElementById('email').value.trim() : document.getElementById('mobile-number').value.trim();
 
         if (!otp) {
-            alert('Please enter OTP');
+            showToast('Please enter OTP', 'error');
             return;
         }
 
-        const payload = { method: selectedMethod, otp: otp, tenant_id: 1 };
-        if (selectedMethod === 'email') {
-            payload.email = document.getElementById('email').value.trim();
-        } else {
-            payload.mobile_number = document.getElementById('mobile-number').value.trim();
-        }
-
         try {
-            const response = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+            const response = await fetch(`${API_BASE}/api/auth/validate-activation`, { // Re-using standard validation endpoint
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                body: JSON.stringify({ identifier, otp, tenant_id: 1 })
             });
 
             const data = await response.json();
             if (data.success) {
                 transitionToStep(3, "Create New Password", "100%");
             } else {
-                alert(data.message);
+                showToast(data.message, 'error');
             }
         } catch (err) {
-            alert('Verification failed');
+            showToast('Verification failed', 'error');
         }
     }
 }
@@ -78,44 +72,45 @@ async function finishReset() {
     const confirmPassword = document.getElementById('confirm-password').value;
 
     if (!password || password.length < 8) {
-        alert('Password must be at least 8 characters');
+        showToast('Password must be at least 8 characters', 'error');
         return;
     }
 
     if (password !== confirmPassword) {
-        alert('Passwords do not match');
+        showToast('Passwords do not match', 'error');
         return;
     }
 
+    const identifier = selectedMethod === 'email' ? document.getElementById('email').value.trim() : document.getElementById('mobile-number').value.trim();
+
     const payload = {
         method: selectedMethod,
+        identifier: identifier,
         otp: otp,
         password: password,
         tenant_id: 1
     };
 
-    if (selectedMethod === 'email') {
-        payload.email = document.getElementById('email').value.trim();
-    } else {
-        payload.mobile_number = document.getElementById('mobile-number').value.trim();
-    }
+    // Keep email/mobile for backward compatibility in the reset function if needed
+    if (selectedMethod === 'email') payload.email = identifier;
+    else payload.mobile_number = identifier;
 
     try {
         const response = await fetch(`${API_BASE}/api/auth/reset-password`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json' , credentials: 'include' },
             body: JSON.stringify(payload)
         });
 
         const data = await response.json();
         if (data.success) {
-            alert('Password reset successfully! Redirecting to login...');
+            showToast('Password reset successfully! Redirecting to login...', 'success');
             window.location.href = 'login.html';
         } else {
             alert(data.message);
         }
     } catch (err) {
-        alert('Reset failed');
+        showToast('Reset failed', 'error');
     }
 }
 
