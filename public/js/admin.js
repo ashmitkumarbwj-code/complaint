@@ -1410,7 +1410,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const searchInput = document.getElementById("search");
     if(searchInput) {
         searchInput.addEventListener("input", function(e) {
-            console.log("Searching:", e.target.value);
             // Basic functional demo of filter mapping
             const rows = document.querySelectorAll("tbody tr");
             const term = e.target.value.toLowerCase();
@@ -1452,7 +1451,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Generic Confirm Stub
     window.confirmAction = () => {
-        console.log("Confirm action triggered.");
         window.closeConfirmModal();
     };
 
@@ -1460,7 +1458,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll("button").forEach(btn => {
         if(!btn.dataset.uiWired) {
             btn.addEventListener("click", () => {
-                console.log("Button clicked:", btn.innerText.trim());
+                // UI tracking placeholder 
             });
             btn.dataset.uiWired = "true";
         }
