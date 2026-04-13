@@ -1089,8 +1089,15 @@ body {
 }
 
 @keyframes glow-success {
-    0%, 100% { box-shadow: 0 0 0px rgba(16, 185, 129, 0); }
-    50% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.6); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 0px rgba(16, 185, 129, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+    }
 }
 
 .status-badge {
@@ -1166,7 +1173,8 @@ button[disabled] {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(2);
-    z-index: 30001; /* Above backdrops */
+    z-index: 30001;
+    /* Above backdrops */
     max-height: 90vh;
     width: auto;
     max-width: 90vw;
@@ -1431,10 +1439,12 @@ button[disabled] {
     backdrop-filter: blur(5px);
     pointer-events: none;
 }
+
 .modal.active {
     display: flex;
     pointer-events: auto;
 }
+
 .modal .glass-panel {
     background: rgba(20, 20, 20, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1442,10 +1452,10 @@ button[disabled] {
     position: relative;
 }
 
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    cursor: pointer;
-    transition: 0.3s;
+border-radius: 50%;
+background: rgba(255, 255, 255, 0.3);
+cursor: pointer;
+transition: 0.3s;
 }
 
 .slider-dot.active {
@@ -1827,6 +1837,7 @@ input:checked+.toggle-slider:before {
     opacity: 0.8;
     filter: drop-shadow(0 0 10px var(--gold-glow));
 }
+
 /* --- ?? REAL-TIME ANALYTICS SUITE --- */
 .analytics-row {
     display: grid;
@@ -1872,7 +1883,10 @@ input:checked+.toggle-slider:before {
     display: inline-block;
 }
 
-.dot.primary { background: var(--gold); box-shadow: 0 0 10px var(--gold-glow); }
+.dot.primary {
+    background: var(--gold);
+    box-shadow: 0 0 10px var(--gold-glow);
+}
 
 .side-charts {
     display: flex;
@@ -1905,7 +1919,7 @@ canvas {
     padding: 1rem 1.5rem;
     border-radius: 8px;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 15px rgba(255, 215, 0, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(255, 215, 0, 0.2);
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -1918,20 +1932,31 @@ canvas {
 .glowing-toast::after {
     content: '';
     position: absolute;
-    top: 0; left: -100%;
-    width: 50%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
     animation: shineToast 2s infinite;
 }
 
 @keyframes slideInRight {
-    to { transform: translateX(0); }
+    to {
+        transform: translateX(0);
+    }
 }
+
 @keyframes fadeOut {
-    to { opacity: 0; transform: translateX(110%); }
+    to {
+        opacity: 0;
+        transform: translateX(110%);
+    }
 }
+
 @keyframes shineToast {
-    100% { left: 200%; }
+    100% {
+        left: 200%;
+    }
 }
 
 #toast-container {
@@ -1941,11 +1966,13 @@ canvas {
     z-index: 9999;
     display: flex;
     flex-direction: column;
-    pointer-events: none; /* Let clicks pass through if empty */
+    pointer-events: none;
+    /* Let clicks pass through if empty */
 }
 
 #toast-container .glowing-toast {
-    pointer-events: auto; /* Re-enable for the actual toast */
+    pointer-events: auto;
+    /* Re-enable for the actual toast */
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -1964,7 +1991,8 @@ canvas {
     align-items: center;
     justify-content: center;
     padding: 2rem;
-    pointer-events: none; /* Zombie protection */
+    pointer-events: none;
+    /* Zombie protection */
     opacity: 0;
     transition: opacity 0.3s ease;
 }
@@ -1990,7 +2018,7 @@ canvas {
     padding: 2.5rem;
     width: 100%;
     max-width: 500px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     transform: translateY(20px);
     transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
 }
@@ -2014,7 +2042,7 @@ canvas {
 
 /* --- UI POLISH: SKELETON LOADERS --- */
 .skeleton-row {
-    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 75%);
     background-size: 200% 100%;
     animation: placeholderShimmer 1.5s infinite linear;
     border-radius: 4px;
@@ -2024,8 +2052,13 @@ canvas {
 }
 
 @keyframes placeholderShimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
 }
 
 /* --- ACTIVITY FEED --- */
@@ -2034,9 +2067,11 @@ canvas {
     overflow-y: auto;
     padding-right: 10px;
 }
+
 .activity-feed-container::-webkit-scrollbar {
     width: 4px;
 }
+
 .activity-feed-container::-webkit-scrollbar-thumb {
     background: var(--gold);
     border-radius: 4px;
@@ -2044,15 +2079,23 @@ canvas {
 
 .feed-item {
     padding: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     align-items: flex-start;
     gap: 12px;
     animation: feedSlideDown 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
 }
+
 @keyframes feedSlideDown {
-    from { opacity: 0; transform: translateY(-15px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .feed-icon {
@@ -2065,19 +2108,38 @@ canvas {
     flex-shrink: 0;
     font-size: 0.85rem;
 }
-.feed-icon.new { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-.feed-icon.resolved { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-.feed-icon.assigned { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-.feed-icon.emergency { background: rgba(239, 68, 68, 0.2); color: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+
+.feed-icon.new {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+.feed-icon.resolved {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.feed-icon.assigned {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.feed-icon.emergency {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
 
 .feed-content {
     flex: 1;
 }
+
 .feed-content p {
     margin: 0 0 4px 0;
     font-size: 0.9rem;
-    color: rgba(255,255,255,0.9);
+    color: rgba(255, 255, 255, 0.9);
 }
+
 .feed-content small {
     color: var(--text-secondary);
     font-size: 0.75rem;
@@ -2088,6 +2150,7 @@ canvas {
     position: relative;
     box-shadow: inset 4px 0 0 var(--gold), inset 0 0 20px rgba(255, 215, 0, 0.1) !important;
 }
+
 .ai-badge {
     background: linear-gradient(45deg, var(--gold), #ff8c00);
     color: #000;
@@ -2099,10 +2162,19 @@ canvas {
     display: inline-block;
     animation: aiPulse 2s infinite;
 }
+
 @keyframes aiPulse {
-    0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
-    70% { box-shadow: 0 0 0 6px rgba(255, 215, 0, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(255, 215, 0, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+    }
 }
 
 /* SMART PRIORITY INDICATOR ON CARDS */
@@ -2116,9 +2188,23 @@ canvas {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
-.spi-high { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: #ef4444; }
-.spi-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border-color: #f59e0b; }
-.spi-low { background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: #10b981; }
 
+.spi-high {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+.spi-medium {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+.spi-low {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border-color: #10b981;
+}
