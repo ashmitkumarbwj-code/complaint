@@ -1,7 +1,9 @@
-# Smart Campus SCRS - robots.txt
 User-agent: *
 Allow: /
-# Disallow admin/dashboard areas if you prefer (optional):
-# Disallow: /admin.html
-# Disallow: /department.html
-# Disallow: /principal_dashboard.html
+
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api
+Disallow: /private
+
+Sitemap: https://gcd-smart-complaint-and-response-system.co.in/sitemap.xml
