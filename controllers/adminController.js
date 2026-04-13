@@ -181,7 +181,7 @@ exports.forwardComplaint = async (req, res) => {
         await conn.beginTransaction();
 
         // 1. Verify department exists
-        const [deptRows] = await conn.execute('SELECT id, name FROM departments WHERE id = $1 AND tenant_id = $2', [department_id, req.user.tenant_id]);
+        const [deptRows] = await conn.execute('SELECT id, name FROM departments WHERE id = $1 AND tenant_id = $2', [department_id, tenantId]);
         if (deptRows.length === 0) {
             await conn.rollback();
             return res.status(404).json({ success: false, message: 'Department not found' });
@@ -189,7 +189,7 @@ exports.forwardComplaint = async (req, res) => {
 
         // 2. Verify complaint exists and get current state
         const [compRows] = await conn.execute(
-            'SELECT id, student_id, category, department_id, status FROM complaints WHERE id = $1 AND tenant_id = $2', [id, req.user.tenant_id]
+            'SELECT id, student_id, category, department_id, status FROM complaints WHERE id = $1 AND tenant_id = $2', [id, tenantId]
         );
         if (compRows.length === 0) {
             await conn.rollback();
@@ -203,7 +203,7 @@ exports.forwardComplaint = async (req, res) => {
             `UPDATE complaints 
              SET department_id = $1, status = 'Pending', admin_notes = $2, resolved_at = NULL, lock_version = lock_version + 1
              WHERE id = $3 AND tenant_id = $4`,
-            [department_id, admin_notes || null, id, req.user.tenant_id]
+            [department_id, admin_notes || null, id, tenantId]
         );
 
         // 4. Audit Trail Logic
