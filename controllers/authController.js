@@ -33,7 +33,7 @@ exports.requestActivation = async (req, res) => {
     try {
         const tenantId = db.getTenantId(req) || 1;
         let entry;
-        let identifier = method === 'email' ? email : mobile_number;
+        let identifier = (method === 'email' ? email : mobile_number).trim().toLowerCase();
         const normalizedRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
 
         if (!identifier) {
