@@ -335,9 +335,4 @@ async function bulkImportStudents(input, req, isJson = false, isDryRun = false) 
     return summary;
 }
 
-    logger.info(`[StudentImport] Complete — Tenant ${tenantId}:`, summary);
-    return summary;
-}
-}
-
 module.exports = { bulkImportStudents };
