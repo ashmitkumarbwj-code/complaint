@@ -227,9 +227,9 @@ if (!isServerless) {
     setInterval(async () => {
         try {
             const db = require('./config/db');
-            const [result] = await db.execute('DELETE FROM otps WHERE expires_at < NOW() OR is_used = 1');
-            if (result.affectedRows > 0) {
-                logger.info(`[OTP Job] Cleaned up ${result.affectedRows} expired/used OTPs`);
+            const [dbRows, result] = await db.execute('DELETE FROM otp_verifications WHERE expires_at < NOW() OR verified = 1');
+            if (result.rowCount > 0) {
+                logger.info(`[OTP Job] Cleaned up ${result.rowCount} expired/used OTPs`);
             }
         } catch (e) {
             logger.error('[OTP Job] Cleanup failed', e);
