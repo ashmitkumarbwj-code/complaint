@@ -1452,12 +1452,6 @@ button[disabled] {
     position: relative;
 }
 
-border-radius: 50%;
-background: rgba(255, 255, 255, 0.3);
-cursor: pointer;
-transition: 0.3s;
-}
-
 .slider-dot.active {
     background: var(--gold);
     transform: scale(1.4);
