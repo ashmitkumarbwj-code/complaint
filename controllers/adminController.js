@@ -189,7 +189,7 @@ exports.forwardComplaint = async (req, res) => {
 
         // 2. Verify complaint exists and get current state
         const [compRows] = await conn.execute(
-            'SELECT id, student_id, category, department_id FROM complaints WHERE id = $1 AND tenant_id = $2', [id, req.user.tenant_id]
+            'SELECT id, student_id, category, department_id, status FROM complaints WHERE id = $1 AND tenant_id = $2', [id, req.user.tenant_id]
         );
         if (compRows.length === 0) {
             await conn.rollback();
@@ -201,23 +201,24 @@ exports.forwardComplaint = async (req, res) => {
         // 3. Reassign department, reset status, save notes
         await conn.execute(
             `UPDATE complaints 
-             SET department_id = $1, status = 'Pending', admin_notes = $2, resolved_at = NULL 
+             SET department_id = $1, status = 'Pending', admin_notes = $2, resolved_at = NULL, lock_version = lock_version + 1
              WHERE id = $3 AND tenant_id = $4`,
             [department_id, admin_notes || null, id, req.user.tenant_id]
         );
 
         // 4. Audit Trail Logic
-        await conn.execute(
-            'UPDATE complaint_departments SET is_current = 0 WHERE complaint_id = $1 AND tenant_id = $2',
-            [id, req.user.tenant_id]
-        );
-
-        // Insert new assignment record
-        await conn.execute(
-            `INSERT INTO complaint_departments (tenant_id, complaint_id, department_id, assigned_by, notes, is_current) 
-             VALUES ($1, $2, $3, $4, $5, 1)`,
-            [req.user.tenant_id, id, department_id, req.user.id, admin_notes || 'Manual reassignment by Admin']
-        );
+        const audit = require('../utils/auditService');
+        await audit.logAction(conn, {
+            complaint_id: id,
+            actor_user_id: req.user.id,
+            actor_role: req.user.role,
+            action_type: 'FORWARDED',
+            from_status: complaint.status,
+            to_status: 'Pending',
+            note: admin_notes || `Manual reassignment to Department ${department_id}`,
+            visibility: 'STUDENT_VISIBLE',
+            req
+        });
 
         await conn.commit();
 

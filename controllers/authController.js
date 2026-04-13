@@ -294,9 +294,9 @@ exports.resetPassword = async (req, res) => {
             'UPDATE users SET password_hash = $1, failed_attempts = 0, locked_until = NULL WHERE email = $2' :
             'UPDATE users SET password_hash = $1, failed_attempts = 0, locked_until = NULL WHERE mobile_number = $2';
         
-        const [dbResult, result] = await db.execute(query, [hashedPassword, identifier]);
+        const [dbRows, dbResult] = await db.execute(query, [hashedPassword, identifier]);
 
-        if (result.rowCount === 0) {
+        if (dbResult.rowCount === 0) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 

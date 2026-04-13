@@ -1429,9 +1429,11 @@ button[disabled] {
     align-items: center;
     justify-content: center;
     backdrop-filter: blur(5px);
+    pointer-events: none;
 }
 .modal.active {
     display: flex;
+    pointer-events: auto;
 }
 .modal .glass-panel {
     background: rgba(20, 20, 20, 0.85);
