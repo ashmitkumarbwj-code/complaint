@@ -320,7 +320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let dashboardCharts = {
         trends: null,
         status: null,
-        dept: null
+        category: null
     };
 
     window.loadDashboardAnalytics = async () => {
@@ -331,16 +331,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (data.success) {
                 renderTrendsChart(data.dailyTrends);
                 renderStatusPieChart(data.statusDistribution);
-                renderDeptBarChart(data.departmentStats);
+                renderCategoryIntensityChart(data.categoryIntensity);
+                renderPressureScale(data.departmentStats);
                 
-                // Also update the summary count cards
+                // Summary Counts
                 animateNumber('stat-total', data.summary.total);
+                animateNumber('stat-sla', data.summary.sla_breaches);
+                animateNumber('stat-students', data.summary.active_students);
+                
+                // Avg Time special handling (with units)
+                const avgEl = document.getElementById('stat-avg-time');
+                if (avgEl) avgEl.textContent = `${data.summary.avg_resolution_hours || 0}h`;
+
+                // Legacy fallback support for tab switching logic
                 animateNumber('stat-pending', data.summary.pending);
                 animateNumber('stat-resolved', data.summary.resolved);
-                
-                if (document.getElementById('stat-students')) {
-                    animateNumber('stat-students', data.summary.active_students);
-                }
             }
         } catch (err) {
             console.error('Analytics fetch failed:', err);
@@ -351,8 +356,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const ctx = document.getElementById('trendsChart').getContext('2d');
         if (dashboardCharts.trends) dashboardCharts.trends.destroy();
 
-        // Target Hackathon Requirement: "Default to last 7 days"
-        // We slice the 30-day backend payload to just the last 7 days here.
         const recentTrends = trends.length > 7 ? trends.slice(-7) : trends;
 
         dashboardCharts.trends = new Chart(ctx, {
@@ -360,7 +363,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             data: {
                 labels: recentTrends.map(t => new Date(t.date).toLocaleDateString(undefined, {weekday:'short', day:'numeric'})),
                 datasets: [{
-                    label: 'Complaints',
+                    label: 'Volume',
                     data: recentTrends.map(t => t.count),
                     borderColor: '#d4af37',
                     backgroundColor: 'rgba(212, 175, 55, 0.1)',
@@ -384,7 +387,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function renderStatusPieChart(distribution) {
-        const ctx = document.getElementById('statusPieChart').getContext('2d');
+        const ctx = document.getElementById('statusPieChart')?.getContext('2d');
+        if (!ctx) return;
         if (dashboardCharts.status) dashboardCharts.status.destroy();
 
         dashboardCharts.status = new Chart(ctx, {
@@ -401,38 +405,68 @@ document.addEventListener("DOMContentLoaded", async () => {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { color: '#adb5bd', padding: 20, font: { size: 10 } } }
+                    legend: { position: 'bottom', labels: { color: '#adb5bd', padding: 15, font: { size: 9 } } }
                 },
-                cutout: '70%'
+                cutout: '75%'
             }
         });
     }
 
-    function renderDeptBarChart(stats) {
-        const ctx = document.getElementById('deptBarChart').getContext('2d');
-        if (dashboardCharts.dept) dashboardCharts.dept.destroy();
+    function renderCategoryIntensityChart(categories) {
+        const ctx = document.getElementById('categoryChart')?.getContext('2d');
+        if (!ctx) return;
+        if (dashboardCharts.category) dashboardCharts.category.destroy();
 
-        dashboardCharts.dept = new Chart(ctx, {
+        dashboardCharts.category = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: stats.map(s => s.name.split(' ')[0]), // Shorten names
+                labels: categories.map(c => c.category),
                 datasets: [{
-                    label: 'Complaints',
-                    data: stats.map(s => s.count),
-                    backgroundColor: 'rgba(58, 134, 255, 0.6)',
-                    borderRadius: 6
+                    data: categories.map(c => c.count),
+                    backgroundColor: 'rgba(212, 175, 55, 0.6)',
+                    borderRadius: 4
                 }]
             },
             options: {
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#adb5bd' } },
-                    x: { grid: { display: false }, ticks: { color: '#adb5bd' } }
+                    x: { beginAtZero: true, grid: { display: false }, ticks: { color: '#adb5bd', font: { size: 9 } } },
+                    y: { grid: { display: false }, ticks: { color: '#adb5bd', font: { size: 9 } } }
                 }
             }
         });
+    }
+
+    function renderPressureScale(stats) {
+        const grid = document.getElementById('dept-pressure-grid');
+        if (!grid) return;
+
+        grid.innerHTML = stats.map(dept => {
+            const score = dept.pressure_score || 0;
+            const color = score > 60 ? '#ef4444' : score > 30 ? '#f59e0b' : '#10b981';
+            const statusText = score > 60 ? 'CRITICAL' : score > 30 ? 'STRESSED' : 'HEALTHY';
+            
+            return `
+                <div class="glass-panel" style="padding: 1rem; border-left: 4px solid ${color};">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                        <span style="font-weight: 600; font-size: 0.9rem;">${dept.name}</span>
+                        <span style="font-size: 0.7rem; color: ${color}; font-weight: 700;">${statusText}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                            <div style="width: ${score}%; height: 100%; background: ${color}; transition: width 1s ease;"></div>
+                        </div>
+                        <span style="font-size: 0.8rem; font-weight: 700;">${score}%</span>
+                    </div>
+                    <div style="margin-top: 5px; font-size: 0.7rem; opacity: 0.6;">
+                        ${dept.pending_count} pending / ${dept.total_count} total
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     // 8. Fetch Stats — wrapper kept alive for socket listeners + status update handlers
@@ -1463,6 +1497,255 @@ document.addEventListener("DOMContentLoaded", async () => {
             btn.dataset.uiWired = "true";
         }
     });
+
+    // ── 🏢 Bulk Ingestion Wizard ──────────────────────────────────────────────
+    let bulkType = 'student'; 
+    let parsedData = [];
+
+    window.openBulkImport = (type) => {
+        bulkType = type;
+        document.getElementById('bulkModalTitle').textContent = `Bulk ${type.charAt(0).toUpperCase() + type.slice(1)} Ingestion`;
+        resetBulkImport();
+        window.showModal('bulkImportModal');
+    };
+
+    window.closeBulkModal = () => window.closeModal('bulkImportModal');
+
+    window.resetBulkImport = () => {
+        parsedData = [];
+        document.getElementById('bulk-step-1').style.display = 'block';
+        document.getElementById('bulk-step-2').style.display = 'none';
+        document.getElementById('bulk-step-3').style.display = 'none';
+        document.getElementById('bulk-file-input').value = '';
+        document.getElementById('preview-errors').textContent = '';
+        document.getElementById('processImportBtn').disabled = false;
+        document.getElementById('processImportBtn').innerHTML = 'Process Import';
+    };
+
+    // File Input Listener
+    document.getElementById('bulk-file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Parse with headers: we expect standard headers in Row 1 or 4
+                // We'll use standard header mapping equivalent to the backend studentImportService
+                const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                
+                if (rawRows.length === 0) {
+                    alert('No data found in the selected sheet.');
+                    return;
+                }
+
+                parsedData = rawRows;
+                renderBulkPreview();
+                
+                document.getElementById('bulk-step-1').style.display = 'none';
+                document.getElementById('bulk-step-2').style.display = 'block';
+            } catch (err) {
+                console.error('XLSX Parse Error:', err);
+                UIUtils.showToast('Failed to parse file. Ensure it is a valid Excel or CSV.', 'error');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    function renderBulkPreview() {
+        const thead = document.getElementById('bulk-preview-thead');
+        const tbody = document.getElementById('bulk-preview-tbody');
+        const countSpan = document.getElementById('preview-count');
+        const errorSpan = document.getElementById('preview-errors');
+
+        if (parsedData.length === 0) return;
+
+        // Define expected columns based on type
+        const studentCols = ['roll_number', 'name', 'email', 'department', 'year', 'mobile_number'];
+        const staffCols = ['name', 'email', 'department', 'role', 'mobile'];
+        const cols = bulkType === 'student' ? studentCols : staffCols;
+
+        // Render Header
+        thead.innerHTML = `<tr>${cols.map(c => `<th>${c.replace('_', ' ').toUpperCase()}</th>`).join('')}<th>STATUS</th></tr>`;
+
+        // Validation Rules
+        let errorCount = 0;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        tbody.innerHTML = parsedData.slice(0, 50).map((row, idx) => {
+            let rowErrors = [];
+            
+            // Basic normalization to match expected column names
+            // If the user's excel has "Roll No", we should try to match it
+            const normalizedRow = {};
+            Object.keys(row).forEach(k => {
+                const cleanK = k.trim().toLowerCase().replace(/[\s_]/g, '');
+                if (cleanK === 'rollno' || cleanK === 'rollnumber') normalizedRow.roll_number = row[k];
+                else if (cleanK === 'name' || cleanK === 'fullname') normalizedRow.name = row[k];
+                else if (cleanK === 'email' || cleanK === 'emailaddress') normalizedRow.email = row[k];
+                else if (cleanK === 'dept' || cleanK === 'department') normalizedRow.department = row[k];
+                else if (cleanK === 'year' || cleanK === 'semester') normalizedRow.year = row[k];
+                else if (cleanK === 'role') normalizedRow.role = row[k];
+                else if (cleanK === 'mobile' || cleanK === 'phone' || cleanK === 'mobilenumber') {
+                    normalizedRow.mobile_number = row[k];
+                    normalizedRow.mobile = row[k];
+                }
+            });
+
+            // Re-assign back to data list for processing
+            parsedData[idx] = normalizedRow;
+
+            // Required Check
+            cols.forEach(c => {
+                if (!normalizedRow[c] && c !== 'mobile_number' && c !== 'mobile') {
+                    rowErrors.push(`Missing ${c}`);
+                }
+            });
+
+            if (normalizedRow.email && !emailRegex.test(normalizedRow.email)) {
+                rowErrors.push('Invalid Email');
+            }
+
+            if (rowErrors.length > 0) errorCount++;
+
+            return `
+                <tr class="${rowErrors.length > 0 ? 'bg-danger-subtle' : ''}">
+                    ${cols.map(c => `<td>${normalizedRow[c] || '<span class="text-danger">None</span>'}</td>`).join('')}
+                    <td>${rowErrors.length > 0 ? `<span class="badge badge-high" title="${rowErrors.join(', ')}"><i class="fa-solid fa-circle-exclamation"></i> Error</span>` : '<span class="badge badge-resolved"><i class="fa-solid fa-check"></i> Ready</span>'}</td>
+                </tr>
+            `;
+        }).join('');
+
+        countSpan.textContent = `Rows Found: ${parsedData.length} (Showing top 50)`;
+        if (errorCount > 0) {
+            errorSpan.textContent = `⚠️ Detected ${errorCount} invalid rows. Please check data.`;
+            document.getElementById('processImportBtn').disabled = true;
+        } else {
+            errorSpan.textContent = '';
+            document.getElementById('processImportBtn').disabled = false;
+        }
+    }
+
+    let lastImportSummary = null;
+
+    window.downloadErrorReport = () => {
+        if (!lastImportSummary || !lastImportSummary.failedRows || lastImportSummary.failedRows.length === 0) return;
+        
+        const worksheet = XLSX.utils.json_to_sheet(lastImportSummary.failedRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Errors");
+        XLSX.writeFile(workbook, `${bulkType}_import_errors.xlsx`);
+    };
+
+    window.processBulkImport = async () => {
+        const btn = document.getElementById('processImportBtn');
+        const isDryRun = document.getElementById('isDryRunMode').checked;
+        const filename = selectedFile ? selectedFile.name : 'upload.xlsx';
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
+        const endpoint = bulkType === 'student' ? '/api/admin/bulk-import-students' : '/api/admin/bulk-import-staff';
+        const payloadKey = bulkType === 'student' ? 'students' : 'staff';
+
+        try {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    [payloadKey]: parsedData,
+                    isDryRun,
+                    filename
+                }),
+                credentials: 'include'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                lastImportSummary = result.summary;
+                document.getElementById('bulk-step-2').style.display = 'none';
+                document.getElementById('bulk-step-3').style.display = 'block';
+                
+                const s = result.summary;
+                document.getElementById('bulk-result-title').textContent = isDryRun ? 'Validation Complete' : 'Import Complete';
+                document.getElementById('bulk-result-subtitle').textContent = isDryRun ? 'Pre-flight check finished. No data was modified.' : 'The registry has been updated successfully.';
+                
+                document.getElementById('bulk-result-details').innerHTML = `
+                    <div class="row text-start mt-3">
+                        <div class="col-6 mb-2">✅ Total Processed: <b>${s.total}</b></div>
+                        <div class="col-6 mb-2">📌 Registered: <b>${s.inserted}</b></div>
+                        <div class="col-6 mb-2">⏭️ Skipped (Dups): <b>${s.duplicates}</b></div>
+                        <div class="col-6 mb-2">❌ Invalid/Failed: <b>${s.invalid}</b></div>
+                        ${s.emailsQueued ? `<div class="col-12 mt-2" style="color: var(--gold);"><i class="fa-solid fa-envelope"></i> ${s.emailsQueued} activation emails queued.</div>` : ''}
+                    </div>
+                `;
+
+                // Show error action if failures exist
+                if (s.invalid > 0 || s.duplicates > 0) {
+                    document.getElementById('failed-rows-action').style.display = 'block';
+                } else {
+                    document.getElementById('failed-rows-action').style.display = 'none';
+                }
+
+                // Reload tables if they are visible
+                if (window.fetchStudents && bulkType === 'student') window.fetchStudents();
+                if (window.fetchStaff && bulkType === 'staff') window.fetchStaff();
+                
+                // Refresh Analytics
+                loadDashboardAnalytics();
+
+            } else {
+                UIUtils.showToast(`Import Failed: ${result.message}`, 'error');
+                btn.disabled = false;
+                btn.innerHTML = 'Process Import';
+            }
+        } catch (err) {
+            console.error('Import POST error:', err);
+            UIUtils.showToast('Server error during import.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'Process Import';
+        }
+    };
+
+    window.closeBulkImportModal = () => {
+        window.closeModal('bulkImportModal');
+        resetBulkImport();
+    };
+
+    window.resetBulkImport = () => {
+        parsedData = [];
+        lastImportSummary = null;
+        document.getElementById('bulk-step-1').style.display = 'block';
+        document.getElementById('bulk-step-2').style.display = 'none';
+        document.getElementById('bulk-step-3').style.display = 'none';
+        document.getElementById('bulk-file-input').value = '';
+        document.getElementById('isDryRunMode').checked = false;
+    };
+
+    window.downloadSampleTemplate = () => {
+        const studentSample = [
+            ['roll_number', 'name', 'email', 'department', 'year', 'mobile_number'],
+            ['202201', 'John Doe', 'john@college.edu', 'Computer Science', '1st Year', '9876543210'],
+            ['202202', 'Jane Smith', 'jane@college.edu', 'Electronics', '2nd Year', '9876543211']
+        ];
+        const staffSample = [
+            ['name', 'email', 'department', 'role', 'mobile'],
+            ['Dr. Sharma', 'sharma@college.edu', 'Physics', 'Staff', '9988776655'],
+            ['Anjali HOD', 'anjali@college.edu', 'Computer Science', 'HOD', '9988776644']
+        ];
+        
+        const content = bulkType === 'student' ? studentSample : staffSample;
+        const worksheet = XLSX.utils.aoa_to_sheet(content);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Sample");
+        XLSX.writeFile(workbook, `${bulkType}_import_template.xlsx`);
+    };
 
 });
 

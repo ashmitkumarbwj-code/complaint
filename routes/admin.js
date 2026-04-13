@@ -29,13 +29,22 @@ router.post('/add-staff', auth, checkRole(['Admin']), adminController.addStaff);
 router.post('/add-student', auth, checkRole(['Admin']), adminController.addStudent);
 
 // @route   POST /api/admin/bulk-import-students
-// @desc    Upload CSV to bulk-import students into verified_students registry
+// @desc    Bulk-import students into verified_students registry (supports JSON or CSV)
 // @access  Private (Admin only)
 router.post('/bulk-import-students',
     auth,
     checkRole(['Admin']),
     csvUpload.single('csv'),
     adminController.bulkImportStudents
+);
+
+// @route   POST /api/admin/bulk-import-staff
+// @desc    Bulk-import staff member into verified_staff table (JSON array)
+// @access  Private (Admin only)
+router.post('/bulk-import-staff',
+    auth,
+    checkRole(['Admin']),
+    adminController.bulkImportStaff
 );
 
 // @route   GET /api/admin/staff

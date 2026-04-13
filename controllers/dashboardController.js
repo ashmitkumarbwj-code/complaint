@@ -25,7 +25,9 @@ exports.getDashboardStats = async (req, res) => {
             SELECT 
                 COUNT(*) as total,
                 COUNT(CASE WHEN status = 'Pending' THEN 1 END) as pending,
-                COUNT(CASE WHEN status = 'Resolved' THEN 1 END) as resolved
+                COUNT(CASE WHEN status = 'Resolved' THEN 1 END) as resolved,
+                -- 🚀 Pro Intelligence: Count SLA Breaches (> 48h)
+                COUNT(CASE WHEN status = 'Pending' AND created_at < CURRENT_TIMESTAMP - INTERVAL '48 hours' THEN 1 END) as sla_breaches
             FROM complaints
             WHERE tenant_id = $1
         `;
@@ -43,11 +45,35 @@ exports.getDashboardStats = async (req, res) => {
             ORDER BY date ASC
         `;
         const departmentStatsQuery = `
-            SELECT d.name, COUNT(c.id) as count 
+            SELECT 
+                d.id, d.name, 
+                COUNT(c.id) as total_count,
+                COUNT(CASE WHEN c.status = 'Pending' THEN 1 END) as pending_count,
+                -- 🚀 Pro Intelligence: Pressure Score = Pending / Total (relative to department size)
+                CASE WHEN COUNT(c.id) > 0 
+                     THEN ROUND((COUNT(CASE WHEN c.status = 'Pending' THEN 1 END)::DECIMAL / COUNT(c.id)::DECIMAL) * 100, 1)
+                     ELSE 0 END as pressure_score
             FROM departments d
             LEFT JOIN complaints c ON d.id = c.department_id
             WHERE d.tenant_id = $1
             GROUP BY d.id, d.name
+        `;
+
+        // 🚀 Pro Intelligence: Category Intensity
+        const categoryIntensityQuery = `
+            SELECT category, COUNT(*) as count 
+            FROM complaints 
+            WHERE tenant_id = $1 
+            GROUP BY category 
+            ORDER BY count DESC 
+            LIMIT 5
+        `;
+
+        // 🚀 Pro Intelligence: Avg Resolution Time (in hours)
+        const avgResolutionTimeQuery = `
+            SELECT ROUND(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600), 1) as avg_hours
+            FROM complaints
+            WHERE tenant_id = $1 AND status = 'Resolved'
         `;
 
         const [summary] = await db.execute(summaryQuery, [tenant_id]);
@@ -55,6 +81,8 @@ exports.getDashboardStats = async (req, res) => {
         const [statusDistribution] = await db.execute(statusDistributionQuery, [tenant_id]);
         const [dailyTrends] = await db.execute(dailyTrendsQuery, [tenant_id]);
         const [departmentStats] = await db.execute(departmentStatsQuery, [tenant_id]);
+        const [categoryIntensity] = await db.execute(categoryIntensityQuery, [tenant_id]);
+        const [resolutionTime] = await db.execute(avgResolutionTimeQuery, [tenant_id]);
 
         const dashboardData = {
             success: true,
@@ -62,11 +90,14 @@ exports.getDashboardStats = async (req, res) => {
                 total: summary[0].total,
                 pending: summary[0].pending,
                 resolved: summary[0].resolved,
-                active_students: students[0].count
+                sla_breaches: summary[0].sla_breaches,
+                active_students: students[0].count,
+                avg_resolution_hours: resolutionTime[0].avg_hours || 0
             },
             statusDistribution,
             dailyTrends,
-            departmentStats
+            departmentStats,
+            categoryIntensity
         };
 
         // 3. Store in Cache (5 Min TTL)

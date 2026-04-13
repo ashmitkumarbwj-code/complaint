@@ -4,6 +4,7 @@ const notifier = require('../utils/notificationService');
 const socketService = require('../utils/socketService');
 const logger = require('../utils/logger');
 const studentImportService = require('../services/studentImportService');
+const staffImportService = require('../services/staffImportService');
 
 /**
  * Admin Adds Staff Member
@@ -270,43 +271,101 @@ exports.forwardComplaint = async (req, res) => {
  * Returns JSON summary:
  *  { total, inserted, duplicates, invalid, emailsQueued, emailsFailed }
  */
+/**
+ * Bulk Import Students
+ * Supports: 
+ *  1. multipart/form-data (CSV file named "csv")
+ *  2. application/json (body.students = array of student objects)
+ */
 exports.bulkImportStudents = async (req, res) => {
+    const isDryRun = req.body.isDryRun === true;
+    const filename = req.body.filename || (req.file ? req.file.originalname : 'manual_json_upload.json');
+    const adminId = req.user.id;
+    const tenantId = req.user.tenant_id || 1;
+
     try {
-        if (!req.file || !req.file.buffer) {
-            return res.status(400).json({
-                success: false,
-                message: 'No CSV file uploaded. Use field name "csv".'
-            });
+        let summary;
+        
+        // 1. Check for JSON payload first (from new UI)
+        if (req.body.students && Array.isArray(req.body.students)) {
+            summary = await studentImportService.bulkImportStudents(req.body.students, req, true, isDryRun);
+        } 
+        // 2. Fallback to CSV Upload (Legacy/Direct)
+        else if (req.file && req.file.buffer) {
+            summary = await studentImportService.bulkImportStudents(req.file.buffer, req, false, isDryRun);
+        } else {
+            return res.status(400).json({ success: false, message: 'No data provided. Upload a .csv file or send a JSON array.' });
         }
 
-        const mimeType = req.file.mimetype || '';
-        const fileName = req.file.originalname || '';
-        const isCSV = mimeType.includes('csv')
-            || mimeType.includes('text/plain')
-            || fileName.toLowerCase().endsWith('.csv');
-
-        if (!isCSV) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid file type. Please upload a .csv file.'
-            });
+        // 🛡️ Audit Log Persistence
+        try {
+            await db.execute(
+                `INSERT INTO bulk_import_logs 
+                (tenant_id, admin_id, import_type, total_rows, inserted_count, duplicate_count, error_count, original_filename, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                [
+                    tenantId, adminId, 'students', 
+                    summary.total, summary.inserted, summary.duplicates, summary.invalid,
+                    filename, isDryRun ? 'dry_run' : 'completed'
+                ]
+            );
+        } catch (logErr) {
+            logger.error('[Admin] Bulk logging failed:', logErr.message);
+            // Non-blocking: Audit failure shouldn't crash the user response
         }
-
-        const summary = await studentImportService.bulkImportStudents(req.file.buffer, req);
 
         return res.json({
             success: true,
-            message: `Import complete. ${summary.inserted} student(s) added.`,
+            message: isDryRun ? 'Validation complete.' : `Import complete. ${summary.inserted} student(s) processed.`,
             summary
         });
 
     } catch (err) {
         logger.error('[Admin] bulkImportStudents error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Server error during bulk import.' });
+    }
+};
 
-        if (err.message && err.message.startsWith('CSV_PARSE_ERROR')) {
-            return res.status(400).json({ success: false, message: err.message });
+/**
+ * Bulk Import Staff
+ * Expects: application/json (body.staff = array of staff objects)
+ */
+exports.bulkImportStaff = async (req, res) => {
+    const isDryRun = req.body.isDryRun === true;
+    const filename = req.body.filename || 'staff_json_upload.json';
+    const adminId = req.user.id;
+    const tenantId = req.user.tenant_id || 1;
+
+    try {
+        if (!req.body.staff || !Array.isArray(req.body.staff)) {
+            return res.status(400).json({ success: false, message: 'No staff data provided. Expecting "staff" array.' });
         }
 
-        res.status(500).json({ success: false, message: 'Server error during bulk import.' });
+        const summary = await staffImportService.bulkImportStaff(req.body.staff, req, isDryRun);
+
+        // 🛡️ Audit Log Persistence
+        try {
+            await db.execute(
+                `INSERT INTO bulk_import_logs 
+                (tenant_id, admin_id, import_type, total_rows, inserted_count, duplicate_count, error_count, original_filename, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                [
+                    tenantId, adminId, 'staff', 
+                    summary.total, summary.inserted, summary.duplicates, summary.invalid,
+                    filename, isDryRun ? 'dry_run' : 'completed'
+                ]
+            );
+        } catch (logErr) {
+            logger.error('[Admin] Bulk logging failed:', logErr.message);
+        }
+
+        res.json({
+            success: true,
+            message: isDryRun ? 'Validation complete.' : `Staff import complete. ${summary.inserted} members processed.`,
+            summary
+        });
+    } catch (err) {
+        logger.error('[Admin] bulkImportStaff error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Server error during staff bulk import.' });
     }
 };

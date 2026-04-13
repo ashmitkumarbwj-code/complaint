@@ -2202,3 +2202,82 @@ canvas {
     color: #10b981;
     border-color: #10b981;
 }
+
+/* ── 🏗️ Bulk Ingestion Wizard Styles ── */
+.modal-card.extra-large {
+    max-width: 1100px;
+    width: 95%;
+}
+
+.dropzone-area {
+    border: 2px dashed rgba(212, 175, 55, 0.3);
+    border-radius: 16px;
+    padding: 3rem;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--text-muted);
+}
+
+.dropzone-area:hover {
+    border-color: var(--gold);
+    background: rgba(212, 175, 55, 0.05);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+.import-preview-table-wrapper {
+    max-height: 400px;
+    overflow-y: auto;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+}
+
+.preview-table {
+    width: 100%;
+    font-size: 0.85rem;
+}
+
+.preview-table th {
+    position: sticky;
+    top: 0;
+    background: var(--navy-blue);
+    z-index: 10;
+    padding: 12px;
+}
+
+.preview-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.preview-table tr:last-child td {
+    border-bottom: none;
+}
+
+.bg-danger-subtle {
+    background-color: rgba(248, 81, 73, 0.1) !important;
+}
+
+.badge-high {
+    background: rgba(248, 81, 73, 0.1);
+    color: #f85149;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.badge-resolved {
+    background: rgba(46, 160, 67, 0.1);
+    color: #3fb950;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.import-step h2 {
+    color: var(--gold);
+    font-weight: 800;
+}

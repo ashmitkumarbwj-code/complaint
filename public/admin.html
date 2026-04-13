@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Smart Campus</title>
+    <meta name="robots" content="noindex, nofollow">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
@@ -12,6 +13,8 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
     <link rel="stylesheet" href="css/style.css">
+    <!-- SheetJS (XLSX) for Bulk Import Preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="dashboard-root" style="display: none;">
     
@@ -170,14 +173,21 @@
                         <i class="fa-solid fa-layer-group card-icon"></i>
                     </div>
                     <div class="stat-card glass-panel">
-                        <p>Pending</p>
-                        <div class="stat-number" id="stat-pending" style="color: #f59e0b;">0</div>
-                        <i class="fa-solid fa-clock card-icon" style="color: #f59e0b;"></i>
+                        <p>SLA Breaches (>48h)</p>
+                        <div class="stat-number" id="stat-sla" style="color: #ef4444;">0</div>
+                        <i class="fa-solid fa-biohazard card-icon" style="color: #ef4444;"></i>
+                        <div style="font-size: 0.65rem; color: #ef4444; opacity: 0.8; margin-top: 5px;">Needs Immediate Attention</div>
                     </div>
                     <div class="stat-card glass-panel">
-                        <p>Resolved</p>
-                        <div class="stat-number" id="stat-resolved" style="color: #10b981;">0</div>
-                        <i class="fa-solid fa-circle-check card-icon" style="color: #10b981;"></i>
+                        <p>Avg Resolution</p>
+                        <div class="stat-number" id="stat-avg-time" style="color: var(--gold);">0h</div>
+                        <i class="fa-solid fa-bolt-lightning card-icon" style="color: var(--gold);"></i>
+                        <div style="font-size: 0.65rem; color: var(--gold); opacity: 0.8; margin-top: 5px;">Efficiency Metric</div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <p>Active Students</p>
+                        <div class="stat-number" id="stat-students" style="color: #3b82f6;">0</div>
+                        <i class="fa-solid fa-user-graduate card-icon" style="color: #3b82f6;"></i>
                     </div>
                 </div>
                 
@@ -187,10 +197,7 @@
                         <div class="chart-header">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <h4>Complaint Trends (Last 7 Days)</h4>
-                                <span class="status-badge status-resolved" style="font-size: 0.65rem; padding: 2px 6px;">+12% vs last week</span>
-                            </div>
-                            <div class="chart-legend">
-                                <span class="dot primary"></span> Total Volume
+                                <span class="status-badge status-resolved" style="font-size: 0.65rem; padding: 2px 6px;">Live Insights</span>
                             </div>
                         </div>
                         <canvas id="trendsChart"></canvas>
@@ -199,12 +206,32 @@
                     <div class="side-charts">
                         <div class="chart-container glass-panel">
                             <h4>Status Distribution</h4>
-                            <canvas id="statusPieChart"></canvas>
+                            <div style="height: 180px;"><canvas id="statusPieChart"></canvas></div>
                         </div>
                         <div class="chart-container glass-panel">
-                            <h4>Department Performance</h4>
-                            <canvas id="deptBarChart"></canvas>
+                            <h4>Category Intensity</h4>
+                            <div style="height: 180px;"><canvas id="categoryChart"></canvas></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- 🧠 Campus Pulse (Department Pressure & Risk Heatmap) -->
+                <div class="glass-panel" style="margin-top: 1.5rem; padding: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem;">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: 12px; color: var(--gold);">
+                            <i class="fa-solid fa-microchip" style="color: #3b82f6;"></i> Campus Pulse: Department Pressure Scale
+                        </h3>
+                        <div style="display: flex; gap: 1rem; font-size: 0.75rem;">
+                            <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span> Healthy (0-30%)</span>
+                            <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></span> Stressed (30-60%)</span>
+                            <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span> Critical (>60%)</span>
+                        </div>
+                    </div>
+                    <div id="dept-pressure-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+                        <!-- Injected via JS: Department Pressure Cards -->
+                        <div class="skeleton-row" style="height: 80px;"></div>
+                        <div class="skeleton-row" style="height: 80px;"></div>
+                        <div class="skeleton-row" style="height: 80px;"></div>
                     </div>
                 </div>
 
@@ -302,7 +329,10 @@
                 <div class="table-card glass-panel">
                     <div class="table-header">
                         <h2>Staff & Faculty Management</h2>
-                        <button class="btn btn-primary" onclick="toggleStaffForm()">+ Add New Staff</button>
+                        <div class="header-actions">
+                            <button class="btn btn-glass" onclick="openBulkImport('staff')"><i class="fa-solid fa-file-import"></i> Bulk Import</button>
+                            <button class="btn btn-primary" onclick="toggleStaffForm()">+ Add New Staff</button>
+                        </div>
                     </div>
                     
                     <div id="staff-form-container" style="display: none;" class="form-container-panel">
@@ -340,7 +370,10 @@
                 <div class="table-card glass-panel">
                     <div class="table-header">
                         <h2>Student Identity Registry</h2>
-                        <button class="btn btn-primary" onclick="toggleStudentForm()">+ Register Student</button>
+                        <div class="header-actions">
+                            <button class="btn btn-glass" onclick="openBulkImport('student')"><i class="fa-solid fa-file-import"></i> Bulk Import</button>
+                            <button class="btn btn-primary" onclick="toggleStudentForm()">+ Register Student</button>
+                        </div>
                     </div>
 
                     <div id="student-form-container" style="display: none;" class="form-container-panel">
@@ -434,6 +467,91 @@
                     <tbody id="members-tbody"></tbody>
                 </table>
                 <button onclick="closeMembersModal()">Close</button>
+            </div>
+        </div>
+
+        <!-- 🏢 NEW: Bulk Import Modal 🏢 -->
+        <div id="bulkImportModal" class="modal">
+            <div class="glass-panel modal-card extra-large">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3><i class="fa-solid fa-file-csv" style="color: var(--gold); margin-right: 10px;"></i> <span id="bulkModalTitle">Bulk Ingestion Wizard</span></h3>
+                    <button class="btn btn-icon" onclick="closeBulkModal()"><i class="fa-solid fa-times"></i></button>
+                </div>
+
+                <!-- Step 1: File Selection -->
+                <div id="bulk-step-1" class="import-step">
+                    <div class="dropzone" id="bulk-dropzone">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 3rem; color: var(--gold); margin-bottom: 1rem;"></i>
+                        <h3>Drag & drop Excel/CSV here</h3>
+                        <p>or click to browse your computer</p>
+                        <input type="file" id="bulk-file-input" hidden accept=".csv, .xlsx, .xls">
+                    </div>
+                    
+                    <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="glass-panel" style="padding: 1rem; border: 1px solid rgba(212,175,55,0.2);">
+                            <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" id="isDryRunMode" style="width: 20px; height: 20px;">
+                                <span class="checkmark"></span>
+                                <div style="display: flex; flex-direction: column;">
+                                    <b style="color: var(--gold);">Validate Only (Dry Run)</b>
+                                    <small style="opacity: 0.7;">Check for errors without importing data to the registry.</small>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; justify-content: center;">
+                            <button class="btn btn-glass" onclick="downloadSampleTemplate()">
+                                <i class="fa-solid fa-download"></i> Sample Template
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Preview & Validation -->
+                <div id="bulk-step-2" class="import-step" style="display: none;">
+                    <div class="alert-info" id="preview-info-box" style="margin-bottom: 1rem; padding: 10px; border-radius: 8px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2);">
+                        <i class="fa-solid fa-circle-info"></i> <span id="preview-count">Scanning rows...</span>
+                    </div>
+                    
+                    <div class="table-container" style="max-height: 300px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+                        <table class="table" style="font-size: 0.8rem;">
+                            <thead id="bulk-preview-thead"></thead>
+                            <tbody id="bulk-preview-tbody"></tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div id="preview-errors" class="text-danger" style="font-size: 0.85rem; font-weight: bold;"></div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="action-btn" onclick="resetBulkImport()" style="background: rgba(255,255,255,0.1);">Back</button>
+                            <button class="action-btn btn-resolve" id="processImportBtn" onclick="processBulkImport()">Process Import</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Success / Report -->
+                <div id="bulk-step-3" class="import-step" style="display: none; text-align: center;">
+                    <div class="success-icon" style="font-size: 4rem; color: #10b981; margin-bottom: 1rem;">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <h2 id="bulk-result-title">Import Successful!</h2>
+                    <p id="bulk-result-subtitle" class="text-muted">The student registry has been updated.</p>
+                    
+                    <div id="bulk-result-details" class="glass-panel" style="margin: 1.5rem 0; padding: 1.5rem;">
+                        <!-- Summary injected here -->
+                    </div>
+
+                    <div id="failed-rows-action" style="display: none; margin-bottom: 1.5rem;">
+                        <div class="alert-danger" style="padding: 10px; border-radius: 8px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); margin-bottom: 1rem;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Some rows failed to import due to validation errors.
+                        </div>
+                        <button class="btn btn-glass" onclick="downloadErrorReport()" style="border-color: #ef4444; color: #ef4444;">
+                            <i class="fa-solid fa-file-export"></i> Download Error Report (for fix & re-upload)
+                        </button>
+                    </div>
+
+                    <button class="btn btn-glass" style="width: 100%;" onclick="closeBulkImportModal()">Close Wizard</button>
+                </div>
             </div>
         </div>
 
