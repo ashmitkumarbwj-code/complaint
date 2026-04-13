@@ -31,7 +31,7 @@ exports.requestActivation = async (req, res) => {
     const { email, mobile_number, roll_number, method, role } = req.body;
 
     try {
-        const tenantId = db.getTenantId(req);
+        const tenantId = db.getTenantId(req) || 1;
         let entry;
         let identifier = method === 'email' ? email : mobile_number;
         const normalizedRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
@@ -138,17 +138,17 @@ exports.completeActivation = async (req, res) => {
         let userId;
 
         if (normalizedRole === 'Student') {
-            const tenantId = db.getTenantId(req);
+            const tenantId = db.getTenantId(req) || 1;
             const query = method === 'email' ? 'SELECT * FROM verified_students WHERE email = $1 AND tenant_id = $2' : 'SELECT * FROM verified_students WHERE mobile_number = $1 AND tenant_id = $2';
             const [vRows] = await db.execute(query, [identifier, tenantId]);
             if (vRows.length === 0) return res.status(400).json({ success: false, message: 'Student verification data missing.' });
             const vData = vRows[0];
 
-            const [uResult] = await db.execute(
+            const [uRows] = await db.execute(
                 'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                [vData.tenant_id, vData.roll_number, vData.email, vData.mobile_number, hashedPassword, 'Student', 1]
+                [vData.tenant_id, vData.roll_number, vData.email, vData.mobile_number, hashedPassword, 'Student', true]
             );
-            userId = uResult.rows[0].id;
+            userId = uRows[0].id;
 
             const deptId = vData.department_id || 7;
             await db.execute(
@@ -156,9 +156,9 @@ exports.completeActivation = async (req, res) => {
                 [vData.tenant_id, userId, vData.roll_number, deptId, vData.mobile_number, vData.id_card_image]
             );
 
-            await db.execute('UPDATE verified_students SET is_account_created = 1 WHERE id = $1', [vData.id]);
+            await db.execute('UPDATE verified_students SET is_account_created = TRUE WHERE id = $1', [vData.id]);
         } else {
-            const tenantId = db.getTenantId(req);
+            const tenantId = db.getTenantId(req) || 1;
             const query = method === 'email' ? 'SELECT * FROM verified_staff WHERE email = $1 AND LOWER(role) = LOWER($2) AND tenant_id = $3' : 'SELECT * FROM verified_staff WHERE mobile_number = $1 AND LOWER(role) = LOWER($2) AND tenant_id = $3';
             const [vRows] = await db.execute(query, [identifier, normalizedRole, tenantId]);
             
@@ -171,18 +171,18 @@ exports.completeActivation = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Account is already activated.' });
             }
 
-            const [uResult] = await db.execute(
+            const [uRows] = await db.execute(
                 'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                [vData.tenant_id, vData.name, vData.email, vData.mobile_number, hashedPassword, normalizedRole, 1]
+                [vData.tenant_id, vData.name, vData.email, vData.mobile_number, hashedPassword, normalizedRole, true]
             );
-            userId = uResult.rows[0].id;
+            userId = uRows[0].id;
 
             await db.execute(
                 'INSERT INTO staff (tenant_id, user_id, department_id, designation, mobile_number) VALUES ($1, $2, $3, $4, $5)',
                 [vData.tenant_id, userId, vData.department_id, vData.role, vData.mobile_number]
             );
 
-            await db.execute('UPDATE verified_staff SET is_account_created = 1 WHERE id = $1', [vData.id]);
+            await db.execute('UPDATE verified_staff SET is_account_created = TRUE WHERE id = $1', [vData.id]);
         }
 
         await otpService.clearOTPs(identifier);
@@ -315,7 +315,7 @@ exports.login = async (req, res) => {
     const { identifier, password } = req.body;
 
     try {
-        const tenantId = db.getTenantId(req);
+        const tenantId = db.getTenantId(req) || 1;
         const [users] = await db.execute(
             'SELECT * FROM users WHERE (username = $1 OR email = $2 OR mobile_number = $3) AND tenant_id = $4',
             [identifier, identifier, identifier, tenantId]
