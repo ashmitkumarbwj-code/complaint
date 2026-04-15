@@ -830,7 +830,7 @@ async function fetchEmergencyAlerts() {
 async function loadPrincipalProfile() {
     try {
         const token = localStorage.getItem('scrs_token');
-        const res = await fetch('http://117.237.13.35:5000/api/users/profile', {
+        const res = await fetch(`${API_BASE}/api/users/profile`, {
             credentials: 'include', headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -921,7 +921,7 @@ if (profileForm) {
             if (fileInput.files[0]) formData.append('profile_image', fileInput.files[0]);
 
             const token = localStorage.getItem('scrs_token');
-            const res = await fetch('http://117.237.13.35:5000/api/users/profile', {
+            const res = await fetch(`${API_BASE}/api/users/profile`, {
                 method: 'PUT',
                 credentials: 'include', headers: { 'Authorization': `Bearer ${token}` },
                 body: formData

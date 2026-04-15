@@ -27,6 +27,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 const app = express();
+app.set('trust proxy', 1);
 
 // 1. High-Priority Tracing (MUST be first)
 app.use(traceMiddleware);
@@ -98,16 +99,19 @@ const statsRoutes = require('./routes/stats');
 const usersRoutes = require('./routes/users');
 const departmentRoutes = require('./routes/departments');
 const healthRoutes = require('./routes/health');
+const slidesRoutes = require('./routes/slides');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/dashboards', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/gallery', galleryRoutes);
+app.use('/api/slides', slidesRoutes); // added
 app.use('/api/stats', statsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/health', healthRoutes);
+
 
 // API 404 — unknown /api/* routes return JSON (static won't serve these)
 app.use((req, res, next) => {
@@ -135,8 +139,7 @@ app.use((req, res, next) => {
 const isServerless = process.env.VERCEL === '1';
 
 // Initialize Background Workers (BullMQ) if Redis is available and not on Vercel
-const { getIsAvailable } = require('./config/redis');
-if (!isServerless && getIsAvailable()) {
+if (!isServerless && process.env.USE_REDIS === 'true') {
     require('./workers/index');
 
     // BullBoard Integration for Queue Monitoring
@@ -210,17 +213,29 @@ if (!isServerless) {
 
     // Run Resilience Re-sync every 10 minutes
     setInterval(async () => {
-        await resyncWorker.processPendingResyncs();
+        try {
+            await resyncWorker.processPendingResyncs();
+        } catch (err) {
+            logger.error('[Cron] Resilience Re-sync Job Failed:', err);
+        }
     }, 10 * 60 * 1000);
 
     // Run media cleanup job daily
     setInterval(async () => {
-        await complaintControllerCore.cleanupOldMedia();
+        try {
+            await complaintControllerCore.cleanupOldMedia();
+        } catch (err) {
+            logger.error('[Cron] Media Cleanup Job Failed:', err);
+        }
     }, 24 * 60 * 60 * 1000);
 
     // Run SLA Escalation Job every hour
     setInterval(async () => {
-        await escalationService.processEscalations();
+        try {
+            await escalationService.processEscalations();
+        } catch (err) {
+            logger.error('[Cron] SLA Escalation Job Failed:', err);
+        }
     }, 1 * 60 * 60 * 1000);
 
     // Run OTP Database Cleanup Job every hour
@@ -228,7 +243,7 @@ if (!isServerless) {
         try {
             const db = require('./config/db');
             const [dbRows, result] = await db.execute('DELETE FROM otp_verifications WHERE expires_at < NOW() OR verified = 1');
-            if (result.rowCount > 0) {
+            if (result && result.rowCount > 0) {
                 logger.info(`[OTP Job] Cleaned up ${result.rowCount} expired/used OTPs`);
             }
         } catch (e) {

@@ -42,7 +42,7 @@ async function processEscalations() {
 
                 // Update database
                 await db.execute(
-                    'UPDATE complaints SET status = "Escalated", escalation_level = ?, admin_notes = CONCAT(IFNULL(admin_notes, ""), "\n[System] Escalated to ", ?, " due to SLA breach.") WHERE id = ?',
+                    "UPDATE complaints SET status = 'Escalated', escalation_level = $1, admin_notes = COALESCE(admin_notes, '') || '\n[System] Escalated to ' || $2 || ' due to SLA breach.' WHERE id = $3",
                     [levelValue, targetLevel, complaint.id]
                 );
 

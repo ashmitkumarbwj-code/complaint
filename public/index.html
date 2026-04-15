@@ -36,6 +36,8 @@
     <meta property="og:url" content="https://gcd-smart-complaint-and-response-system.co.in/" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://gcd-smart-complaint-and-response-system.co.in/images/branding/logo.png" />
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css?v=5">
@@ -54,8 +56,21 @@
 
     <!-- Section 1 — Welcome Screen -->
     <section id="section-1" class="fullscreen-section section-welcome">
+        
+        <!-- Background Hero Slider -->
+        <div id="hero-slider" class="swiper" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 0; display: none;">
+            <div class="swiper-wrapper" id="hero-swiper-wrapper">
+                <!-- Dynamic slides inject here -->
+            </div>
+            <!-- Add Pagination -->
+            <div class="swiper-pagination"></div>
+            <!-- Add Navigation -->
+            <div class="swiper-button-next" style="color: var(--gold);"></div>
+            <div class="swiper-button-prev" style="color: var(--gold);"></div>
+        </div>
+
         <!-- Particles container -->
-        <div id="particles-js" class="particles-bg"></div>
+        <div id="particles-js" class="particles-bg" style="z-index: 1;"></div>
         
         <!-- College Header - Top Left aligned -->
         <div class="college-header gsap-fade-up">
@@ -75,10 +90,10 @@
             
             <!-- Portal Buttons -->
             <div class="portal-buttons gsap-fade-up delay-3">
-                <a href="login.html?role=Student" class="btn btn-glass btn-glow"><i class="fa-solid fa-user-graduate"></i> Student Portal</a>
-                <a href="login.html?role=Staff" class="btn btn-glass btn-glow"><i class="fa-solid fa-chalkboard-user"></i> Staff Portal</a>
-                <a href="login.html?role=Admin" class="btn btn-glass btn-glow"><i class="fa-solid fa-user-shield"></i> Admin Panel</a>
-                <a href="login.html?role=Principal" class="btn btn-glass btn-gold"><i class="fa-solid fa-chart-pie"></i> Principal Dashboard</a>
+                <a href="login.html?role=student" class="btn btn-glass btn-glow"><i class="fa-solid fa-user-graduate"></i> Student Portal</a>
+                <a href="login.html?role=staff" class="btn btn-glass btn-glow"><i class="fa-solid fa-chalkboard-user"></i> Staff Portal</a>
+                <a href="login.html?role=admin" class="btn btn-glass btn-glow"><i class="fa-solid fa-user-shield"></i> Admin Panel</a>
+                <a href="login.html?role=principal" class="btn btn-glass btn-gold"><i class="fa-solid fa-chart-pie"></i> Principal Dashboard</a>
                 <a href="terms-conditions/terms.html" class="btn btn-glass"><i class="fa-solid fa-circle-question"></i> Help</a>
             </div>
             
@@ -278,9 +293,9 @@
             </div>
             
             <div class="cta-buttons">
-                <a href="activate.html" class="btn btn-glass btn-large btn-glow"><i class="fa-solid fa-user-plus"></i> Register as Student</a>
+                <a href="activate-student.html" class="btn btn-glass btn-large btn-glow"><i class="fa-solid fa-user-plus"></i> Register as Student</a>
                 <a href="login.html" class="btn btn-glass btn-large btn-gold btn-glow"><i class="fa-solid fa-right-to-bracket"></i> Login to Dashboard</a>
-                <a href="login.html?role=Student" class="btn btn-glass btn-large"><i class="fa-solid fa-bullhorn"></i> Report an Issue</a>
+                <a href="login.html?role=student" class="btn btn-glass btn-large"><i class="fa-solid fa-bullhorn"></i> Report an Issue</a>
             </div>
         </div>
     </section>
@@ -343,7 +358,9 @@
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
     <!-- Custom Configuration -->
     <script src="js/config.js"></script>
     

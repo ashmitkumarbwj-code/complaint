@@ -230,3 +230,24 @@ CREATE TRIGGER sync_complaints_updated_at
     BEFORE UPDATE ON complaints
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- 11. Homepage System
+CREATE TABLE homepage_slides (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    image_url VARCHAR(500) NOT NULL,
+    public_id VARCHAR(255),
+    display_order INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    start_date TIMESTAMPTZ,
+    end_date TIMESTAMPTZ,
+    created_by INT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER sync_homepage_slides_updated_at
+    BEFORE UPDATE ON homepage_slides
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

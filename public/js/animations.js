@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initGSAPAnimations();
     initChart();
     initCounters();
+    initHeroSlider();
 });
 
 /* --- Storytelling Background Logic --- */
@@ -491,6 +492,85 @@ function initDynamicGallery() {
         });
 }
 
+
+    // DOMContentLoaded already setup at top, initDynamicGallery added there if needed.
+    // However, it appears it is hooked down here, moving it to top or keeping it here is fine.
+    // I'll keep the caller:
 document.addEventListener("DOMContentLoaded", () => {
     initDynamicGallery();
 });
+
+/* =========================================================================
+   6. Hero Slider Initialization (Swiper.js)
+   ========================================================================= */
+async function initHeroSlider() {
+    const swiperWrapper = document.getElementById('hero-swiper-wrapper');
+    const heroSlider = document.getElementById('hero-slider');
+    if (!swiperWrapper || !heroSlider) return;
+
+    // Attach temporary loading skeleton/spinner
+    heroSlider.style.display = 'block';
+    swiperWrapper.innerHTML = `
+        <div style="display: flex; height: 100%; width: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);">
+            <i class="fa-solid fa-circle-notch fa-spin" style="color: var(--gold); font-size: 3rem;"></i>
+        </div>
+    `;
+
+    try {
+        console.log('[Hero Slider] Fetching active slides...');
+        const url = (window.API_BASE || '') + '/api/slides';
+        const res = await fetch(url);
+        const data = await res.json();
+
+        console.log(`[Hero Slider] Fetch complete. Found ${data.slides ? data.slides.length : 0} slides.`);
+
+        if (data.success && data.slides && data.slides.length > 0) {
+            // Render slides with lazy loading imgs
+            swiperWrapper.innerHTML = data.slides.map(slide => `
+                <div class="swiper-slide">
+                    <img loading="lazy" src="${slide.image_url}" alt="${slide.title}" style="width:100%; height:100%; object-fit:cover; filter: brightness(0.5); position: absolute; top:0; left:0; z-index:0;">
+                    <div class="swiper-lazy-preloader swiper-lazy-preloader-white"></div>
+                    <div style="position:absolute; bottom:15%; left:5%; z-index:10; max-width:600px; text-shadow: 0 4px 10px rgba(0,0,0,0.8);">
+                        <h2 style="color:var(--gold); font-size:2.5rem; font-weight:800; margin-bottom:10px;">${slide.title}</h2>
+                        ${slide.description ? `<p style="color:white; font-size:1.2rem;">${slide.description}</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            // Initialize Swiper with lazy properties
+            new Swiper('.swiper', {
+                loop: true,
+                lazy: true,
+                autoplay: {
+                    delay: 5000,
+                    disableOnInteraction: false,
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                effect: 'fade',
+                fadeEffect: {
+                    crossFade: true
+                }
+            });
+            
+            // Hide the default static storyboard bg layer that is active to prevent clashing
+            const storyboardbg = document.getElementById('storyboard-bg');
+            if (storyboardbg) storyboardbg.style.display = 'none';
+
+        } else {
+            // Fallback: hide the loading slider entirely
+            heroSlider.style.display = 'none';
+            console.log('[Hero Slider] No active slides found. Using static fallback background.');
+        }
+    } catch (err) {
+        console.error('[Hero Slider] Failed to load hero slides:', err);
+        heroSlider.style.display = 'none'; // Fallback on error
+    }
+}
+

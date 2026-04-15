@@ -28,6 +28,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }
             });
         }
+        
+        // Admin-only Navigation Guard
+        if (user.role === 'Admin') {
+            const slidesTab = document.getElementById('nav-item-slides');
+            if (slidesTab) slidesTab.style.display = 'flex';
+        }
     }
 
     // 2. Initialize Three.js Background
@@ -180,7 +186,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         'tab-departments': { title: 'Academic Departments', sub: 'Routing and structure' },
         'tab-staff': { title: 'Faculty & Administration', sub: 'Staff permissions and roles' },
         'tab-students': { title: 'Student Registry', sub: 'Identity and credentials' },
-        'tab-gallery': { title: 'Homepage Gallery', sub: 'Public slider control' }
+        'tab-gallery': { title: 'Homepage Gallery', sub: 'Public slider control' },
+        'tab-slides': { title: 'Homepage Hero Slider', sub: 'Dynamic animated background slides' }
     };
 
     function switchTab(tabId) {
@@ -205,6 +212,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (tabId === 'tab-departments') fetchDeptManagement();
         if (tabId === 'tab-complaints') fetchComplaints();
         if (tabId === 'tab-gallery') loadGallery();
+        if (tabId === 'tab-slides') loadSlides();
     }
 
     navItems.forEach(item => {
@@ -602,6 +610,35 @@ document.addEventListener("DOMContentLoaded", async () => {
         
         window.showModal('idModal');
     };
+
+    window.updateStatus = async (id, status) => {
+        if (!confirm(`Are you sure you want to mark complaint #${id} as ${status}?`)) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/complaints/${id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status }),
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Complaint #${id} updated to ${status}`, 'success');
+                fetchComplaints();
+                if (window.loadDashboardAnalytics) window.loadDashboardAnalytics();
+            } else {
+                showToast(data.message || 'Update failed', 'error');
+            }
+        } catch (err) {
+            console.error('[Admin] Update status error:', err);
+            showToast('Network error updating status', 'error');
+        }
+    };
+
+    window.fetchStats = () => {
+        if (window.loadDashboardAnalytics) window.loadDashboardAnalytics();
+    };
+
 
     // Additional fetch functions (Staff, Students, Departments, Gallery) reused from original
     // ... [Implementation for fetchStaff, fetchStudents, loadDepartments, loadGallery remains similar but cleaned up]
@@ -1747,5 +1784,218 @@ document.addEventListener("DOMContentLoaded", async () => {
         XLSX.writeFile(workbook, `${bulkType}_import_template.xlsx`);
     };
 
-});
+    // ── Hero Slider Management ──────────────────────────────────────────────
+    
+    window.loadSlides = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/slides`, { credentials: 'include' });
+            const data = await res.json();
+            if (data.success) {
+                renderSlidesTable(data.slides);
+            }
+        } catch (err) {
+            console.error('Failed to load slides', err);
+        }
+    };
 
+    function renderSlidesTable(slides) {
+        const tbody = document.getElementById('slides-tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = slides.map(s => `
+            <tr class="fade-in">
+                <td style="font-weight: bold; width: 80px;">${s.display_order}</td>
+                <td style="width: 120px;">
+                    <img src="${s.image_url}" alt="${s.title}" style="height: 50px; width: 90px; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
+                </td>
+                <td>
+                    <div style="font-weight: bold; color: var(--gold);">${s.title}</div>
+                    <div style="font-size: 0.8rem; opacity: 0.7; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.description || 'No description'}</div>
+                </td>
+                <td>
+                    <label class="switch">
+                        <input type="checkbox" onchange="toggleSlide(${s.id}, this.checked)" ${s.is_active ? 'checked' : ''}>
+                        <span class="slider round"></span>
+                    </label>
+                </td>
+                <td>
+                    <button class="action-btn" style="background: rgba(84,160,255,0.1); color: #54a0ff; border: 1px solid rgba(84,160,255,0.3);" onclick='openSlideModal(${JSON.stringify(s).replace(/'/g, "&#39;")})'>
+                        <i class="fa-solid fa-pen"></i> Edit
+                    </button>
+                    <button class="action-btn" style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); margin-left: 5px;" onclick="deleteSlide(${s.id})">
+                        <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    window.openSlideModal = (slide = null) => {
+        const titleInput = document.getElementById('slide-title');
+        const descInput = document.getElementById('slide-description');
+        const orderInput = document.getElementById('slide-order');
+        const activeInput = document.getElementById('slide-active');
+        const idInput = document.getElementById('slide-id');
+        const imgInput = document.getElementById('slide-image');
+
+        if (slide) {
+            document.getElementById('slideModalTitle').innerText = 'Edit Slide';
+            idInput.value = slide.id;
+            titleInput.value = slide.title;
+            descInput.value = slide.description || '';
+            orderInput.value = slide.display_order;
+            activeInput.checked = slide.is_active;
+            imgInput.required = false;
+        } else {
+            document.getElementById('slideModalTitle').innerText = 'Add New Slide';
+            document.getElementById('slide-form').reset();
+            idInput.value = '';
+            orderInput.value = 0;
+            activeInput.checked = true;
+            imgInput.required = true;
+        }
+        window.showModal('slideModal');
+    };
+
+    window.closeSlideModal = () => {
+        window.closeModal('slideModal');
+        const wrapper = document.getElementById('slide-preview-wrapper');
+        const img = document.getElementById('slide-image-preview');
+        if (wrapper && img) {
+            wrapper.style.display = 'none';
+            img.src = '';
+        }
+    };
+
+    window.previewSlideImage = (input) => {
+        const wrapper = document.getElementById('slide-preview-wrapper');
+        const img = document.getElementById('slide-image-preview');
+        
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            
+            // Validate size (5MB max) and type
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Image size must be less than 5MB', 'error');
+                input.value = '';
+                wrapper.style.display = 'none';
+                return;
+            }
+            if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+                showToast('Only JPEG, PNG, or WebP allowed', 'error');
+                input.value = '';
+                wrapper.style.display = 'none';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                img.src = e.target.result;
+                wrapper.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        } else {
+            wrapper.style.display = 'none';
+        }
+    };
+
+    window.saveSlide = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('saveSlideBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        const id = document.getElementById('slide-id').value;
+        const form = document.getElementById('slide-form');
+        const formData = new FormData();
+
+        const imageFile = document.getElementById('slide-image').files[0];
+        if (imageFile) {
+            if (imageFile.size > 5 * 1024 * 1024) {
+                showToast('Image size exceeds 5MB limit', 'error');
+                btn.disabled = false;
+                btn.innerHTML = 'Save Slide';
+                return;
+            }
+            formData.append('image', imageFile);
+        } else if (!id) {
+            showToast('Image is required to create a new slide', 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'Save Slide';
+            return;
+        }
+
+        formData.append('title', document.getElementById('slide-title').value);
+        formData.append('description', document.getElementById('slide-description').value);
+        formData.append('display_order', document.getElementById('slide-order').value);
+        formData.append('is_active', document.getElementById('slide-active').checked);
+
+        const url = id ? \`\${API_BASE}/api/admin/slides/\${id}\` : \`\${API_BASE}/api/admin/slides\`;
+        const method = id ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method,
+                body: formData,
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message, 'success');
+                closeSlideModal();
+                loadSlides();
+            } else {
+                showToast(data.message || 'Failed to save slide', 'error');
+            }
+        } catch (err) {
+            showToast('Network error while saving slide', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Save Slide';
+        }
+    };
+
+    window.toggleSlide = async (id, isActive) => {
+        try {
+            const res = await fetch(\`\${API_BASE}/api/admin/slides/\${id}/toggle\`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: isActive }),
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Slide status updated', 'success');
+            } else {
+                showToast('Failed to toggle status', 'error');
+                loadSlides(); // revert
+            }
+        } catch (err) {
+            showToast('Network error', 'error');
+            loadSlides(); // revert
+        }
+    };
+
+    window.deleteSlide = (id) => {
+        showConfirmModal('Delete Slide', 'Are you sure you want to delete this slide? The image will be permanently removed.', async () => {
+            try {
+                const res = await fetch(\`\${API_BASE}/api/admin/slides/\${id}\`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Slide deleted successfully', 'success');
+                    loadSlides();
+                } else {
+                    showToast(data.message || 'Delete failed', 'error');
+                }
+            } catch (err) {
+                showToast('Network error', 'error');
+            } finally {
+                closeConfirmModal();
+            }
+        });
+    };
+
+});

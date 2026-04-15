@@ -192,10 +192,10 @@
                             <a id="forgot-link" href="forgot-password.html" style="color: #888; text-decoration: none;">Forgot Password?</a>
                         </p>
                         <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.4rem;">
-                            <a id="activate-link" href="activate.html" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Student? Activate Account</a>
+                            <a id="activate-link" href="activate-student.html" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Student? Activate Account</a>
                         </p>
                         <p id="activate-admin-wrap" style="font-size: 0.9rem; color: var(--text-secondary); display: none;">
-                            <a id="activate-admin-link" href="activate-staff.html?role=Admin" style="color: #ef4444; text-decoration: none; font-weight: 600;">Admin? Activate Account</a>
+                            <a id="activate-admin-link" href="activate-admin.html" style="color: #ef4444; text-decoration: none; font-weight: 600;">Admin? Activate Account</a>
                         </p>
                     </div>
                 </div>
@@ -215,78 +215,80 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const forcedRole = urlParams.get('role');
+            const rawRole = urlParams.get('role');
             const roleBtns = document.querySelectorAll('.role-btn');
             const activateLink = document.getElementById('activate-link');
             const forgotLink = document.getElementById('forgot-link');
+            const adminActivateLink = document.getElementById('activate-admin-link');
             const authHeader = document.querySelector('.auth-header p');
+            const adminWrap = document.getElementById('activate-admin-wrap');
 
-            function updateLinksForRole(roleText) {
-                const role = roleText.toLowerCase();
-                const isAdmin = role.includes('admin');
-                const isPrincipal = role.includes('principal');
-                const isStaff = ['staff', 'hod'].some(r => role.includes(r));
-                const adminWrap = document.getElementById('activate-admin-wrap');
+            // 1. Detect and Normalize Role
+            const normalizedRole = window.RoleManager.normalize(rawRole);
+            console.log(`[Role Detection] Raw: ${rawRole}, Normalized: ${normalizedRole}`);
 
-                if (isAdmin) {
-                    // Admin selected: show Staff activate link + Admin activate link
-                    activateLink.href = 'activate-staff.html?role=Staff';
+            function updateLinksForRole(role) {
+                const canonical = window.RoleManager.normalize(role);
+                const activationPage = window.RoleManager.getActivationPage(canonical);
+                const forgotPage = window.RoleManager.getForgotPage(canonical);
+                const displayName = window.RoleManager.getDisplayName(canonical);
+
+                console.log(`[Routing] Updating links for: ${canonical} -> ${activationPage}`);
+
+                // Update Primary Activate Link
+                if (canonical === window.RoleManager.ADMIN) {
+                    // Admin selected: Special case as per user request
+                    // Primary link becomes Staff activation, Admin activation appears separately
+                    activateLink.href = 'activate-staff.html';
                     activateLink.textContent = 'Staff/Faculty? Activate Account';
                     activateLink.style.color = '#f59e0b';
-                    forgotLink.href = 'forgot-password-staff.html?role=Admin';
-                    forgotLink.textContent = 'Forgot Password?';
+                    
                     adminWrap.style.display = 'block';
-                    document.getElementById('activate-admin-link').href = 'activate-staff.html?role=Admin';
-                } else if (isPrincipal) {
-                    // Principal selected
-                    activateLink.href = 'activate-staff.html?role=Principal';
-                    activateLink.textContent = 'Principal? Activate Account';
-                    activateLink.style.color = '#f59e0b';
-                    forgotLink.href = 'forgot-password-staff.html?role=Principal';
-                    forgotLink.textContent = 'Forgot Password?';
-                    adminWrap.style.display = 'none';
-                } else if (isStaff) {
-                    // Staff/HOD
-                    activateLink.href = 'activate-staff.html?role=Staff';
-                    activateLink.textContent = 'Staff/Faculty? Activate Account';
-                    activateLink.style.color = '#f59e0b';
-                    forgotLink.href = 'forgot-password-staff.html?role=Staff';
-                    forgotLink.textContent = 'Forgot Password?';
-                    adminWrap.style.display = 'none';
+                    adminActivateLink.href = 'activate-admin.html';
+                    adminActivateLink.textContent = 'Admin? Activate Account';
                 } else {
-                    // Student: default
-                    activateLink.href = 'activate.html';
-                    activateLink.textContent = 'Student? Activate Account';
-                    activateLink.style.color = 'var(--primary-color)';
-                    forgotLink.href = 'forgot-password.html';
-                    forgotLink.textContent = 'Forgot Password?';
+                    // Standard roles
+                    activateLink.href = activationPage;
+                    activateLink.textContent = `${displayName}? Activate Account`;
+                    activateLink.style.color = (canonical === window.RoleManager.STUDENT) ? 'var(--primary-color)' : '#f59e0b';
                     adminWrap.style.display = 'none';
                 }
+
+                // Update Forgot Link
+                forgotLink.href = forgotPage;
+                forgotLink.textContent = 'Forgot Password?';
             }
 
-            // Update links whenever a role button is clicked
+            // 2. Setup Role Button Listeners
             roleBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    updateLinksForRole(btn.textContent.trim());
+                    const roleText = btn.textContent.trim();
+                    updateLinksForRole(roleText);
                 });
             });
 
-            if (forcedRole) {
+            // 3. Handle Initial State / URL Forcing
+            if (rawRole) {
+                // Find button that matches normalized role
                 const target = Array.from(roleBtns).find(btn =>
-                    btn.textContent.trim().toLowerCase().includes(forcedRole.toLowerCase())
+                    window.RoleManager.normalize(btn.textContent.trim()) === normalizedRole
                 );
+
                 if (target) {
                     roleBtns.forEach(btn => {
                         if (btn !== target) btn.style.display = 'none';
                         else btn.classList.add('active');
                     });
-                    const roleName = target.textContent.trim();
-                    authHeader.textContent = `Verify your identity to access the ${roleName} portal.`;
-                    updateLinksForRole(roleName);
+                    const displayName = window.RoleManager.getDisplayName(normalizedRole);
+                    if (authHeader) authHeader.textContent = `Verify your identity to access the ${displayName} portal.`;
+                    updateLinksForRole(normalizedRole);
+                } else {
+                    // Fallback to Student if role in URL was invalid
+                    updateLinksForRole(window.RoleManager.STUDENT);
                 }
             } else {
                 // Default: Student
-                updateLinksForRole('Student');
+                updateLinksForRole(window.RoleManager.STUDENT);
             }
         });
     </script>

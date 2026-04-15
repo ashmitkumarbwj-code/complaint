@@ -30,6 +30,21 @@ const resetLimiter = rateLimit({
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 router.post('/login',               loginLimiter,  v.validateLogin,               authController.login);
+
+// Role-Based Activation (Parallel System)
+router.post('/student/request-activation',   otpLimiter, v.validateRequestActivation,  authController.requestStudentActivation);
+router.post('/student/complete-activation',              v.validateCompleteActivation, authController.completeStudentActivation);
+
+router.post('/staff/request-activation',     otpLimiter, v.validateRequestActivation,  authController.requestStaffActivation);
+router.post('/staff/complete-activation',                v.validateCompleteActivation, authController.completeStaffActivation);
+
+router.post('/admin/request-activation',     otpLimiter, v.validateRequestActivation,  authController.requestAdminActivation);
+router.post('/admin/complete-activation',                v.validateCompleteActivation, authController.completeAdminActivation);
+
+router.post('/principal/request-activation', otpLimiter, v.validateRequestActivation,  authController.requestPrincipalActivation);
+router.post('/principal/complete-activation',            v.validateCompleteActivation, authController.completePrincipalActivation);
+
+// Legacy/Compatibility Endpoints (Do not remove)
 router.post('/request-activation',  otpLimiter,    v.validateRequestActivation,   authController.requestActivation);
 router.post('/complete-activation',                v.validateCompleteActivation,  authController.completeActivation);
 

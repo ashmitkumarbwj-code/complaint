@@ -2,8 +2,23 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const adminController = require('../controllers/adminController');
+const slidesController = require('../controllers/slidesController');
 const auth = require('../middleware/authMiddleware');
 const checkRole = require('../middleware/roleMiddleware');
+
+// Multer memory storage setup for slides
+const slideUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+    fileFilter: (req, file, cb) => {
+        const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (allowedMimes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only JPEG, PNG, and WebP images are allowed'));
+        }
+    }
+});
 
 // Multer: in-memory storage for CSV (no disk writes)
 const csvUpload = multer({
@@ -67,5 +82,14 @@ router.put('/complaints/:id/status', auth, checkRole(['Admin']), adminController
 // @desc    Manually forward (reassign) a complaint to a different department
 // @access  Private (Admin only)
 router.patch('/complaints/:id/forward', auth, checkRole(['Admin']), adminController.forwardComplaint);
+
+// ==========================================
+// ADMIN SLIDES MANAGEMENT
+// ==========================================
+router.get('/slides', auth, checkRole(['Admin']), slidesController.getAllSlides);
+router.post('/slides', auth, checkRole(['Admin']), slideUpload.single('image'), slidesController.createSlide);
+router.put('/slides/:id', auth, checkRole(['Admin']), slideUpload.single('image'), slidesController.updateSlide);
+router.delete('/slides/:id', auth, checkRole(['Admin']), slidesController.deleteSlide);
+router.patch('/slides/:id/toggle', auth, checkRole(['Admin']), slidesController.toggleSlide);
 
 module.exports = router;

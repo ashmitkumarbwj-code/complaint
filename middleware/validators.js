@@ -71,7 +71,7 @@ const otpRule = (field = 'otp') =>
 
 const tenantRule = () =>
     body('tenant_id')
-        .notEmpty().withMessage('Tenant context (College ID) is required.')
+        .optional({ checkFalsy: true })
         .isInt({ min: 1 }).withMessage('Invalid Tenant ID.');
 
 // ─────────────────────────────────────────────────────────────────
@@ -87,6 +87,26 @@ exports.validateLogin = [
     body('password')
         .notEmpty().withMessage('Password is required.')
         .isLength({ max: 128 }).withMessage('Password is too long.'),
+    tenantRule(),
+    validate
+];
+
+// Role-Based Activation Validators (Parallel System)
+exports.validateRoleActivationRequest = [
+    methodRule(),
+    emailRuleOptional('email'),
+    mobileRuleOptional('mobile_number'),
+    rollNumberRuleOptional('roll_number'),
+    tenantRule(),
+    validate
+];
+
+exports.validateRoleActivationComplete = [
+    methodRule(),
+    emailRuleOptional('email'),
+    mobileRuleOptional('mobile_number'),
+    otpRule('otp'),
+    passwordRule('password'),
     tenantRule(),
     validate
 ];

@@ -31,6 +31,7 @@ exports.requestActivation = async (req, res) => {
     const { email, mobile_number, roll_number, method, role } = req.body;
 
     try {
+        console.log(`[AUTH] Request received for activation via ${method} - Identifier: ${email || mobile_number}`);
         const tenantId = db.getTenantId(req) || 1;
         let entry;
         let identifier = (method === 'email' ? email : mobile_number).trim().toLowerCase();
@@ -43,16 +44,30 @@ exports.requestActivation = async (req, res) => {
         if (normalizedRole === 'Student') {
             const query = method === 'email' 
                 ? 'SELECT * FROM verified_students WHERE email = $1 AND tenant_id = $2' 
-                : 'SELECT * FROM verified_students WHERE roll_number = $1 AND mobile_number = $2 AND tenant_id = $3';
-            const params = method === 'email' ? [identifier, tenantId] : [roll_number, identifier, tenantId];
+                : 'SELECT * FROM verified_students WHERE mobile_number = $1 AND tenant_id = $2';
+            const params = [identifier, tenantId];
             
+            console.log(`[DB] Query start for Student - Identifier: ${identifier}`);
             const [rows] = await db.execute(query, params);
-            if (rows.length === 0) return res.status(400).json({ success: false, message: 'No registered student account found with these details.' });
+            console.log(`[DB] Query end - Found ${rows.length} rows`);
+            
+            if (rows.length === 0) {
+                console.log(`[DB] User not found`);
+                return res.status(404).json({ success: false, message: 'Sorry, you are not part of our college.' });
+            }
+            console.log(`[DB] User found`);
             entry = rows[0];
         } else {
             const field = method === 'email' ? 'email' : 'mobile_number';
+            console.log(`[DB] Query start for Staff - Identifier: ${identifier}`);
             const [rows] = await db.execute(`SELECT * FROM verified_staff WHERE ${field} = $1 AND LOWER(role) = LOWER($2) AND tenant_id = $3`, [identifier, normalizedRole, tenantId]);
-            if (rows.length === 0) return res.status(400).json({ success: false, message: `No registered ${normalizedRole} account found with these details.` });
+            console.log(`[DB] Query end - Found ${rows.length} rows`);
+            
+            if (rows.length === 0) {
+                console.log(`[DB] User not found`);
+                return res.status(404).json({ success: false, message: 'Sorry, you are not part of our college.' });
+            }
+            console.log(`[DB] User found`);
             entry = rows[0];
         }
 
@@ -66,6 +81,7 @@ exports.requestActivation = async (req, res) => {
         }
 
         const otp = otpService.generateOTP();
+        console.log(`[OTP] Generated successfully for ${identifier}`);
         await otpService.saveOTP(identifier, otp);
 
         if (method === 'email') {
@@ -74,7 +90,7 @@ exports.requestActivation = async (req, res) => {
             
             return res.json({ 
                 success: true, 
-                message: process.env.OTP_MODE === 'mock' ? 'OTP sent (mock mode)' : 'Activation OTP sent to your registered email address.',
+                message: 'OTP sent successfully',
                 demoOtp: process.env.OTP_MODE === 'mock' ? otp : undefined
             });
         } else {
@@ -84,12 +100,12 @@ exports.requestActivation = async (req, res) => {
             
             return res.json({ 
                 success: true, 
-                message: process.env.OTP_MODE === 'mock' ? 'OTP sent (mock mode)' : 'Activation OTP sent to your registered mobile number.',
+                message: 'OTP sent successfully',
                 demoOtp: process.env.OTP_MODE === 'mock' ? otp : undefined
             });
         }
     } catch (error) {
-        console.error('Activation request error:', error);
+        console.error(`[ERROR] Something failed during activation request:`, error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };
@@ -974,3 +990,182 @@ exports.firebaseCompleteActivation = async (req, res) => {
         conn.release();
     }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROLE-BASED ACTIVATION SYSTEM (STRICT SEPARATION)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Generic Helper for Requesting Activation with Strict Role Isolation
+ */
+async function handleRoleActivationRequest(req, res, targetRole) {
+    const { email, mobile_number, method } = req.body;
+    const identifier = (method === 'email' ? email : mobile_number || '').trim().toLowerCase();
+    const tenantId = db.getTenantId(req) || 1;
+
+    console.log(`[AUTH] Role: ${targetRole} | Method: ${method} | Identifier: ${identifier}`);
+
+    try {
+        if (!identifier) {
+            return res.status(400).json({ success: false, message: `${method === 'email' ? 'Email' : 'Mobile number'} is required.` });
+        }
+
+        let entry = null;
+        console.log(`[DB] Checking identifier in registry...`);
+
+        if (targetRole.toLowerCase() === 'student') {
+            const query = method === 'email' 
+                ? 'SELECT * FROM verified_students WHERE LOWER(email) = $1 AND tenant_id = $2' 
+                : 'SELECT * FROM verified_students WHERE mobile_number = $1 AND tenant_id = $2';
+            
+            const [rows] = await db.execute(query, [identifier, tenantId]);
+            if (rows.length > 0) entry = rows[0];
+        } else {
+            // Staff, Admin, Principal all live in verified_staff with a role filter
+            const field = method === 'email' ? 'LOWER(email)' : 'mobile_number';
+            const query = `SELECT * FROM verified_staff WHERE ${field} = $1 AND LOWER(role) = LOWER($2) AND tenant_id = $3`;
+            
+            const [rows] = await db.execute(query, [identifier, targetRole, tenantId]);
+            if (rows.length > 0) entry = rows[0];
+        }
+
+        if (!entry) {
+            console.log(`[DB] Not Found - Rejecting with 403`);
+            return res.status(403).json({ success: false, message: 'Sorry, you are not part of our college.' });
+        }
+
+        console.log(`[DB] Found matching record for ${targetRole}`);
+
+        if (entry.is_account_created) {
+            return res.status(400).json({ success: false, message: 'Account already activated. Please login.' });
+        }
+
+        const canSend = await otpService.checkRateLimit(identifier);
+        if (!canSend) {
+            return res.status(429).json({ success: false, message: 'Too many OTP requests. Try again after 10 minutes.' });
+        }
+
+        const otp = otpService.generateOTP();
+        console.log(`[OTP] Generated successfully`);
+        await otpService.saveOTP(identifier, otp);
+
+        if (method === 'email') {
+            const emailSent = await notifier.sendOTPEmail(identifier, otp);
+            if (!emailSent) return res.status(500).json({ success: false, message: 'Failed to send activation OTP email.' });
+        } else {
+            const message = `Your Smart Campus activation OTP is: ${otp}. Valid for 5 minutes.`;
+            const smsSent = await notifier.sendSMS(identifier, message);
+            if (!smsSent) return res.status(500).json({ success: false, message: 'Failed to send activation OTP SMS.' });
+        }
+
+        return res.json({ 
+            success: true, 
+            message: 'OTP sent successfully',
+            demoOtp: process.env.OTP_MODE === 'mock' ? otp : undefined
+        });
+
+    } catch (error) {
+        console.error(`[ERROR] Activation request failure:`, error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+}
+
+/**
+ * Generic Helper for Completing Activation with Strict Role Isolation
+ */
+async function handleRoleActivationComplete(req, res, targetRole) {
+    const { method, email, mobile_number, otp, password } = req.body;
+    const identifier = (method === 'email' ? email : mobile_number || '').trim().toLowerCase();
+    const tenantId = db.getTenantId(req) || 1;
+
+    try {
+        if (!identifier || !otp) {
+            return res.status(400).json({ success: false, message: 'Identifier and OTP are required.' });
+        }
+
+        console.log(`[AUTH] Completing Activation | Role: ${targetRole} | Identifier: ${identifier}`);
+
+        const result = await otpService.verifyOTP(identifier, otp);
+        if (result === 'locked') return res.status(429).json({ success: false, message: 'Too many attempts. Locked.' });
+        if (result === 'expired') return res.status(400).json({ success: false, message: 'OTP expired.' });
+        if (result !== 'valid') return res.status(400).json({ success: false, message: 'Invalid OTP.' });
+
+        if (!password || password.length < 8) {
+            return res.status(400).json({ success: false, message: 'Password must be at least 8 characters.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const conn = await db.getTransaction();
+
+        try {
+            await conn.beginTransaction();
+            let vd, userId;
+
+            if (targetRole.toLowerCase() === 'student') {
+                const query = method === 'email' ? 'SELECT * FROM verified_students WHERE LOWER(email) = $1 AND tenant_id = $2' : 'SELECT * FROM verified_students WHERE mobile_number = $1 AND tenant_id = $2';
+                const [vRows] = await conn.execute(query, [identifier, tenantId]);
+                if (vRows.length === 0) throw new Error('Registry entry vanished');
+                vd = vRows[0];
+
+                const [uRows] = await conn.execute(
+                    'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+                    [tenantId, vd.roll_number, vd.email, vd.mobile_number, hashedPassword, 'Student', true]
+                );
+                userId = uRows[0].id;
+
+                await conn.execute(
+                    'INSERT INTO students (tenant_id, user_id, roll_number, department_id, mobile_number) VALUES ($1, $2, $3, $4, $5)',
+                    [tenantId, userId, vd.roll_number, vd.department_id || 1, vd.mobile_number]
+                );
+
+                await conn.execute('UPDATE verified_students SET is_account_created = TRUE WHERE id = $1', [vd.id]);
+            } else {
+                const field = method === 'email' ? 'LOWER(email)' : 'mobile_number';
+                const query = `SELECT * FROM verified_staff WHERE ${field} = $1 AND LOWER(role) = LOWER($2) AND tenant_id = $3`;
+                const [vRows] = await conn.execute(query, [identifier, targetRole, tenantId]);
+                if (vRows.length === 0) throw new Error('Registry entry vanished');
+                vd = vRows[0];
+
+                const [uRows] = await conn.execute(
+                    'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+                    [tenantId, vd.name, vd.email, vd.mobile_number, hashedPassword, vd.role, true]
+                );
+                userId = uRows[0].id;
+
+                await conn.execute(
+                    'INSERT INTO staff (tenant_id, user_id, department_id, designation, mobile_number) VALUES ($1, $2, $3, $4, $5)',
+                    [tenantId, userId, vd.department_id, vd.role, vd.mobile_number]
+                );
+
+                await conn.execute('UPDATE verified_staff SET is_account_created = TRUE WHERE id = $1', [vd.id]);
+            }
+
+            await conn.commit();
+            await otpService.clearOTPs(identifier);
+            res.json({ success: true, message: 'Account activated successfully!' });
+
+        } catch (innerErr) {
+            await conn.rollback();
+            throw innerErr;
+        } finally {
+            conn.release();
+        }
+
+    } catch (error) {
+        console.error(`[ERROR] Activation completion failure:`, error);
+        res.status(500).json({ success: false, message: 'Activation failed' });
+    }
+}
+
+// Public Role Wrappers
+exports.requestStudentActivation   = (req, res) => handleRoleActivationRequest(req, res, 'Student');
+exports.completeStudentActivation  = (req, res) => handleRoleActivationComplete(req, res, 'Student');
+
+exports.requestStaffActivation     = (req, res) => handleRoleActivationRequest(req, res, 'Staff');
+exports.completeStaffActivation    = (req, res) => handleRoleActivationComplete(req, res, 'Staff');
+
+exports.requestAdminActivation     = (req, res) => handleRoleActivationRequest(req, res, 'Admin');
+exports.completeAdminActivation    = (req, res) => handleRoleActivationComplete(req, res, 'Admin');
+
+exports.requestPrincipalActivation = (req, res) => handleRoleActivationRequest(req, res, 'Principal');
+exports.completePrincipalActivation = (req, res) => handleRoleActivationComplete(req, res, 'Principal');

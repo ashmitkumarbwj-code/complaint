@@ -29,7 +29,7 @@ exports.saveOTP = async (identifier, otpCode, userId = null) => {
     const hashedOtp = await bcrypt.hash(otpCode, 10);
 
     // Invalidate existing
-    await db.execute('UPDATE otp_verifications SET verified = 1 WHERE identifier = $1 AND verified = 0', [identifier]);
+    await db.execute('UPDATE otp_verifications SET verified = true WHERE identifier = $1 AND verified = false', [identifier]);
 
     // Insert new
     await db.execute(
@@ -48,7 +48,7 @@ exports.verifyOTP = async (identifier, otpCode) => {
     // 1. Fetch latest
     const [rows] = await db.execute(
         `SELECT * FROM otp_verifications 
-         WHERE identifier = $1 AND verified = 0
+         WHERE identifier = $1 AND verified = false
          ORDER BY created_at DESC LIMIT 1`,
         [identifier]
     );
@@ -77,7 +77,7 @@ exports.verifyOTP = async (identifier, otpCode) => {
     }
 
     // Success
-    await db.execute('UPDATE otp_verifications SET verified = 1 WHERE id = $1', [record.id]);
+    await db.execute('UPDATE otp_verifications SET verified = true WHERE id = $1', [record.id]);
     return 'valid';
 };
 

@@ -6,29 +6,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const authForm = document.getElementById('auth-form');
     const btnLogin = document.getElementById('btn-login');
 
-    let currentRole = 'Student';
+    let currentRole = window.RoleManager.STUDENT;
 
     // Role Selection
     roleBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             roleBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            let roleText = btn.textContent.trim();
+            
+            const rawRole = btn.textContent.trim();
+            currentRole = window.RoleManager.normalize(rawRole);
+            
+            console.log(`[Auth] Role Selected: ${rawRole} -> Canonical: ${currentRole}`);
 
-            if (roleText === 'Student') {
-                currentRole = 'Student';
+            if (currentRole === window.RoleManager.STUDENT) {
                 identifierLabel.textContent = 'Roll Number / Email';
                 identifierInput.placeholder = 'e.g. 21DCS010';
-            } else if (roleText === 'Staff/Faculty') {
-                currentRole = 'Staff';
+            } else if (currentRole === window.RoleManager.STAFF) {
                 identifierLabel.textContent = 'Email / Username';
                 identifierInput.placeholder = 'e.g. facult@gdc.edu';
-            } else if (roleText === 'Admin') {
-                currentRole = 'Admin';
+            } else if (currentRole === window.RoleManager.ADMIN) {
                 identifierLabel.textContent = 'Admin ID';
                 identifierInput.placeholder = 'e.g. admin_01';
-            } else if (roleText === 'Principal') {
-                currentRole = 'Principal';
+            } else if (currentRole === window.RoleManager.PRINCIPAL) {
                 identifierLabel.textContent = 'Email / Official ID';
                 identifierInput.placeholder = 'e.g. principal@gdc.edu';
             }
@@ -52,34 +52,30 @@ document.addEventListener("DOMContentLoaded", () => {
         btnLogin.disabled = true;
 
         try {
+            console.log(`[Auth] Attempting login as: ${currentRole}`);
             const response = await fetch(`${API_BASE}/api/auth/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
-                credentials: 'include', // 🔥 Mandatory for HttpOnly cookies
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ 
                     role: currentRole, 
                     identifier, 
                     password,
-                    tenant_id: 1 // Default to Main Campus for now
+                    tenant_id: 1 
                 })
             });
 
             const data = await response.json();
 
             if (data.success) {
-                // Store only UI-friendly metadata. 
-                // Sensitive data/roles are now verified via server handshake on every load.
                 const uiUser = {
                     name: data.user.username || data.user.name,
                     avatar: data.user.profile_image,
                     dept: data.user.department_name
                 };
                 localStorage.setItem('scrs_user', JSON.stringify(uiUser));
-                
-                // Keep a small hint for redirection logic, but it's not used for access control
                 localStorage.setItem('scrs_role_hint', data.user.role);
                 
-                // Redirect using server-provided path
                 window.location.href = data.redirect || 'admin.html';
             } else {
                 showToast(data.message || 'Login failed', 'error');
@@ -96,11 +92,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Support Role Pre-selection from URL (e.g. login.html?role=staff)
     const urlParams = new URLSearchParams(window.location.search);
-    const preSelectRole = urlParams.get('role');
-    if (preSelectRole) {
+    const preSelectRoleRaw = urlParams.get('role');
+    if (preSelectRoleRaw) {
+        const normalized = window.RoleManager.normalize(preSelectRoleRaw);
+        console.log(`[Auth] Pre-selection URL role: ${preSelectRoleRaw} -> Normalized: ${normalized}`);
+        
         const targetBtn = Array.from(roleBtns).find(btn => 
-            btn.textContent.trim().toLowerCase().includes(preSelectRole.toLowerCase())
+            window.RoleManager.normalize(btn.textContent.trim()) === normalized
         );
         if (targetBtn) targetBtn.click();
+    } else {
+        // Default UI state
+        const studentBtn = Array.from(roleBtns).find(btn => btn.textContent.trim() === 'Student');
+        if (studentBtn) studentBtn.click();
     }
 });
