@@ -53,8 +53,8 @@ exports.createSlide = async (req, res) => {
             ]
         );
 
-        logger.info(`[Slides Controller] Slide created: ID ${result.rows[0].id} by Admin ${req.user.id}`);
-        res.status(201).json({ success: true, slide: result.rows[0], message: 'Slide created successfully' });
+        logger.info(`[Slides Controller] Slide created: ID ${result[0].id} by Admin ${req.user.id}`);
+        res.status(201).json({ success: true, slide: result[0], message: 'Slide created successfully' });
     } catch (error) {
         logger.error('[Slides Controller] Create error:', error);
         res.status(500).json({ success: false, message: 'Failed to create slide' });
@@ -133,8 +133,8 @@ exports.updateSlide = async (req, res) => {
             }
         }
 
-        logger.info(`[Slides Controller] Slide updated: ID ${updated.rows[0].id} by Admin ${req.user.id}`);
-        res.json({ success: true, slide: updated.rows[0], message: 'Slide updated successfully' });
+        logger.info(`[Slides Controller] Slide updated: ID ${updated[0].id} by Admin ${req.user.id}`);
+        res.json({ success: true, slide: updated[0], message: 'Slide updated successfully' });
     } catch (error) {
         logger.error('[Slides Controller] Update error:', error);
         res.status(500).json({ success: false, message: 'Failed to update slide' });

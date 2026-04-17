@@ -45,11 +45,19 @@ exports.submitComplaint = async (req, res) => {
             ? `AI Auto-escalated priority to ${finalPriority}` 
             : 'Auto-routed by system based on category';
 
-        await db.execute(
-            `INSERT INTO complaint_departments (tenant_id, complaint_id, department_id, assigned_by, notes, is_current) 
-             VALUES ($1, $2, $3, NULL, $4, 1)`,
-            [tenantId, complaintId, targetDeptId, auditNote]
-        );
+        // 4. Audit Trail Logic (Initial Submission)
+        const audit = require('../utils/auditService');
+        await audit.logAction(null, {
+            complaint_id: complaintId,
+            actor_user_id: req.user.id,
+            actor_role: req.user.role,
+            action_type: 'STATUS_CHANGE',
+            from_status: null,
+            to_status: 'Pending',
+            note: auditNote,
+            visibility: 'STUDENT_VISIBLE',
+            req
+        });
 
         // 5. Queue File Upload (Zero-Trust Job) with Resilience Fallback
         if (req.file) {
@@ -115,8 +123,9 @@ exports.updateStatus = async (req, res) => {
         // Socket & Notifications are now partially handled or triggered from here
         // (Service handles DB, Controller handles UI side-effects)
         if (!result.noOp) {
-            socketService.emitStatusUpdate(complaint_id, status, null); // targetStudentId can be added in service data return
+            socketService.emitStatusUpdate(complaint_id, status, result.data.student_id, result.data.department_id);
         }
+
 
         res.json({ 
             success: true, 
@@ -225,11 +234,11 @@ exports.getComplaintHistory = async (req, res) => {
 
     try {
         // Senior Security Verification
-        if (role === 'Staff' || role === 'HOD') {
-            const [complaint] = await db.execute('SELECT department_id FROM complaints WHERE id = $1', [id]);
+        if (role === 'staff' || role === 'hod') {
+            const [complaint] = await db.tenantExecute(req, 'SELECT department_id FROM complaints WHERE id = $1', [id]);
             if (complaint.length === 0) return res.status(404).json({ success: false, message: 'Complaint not found' });
             
-            const [membership] = await db.execute(
+            const [membership] = await db.tenantExecute(req,
                 'SELECT 1 FROM department_members WHERE department_id = $1 AND user_id = $2',
                 [complaint[0].department_id, user_id]
             );

@@ -1,7 +1,28 @@
 # ── Environment & Secrets ─────────────────────────────────────
 .env
+.env.*
 .env.local
 .env.*.local
+scratch/
+uploads/
+uploads_bak/
+backups/
+backups_*/
+
+
+tmp/
+data/test_*
+test*.js
+test*.env
+*.sql
+!database/
+!database/*.sql
+!database_pg.sql
+admin_user.txt
+users.txt
+tmp_sync_gallery.js
+
+
 
 # ── Dependencies ──────────────────────────────────────────────
 node_modules/

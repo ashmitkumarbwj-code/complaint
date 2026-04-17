@@ -4,24 +4,23 @@ window.API_BASE = window.location.origin;
  * RoleManager - Centralized utility for handling role-based routing and normalization.
  */
 window.RoleManager = {
-    // Roles are normalized to lowercase canonical values
-    STUDENT: 'student',
-    STAFF: 'staff',
+    // Canonical Identifiers (Standardized Lowercase)
+    STUDENT:   'student',
+    STAFF:     'staff',
+    ADMIN:     'admin',
     PRINCIPAL: 'principal',
-    ADMIN: 'admin',
 
     /**
-     * Normalizes any input role string to a canonical lowercase value.
-     * Defaults to 'student' if invalid or missing.
+     * Normalizes a role string to its canonical lowercase value.
      */
     normalize: function(role) {
         if (!role) return this.STUDENT;
         const r = role.toLowerCase().trim();
         
-        if (r.includes('student')) return this.STUDENT;
-        if (r.includes('staff') || r.includes('faculty') || r.includes('hod')) return this.STAFF;
-        if (r.includes('principal')) return this.PRINCIPAL;
-        if (r.includes('admin')) return this.ADMIN;
+        if (r === 'student') return this.STUDENT;
+        if (r === 'staff' || r === 'faculty' || r === 'hod') return this.STAFF;
+        if (r === 'principal') return this.PRINCIPAL;
+        if (r === 'admin' || r === 'admin aux') return this.ADMIN;
         
         return this.STUDENT; // Safe fallback
     },
@@ -58,6 +57,6 @@ window.RoleManager = {
     getForgotPage: function(role) {
         const r = this.normalize(role);
         if (r === this.STUDENT) return 'forgot-password.html';
-        return `forgot-password-staff.html?role=${r.charAt(0).toUpperCase() + r.slice(1)}`;
+        return `forgot-password-staff.html?role=${r}`;
     }
 };

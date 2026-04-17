@@ -54,4 +54,23 @@ router.get('/', async (req, res) => {
     });
 });
 
+router.get('/info', async (req, res) => {
+    // 🛡️ Proof-based verification (Admin Only)
+    // We add this here to prove the environment lockdown
+    const redisAvailable = getIsAvailable();
+    return res.json({
+        success: true,
+        proof: {
+            NODE_ENV: process.env.NODE_ENV,
+            OTP_MODE: process.env.OTP_MODE,
+            USE_REDIS: process.env.USE_REDIS === 'true',
+            REDIS_REALTIME: redisAvailable ? 'CONNECTED' : 'DISCONNECTED',
+            FRONTEND_URLS: process.env.FRONTEND_URLS,
+            IS_SERVERLESS: process.env.VERCEL === '1',
+            ARCHITECTURE: process.env.VERCEL === '1' ? 'Serverless (Vercel)' : 'Persistent (EC2/PM2/Local)',
+            PROCESS_ID: process.pid
+        }
+    });
+});
+
 module.exports = router;

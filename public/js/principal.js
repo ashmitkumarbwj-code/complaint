@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
     // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
-    const userProfile = await window.validateSession('Principal');
+    const userProfile = await window.validateSession('principal');
     if (!userProfile) return;
 
     // Sync localStorage for UI consistency, but server is the source of truth

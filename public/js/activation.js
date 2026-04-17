@@ -17,13 +17,13 @@ console.log(`[Activation] Initialized for Role: ${CANONICAL_ROLE}`);
 
 async function nextStep(step) {
     if (step === 1) {
-        selectedMethod = document.querySelector('input[name="method"]:checked').value;
-        const mobile = document.getElementById('mobile-number').value.trim();
+        // PHASE 1: Forced Email Method
+        selectedMethod = 'email';
         const email = document.getElementById('email').value.trim();
         
         // Handle Identifier
-        savedIdentifier = selectedMethod === 'email' ? email : mobile;
-        if (!savedIdentifier) return showToast(`Please enter your registered ${selectedMethod}`, 'error');
+        savedIdentifier = email;
+        if (!savedIdentifier) return showToast(`Please enter your registered Official Email`, 'error');
 
         // Prepare Payload
         const payload = { 
@@ -40,7 +40,11 @@ async function nextStep(step) {
 
         try {
             console.log(`[AUTH] Requesting activation for ${CANONICAL_ROLE} via ${selectedMethod}`);
-            const response = await fetch(`/api/auth/request-activation`, {
+            
+            // ROLE-SPECIFIC ENDPOINT (STRICT)
+            const endpoint = `/api/auth/${CANONICAL_ROLE}/request-activation`;
+            
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -48,6 +52,7 @@ async function nextStep(step) {
             });
 
             const data = await response.json();
+
             if (data.success) {
                 showToast(data.message || 'OTP sent successfully', 'success');
                 transitionToStep(2, "Enter Verification Code", "66.66%");
@@ -57,6 +62,7 @@ async function nextStep(step) {
                     showToast("⚡ Demo Mode: OTP auto-filled", "info");
                 }
             } else {
+                console.log("❌ USER NOT FOUND OR REJECTED");
                 showToast(data.message || 'Sorry, you are not part of our college.', 'error');
             }
         } catch (err) {
@@ -101,7 +107,10 @@ async function finishActivation() {
     btn.disabled = true;
 
     try {
-        const response = await fetch(`/api/auth/complete-activation`, {
+        // ROLE-SPECIFIC ENDPOINT (STRICT)
+        const endpoint = `/api/auth/${CANONICAL_ROLE}/complete-activation`;
+
+        const response = await fetch(endpoint, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
@@ -112,7 +121,6 @@ async function finishActivation() {
         if (data.success) {
             showToast('Account activated successfully!', 'success');
             setTimeout(() => {
-                const displayName = window.RoleManager ? window.RoleManager.getDisplayName(CANONICAL_ROLE) : CANONICAL_ROLE;
                 window.location.href = `login.html?role=${CANONICAL_ROLE}`;
             }, 2000);
         } else {
@@ -121,7 +129,7 @@ async function finishActivation() {
     } catch (err) {
         showToast('Activation failed. Server error.', 'error');
     } finally {
-        const displayName = window.RoleManager ? window.RoleManager.getDisplayName(CANONICAL_ROLE) : CANONICAL_ROLE;
+        const displayName = CANONICAL_ROLE.charAt(0).toUpperCase() + CANONICAL_ROLE.slice(1);
         btn.innerHTML = `Activate ${displayName} Account <i class="fa-solid fa-bolt"></i>`;
         btn.disabled = false;
     }

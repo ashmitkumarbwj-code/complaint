@@ -29,12 +29,12 @@ class ComplaintService {
      */
     async submitComplaint(complaintData, tenantId) {
         const { student_id, title, department_id, category, description, location, priority, local_file_path } = complaintData;
-        const [result] = await db.tenantExecute({ user: { tenant_id: tenantId } },
+        const [rows] = await db.tenantExecute({ user: { tenant_id: tenantId } },
             `INSERT INTO complaints (tenant_id, student_id, title, department_id, category, description, location, priority, local_file_path) 
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
             [tenantId, student_id, title, department_id, category, description, location, priority, local_file_path || null]
         );
-        return result.rows[0].id;
+        return rows[0].id;
     }
 
     /**
@@ -58,11 +58,11 @@ class ComplaintService {
         let pCount = 1;
 
         // 1. Ownership/Membership Enforcement
-        if (role === 'Student') {
+        if (role === 'student') {
             pCount++;
             query += ` AND c.student_id = $${pCount}`;
             params.push(sessionStudentId);
-        } else if (role === 'Staff' || role === 'HOD') {
+        } else if (role === 'staff' || role === 'hod') {
             pCount++;
             query += ` AND c.department_id IN (
                 SELECT department_id FROM department_members WHERE user_id = $${pCount}
@@ -81,7 +81,7 @@ class ComplaintService {
             query += ` AND c.department_id = $${pCount}`;
             params.push(department_id);
         }
-        if (student_id && ['Admin', 'Principal'].includes(role)) {
+        if (student_id && ['admin', 'principal'].includes(role)) {
             pCount++;
             query += ` AND c.student_id = $${pCount}`;
             params.push(student_id);
@@ -93,7 +93,7 @@ class ComplaintService {
         const [rows] = await db.execute(query, params);
 
         // Anonymity Logic
-        const canSeeRealNames = ['Admin', 'Principal', 'HOD'].includes(role);
+        const canSeeRealNames = ['admin', 'principal', 'hod'].includes(role);
         const data = rows.map(c => {
             if (!c.media_url && c.local_file_path) {
                 const pureFilename = c.local_file_path.split(/[\\/]/).pop();
@@ -110,11 +110,11 @@ class ComplaintService {
         const countParams = [tenantId];
         let cpCount = 1;
 
-        if (role === 'Student') {
+        if (role === 'student') {
             cpCount++;
             countQuery += ` AND c.student_id = $${cpCount}`;
             countParams.push(sessionStudentId);
-        } else if (role === 'Staff' || role === 'HOD') {
+        } else if (role === 'staff' || role === 'hod') {
             cpCount++;
             countQuery += ` AND c.department_id IN (
                 SELECT department_id FROM department_members WHERE user_id = $${cpCount}
@@ -162,7 +162,7 @@ class ComplaintService {
                 throw new Error('VERSION_CONFLICT');
             }
 
-            if (actorRole === 'Staff' || actorRole === 'HOD') {
+            if (actorRole === 'staff' || actorRole === 'hod') {
                 const [membership] = await connection.execute(
                     'SELECT 1 FROM department_members WHERE department_id = $1 AND user_id = $2',
                     [complaint.department_id, actorId]
@@ -176,7 +176,7 @@ class ComplaintService {
                     throw new Error('INVALID_TRANSITION');
                 }
                 if (newStatus === 'Reopened' || (complaint.status === 'Resolved' && newStatus === 'Pending')) {
-                    if (actorRole === 'Student') {
+                    if (actorRole === 'student') {
                         if (complaint.reopened_count >= 1) throw new Error('MAX_REOPEN_EXCEEDED');
                         if (!workflow.isWithinReopenWindow(complaint.resolved_at)) throw new Error('REOPEN_WINDOW_EXPIRED');
                     }
@@ -230,7 +230,7 @@ class ComplaintService {
                 from_status: complaint.status,
                 to_status: newStatus,
                 note: adminNotes,
-                visibility: actorRole === 'Student' ? 'STUDENT_VISIBLE' : 'STAFF_ONLY',
+                visibility: actorRole === 'student' ? 'STUDENT_VISIBLE' : 'STAFF_ONLY',
                 metadata: {
                     prev_version: complaint.lock_version,
                     new_version: complaint.lock_version + 1
@@ -239,7 +239,16 @@ class ComplaintService {
             });
 
             await connection.commit();
-            return { success: true, data: { new_status: newStatus, lock_version: complaint.lock_version + 1 } };
+            return { 
+                success: true, 
+                data: { 
+                    new_status: newStatus, 
+                    lock_version: complaint.lock_version + 1,
+                    student_id: complaint.student_id,
+                    department_id: complaint.department_id 
+                } 
+            };
+
 
         } catch (err) {
             await connection.rollback();

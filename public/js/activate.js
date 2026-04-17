@@ -37,7 +37,8 @@ async function nextStep(step) {
         try {
             const response = await fetch(`${API_BASE}/api/auth/request-activation`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
@@ -66,7 +67,8 @@ async function nextStep(step) {
         try {
             const response = await fetch(`${API_BASE}/api/auth/validate-activation`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     identifier: savedIdentifier, 
                     otp, 
@@ -115,7 +117,8 @@ async function finishActivation() {
     try {
         const response = await fetch(`${API_BASE}/api/auth/complete-activation`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 

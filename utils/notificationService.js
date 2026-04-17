@@ -1,43 +1,62 @@
-const { notificationQueue } = require('./queueService');
 const logger = require('./logger');
+const nodemailer = require('nodemailer');
 
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    secure: false,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+});
+
+let twilioClient = null;
+const sid = process.env.TWILIO_ACCOUNT_SID;
+if (sid && sid.startsWith('AC')) {
+    try {
+        const twilio = require('twilio');
+        twilioClient = twilio(sid, process.env.TWILIO_AUTH_TOKEN);
+        logger.info('[Twilio] Notification service initialized SMS client.');
+    } catch (e) {
+        logger.warn('[Twilio] Notification service failed to initialize:', e.message);
+    }
+}
 
 /**
- * Send an email notification
+ * Send an email notification (Direct Call - No Queue)
  */
 exports.sendEmail = async (to, subject, text) => {
     try {
-        await notificationQueue.add('email', { to, subject, text }, {
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 2000 },
-            removeOnComplete: true,
-            removeOnFail: false
+        if (process.env.OTP_MODE === 'mock') {
+            console.log(`[MOCK EMAIL] To: ${to} | Subject: ${subject} | Text: ${text}`);
+            return true;
+        }
+
+        if (!process.env.SMTP_USER || process.env.SMTP_USER.includes('your_email')) {
+             console.log(`[MOCK EMAIL FALLBACK] To: ${to} | Subject: ${subject}`);
+             return true;
+        }
+
+        await transporter.sendMail({
+            from: `"Smart Campus SCRS" <${process.env.SMTP_USER}>`,
+            to,
+            subject,
+            text,
         });
         return true;
     } catch (error) {
-        logger.error('Failed to enqueue email job:', error);
+        logger.error('Failed to send email:', error);
         return false;
     }
 };
 
-
-
 /**
- * Send an SMS notification
+ * Send an SMS notification (Roadmap / Currently Disabled)
  */
 exports.sendSMS = async (to, message) => {
-    try {
-        await notificationQueue.add('sms', { to, message }, {
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 2000 },
-            removeOnComplete: true,
-            removeOnFail: false
-        });
-        return true;
-    } catch (error) {
-        logger.error('Failed to enqueue SMS job:', error);
-        return false;
-    }
+    logger.info(`[SMS] Skipping SMS to ${to} (Phase 1: Email Only Enabled)`);
+    return true; // Return true to avoid breaking flows that call this
 };
 
 /**

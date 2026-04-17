@@ -258,7 +258,7 @@ function renderChart(canvas) {
 
             if (!hasData) {
                 // Show empty state instead of blank chart
-                const emptyEl = document.createElement('div', { credentials: 'include' });
+                const emptyEl = document.createElement('div');
                 emptyEl.style.cssText = `
                     position: absolute; inset: 0;
                     display: flex; flex-direction: column;
@@ -539,12 +539,12 @@ async function initHeroSlider() {
 
             // Initialize Swiper with lazy properties
             new Swiper('.swiper', {
-                loop: true,
+                loop: data.slides.length > 1,
                 lazy: true,
-                autoplay: {
+                autoplay: data.slides.length > 1 ? {
                     delay: 5000,
                     disableOnInteraction: false,
-                },
+                } : false,
                 pagination: {
                     el: '.swiper-pagination',
                     clickable: true,

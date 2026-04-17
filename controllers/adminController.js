@@ -33,7 +33,7 @@ exports.addStaff = async (req, res) => {
 
         // 3. Send Activation/Welcome Email
         const baseUrl = process.env.BASE_URL || `http://${req.get('host')}`;
-        const loginUrl = `${baseUrl}/login.html?role=${role}`;
+        const loginUrl = `${baseUrl}/login.html?role=${role.toLowerCase()}`;
         
         await notifier.sendEmail(
             email, 
@@ -126,7 +126,7 @@ exports.updateComplaintStatus = async (req, res) => {
     try {
         // 1. Update database
         const query = 'UPDATE complaints SET status = $1, resolved_at = $2 WHERE id = $3';
-        const resolvedAt = (status === 'Resolved' || status === 'resolved') ? new Date() : null;
+        const resolvedAt = (status.toLowerCase() === 'resolved') ? new Date() : null;
         
         const [dbRows, result] = await db.tenantExecute(req, query, [status, resolvedAt, id]);
         
@@ -134,13 +134,14 @@ exports.updateComplaintStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Complaint not found' });
         }
 
-        // 2. Fetch student_id and category for notifications
-        const [compRows] = await db.tenantExecute(req, 'SELECT student_id, category FROM complaints WHERE id = $1', [id]);
+        // 2. Fetch student_id, department_id and category for notifications
+        const [compRows] = await db.tenantExecute(req, 'SELECT student_id, department_id, category FROM complaints WHERE id = $1', [id]);
         if (compRows.length > 0) {
-            const { student_id, category } = compRows[0];
+            const { student_id, department_id, category } = compRows[0];
             
             // Real-time update via Socket.io
-            socketService.emitStatusUpdate(id, status, student_id);
+            socketService.emitStatusUpdate(id, status, student_id, department_id);
+
 
             // Notify Student via email
             try {
@@ -299,12 +300,12 @@ exports.bulkImportStudents = async (req, res) => {
 
         // 🛡️ Audit Log Persistence
         try {
-            await db.execute(
+            await db.tenantExecute(req,
                 `INSERT INTO bulk_import_logs 
-                (tenant_id, admin_id, import_type, total_rows, inserted_count, duplicate_count, error_count, original_filename, status)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                (admin_id, import_type, total_rows, inserted_count, duplicate_count, error_count, original_filename, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
                 [
-                    tenantId, adminId, 'students', 
+                    adminId, 'students', 
                     summary.total, summary.inserted, summary.duplicates, summary.invalid,
                     filename, isDryRun ? 'dry_run' : 'completed'
                 ]
@@ -345,12 +346,12 @@ exports.bulkImportStaff = async (req, res) => {
 
         // 🛡️ Audit Log Persistence
         try {
-            await db.execute(
+            await db.tenantExecute(req,
                 `INSERT INTO bulk_import_logs 
-                (tenant_id, admin_id, import_type, total_rows, inserted_count, duplicate_count, error_count, original_filename, status)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                (admin_id, import_type, total_rows, inserted_count, duplicate_count, error_count, original_filename, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
                 [
-                    tenantId, adminId, 'staff', 
+                    adminId, 'staff', 
                     summary.total, summary.inserted, summary.duplicates, summary.invalid,
                     filename, isDryRun ? 'dry_run' : 'completed'
                 ]

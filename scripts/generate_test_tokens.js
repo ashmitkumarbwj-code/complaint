@@ -2,7 +2,11 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-const secret = process.env.JWT_SECRET || 'akshu_secure_2026_!@#_random_string_987';
+const secret = process.env.JWT_SECRET;
+if (!secret) {
+    console.error('JWT_SECRET is required');
+    process.exit(1);
+}
 
 const studentPayload = {
     user: {

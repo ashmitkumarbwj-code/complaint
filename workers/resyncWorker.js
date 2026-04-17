@@ -74,3 +74,30 @@ exports.processPendingResyncs = async () => {
         logger.error('[RESILIENCE] Fatal error in resyncWorker:', err);
     }
 };
+/**
+ * Automated Disk Safety
+ * Deletes files in 'uploads/' that are older than 24 hours.
+ * This prevents orphan files (from crashes/failures) from filling up disk space.
+ */
+exports.deleteOldOrphans = async () => {
+    const uploadsDir = path.join(__dirname, '../uploads');
+    try {
+        const files = await fs.readdir(uploadsDir);
+        const now = Date.now();
+        const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+        logger.info(`[Disk Safety] Checking ${files.length} files in uploads/ for cleanup...`);
+
+        for (const file of files) {
+            const filePath = path.join(uploadsDir, file);
+            const stats = await fs.stat(filePath);
+
+            if (now - stats.mtimeMs > EXPIRY_MS) {
+                await fs.unlink(filePath);
+                logger.info(`[Disk Safety] Deleted orphan/old file: ${file}`);
+            }
+        }
+    } catch (err) {
+        logger.error('[Disk Safety] Cleanup failed:', err.message);
+    }
+};

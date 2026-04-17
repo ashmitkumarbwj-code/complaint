@@ -4,14 +4,18 @@ module.exports = {
     init: (server) => {
         const { Server } = require('socket.io');
 
-        // ─── Restrict CORS to the configured origin ───────────────────────────
-        const allowedOrigin = 'https://smart-complaint-and-response-system.vercel.app';
+        // ─── Restrict CORS to the configured origin(s) ────────────────────────
+        const frontendUrls = process.env.FRONTEND_URLS 
+            ? process.env.FRONTEND_URLS.split(',').map(u => u.trim()) 
+            : ['http://localhost:3000', 'https://smart-complaint-and-response-system.vercel.app'];
 
         io = new Server(server, {
             cors: {
-                origin: allowedOrigin,
-                methods: ['GET', 'POST']
+                origin: frontendUrls,
+                methods: ['GET', 'POST'],
+                credentials: true
             },
+
             // ─── Heartbeat settings ─────────────────────────────────────────
             // If client misses 2 pings (2 × 10s = 20s), the server forcefully
             // disconnects the stale socket to free up memory.
@@ -55,14 +59,21 @@ module.exports = {
             io.to(`dept_${complaint.department_id}`).emit('new_complaint', complaint);
         }
     },
-    emitStatusUpdate: (complaintId, status, studentId) => {
+    emitStatusUpdate: (complaintId, status, studentId, departmentId) => {
         if (io) {
             // Emit to the specific student
             io.to(`student_${studentId}`).emit('status_updated', { complaintId, status });
+            
+            // Notify the department room (for staff synchronization)
+            if (departmentId) {
+                io.to(`dept_${departmentId}`).emit('status_updated', { complaintId, status });
+            }
+
             // Also notify admin stream
             io.to('admin').emit('status_updated', { complaintId, status });
         }
     },
+
     emitEmergencyAlert: (complaint) => {
         if (io) {
             // Emits specifically to the principal_room

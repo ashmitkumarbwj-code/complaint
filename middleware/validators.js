@@ -116,7 +116,7 @@ exports.validateRequestActivation = [
     body('role')
         .trim()
         .notEmpty().withMessage('Role is required.')
-        .isIn(['Student', 'Staff', 'HOD', 'Admin', 'Principal']).withMessage('Invalid role specified.'),
+        .isIn(['Student', 'Staff', 'HOD', 'Admin', 'Principal', 'student', 'staff', 'hod', 'admin', 'principal']).withMessage('Invalid role specified.'),
     methodRule(),
     emailRuleOptional('email'),
     mobileRuleOptional('mobile_number'),

@@ -3,29 +3,27 @@ let selectedMethod = 'email';
 
 async function nextStep(step) {
     if (step === 1) {
-        selectedMethod = document.getElementById('verification-method').value;
-        const payload = { method: selectedMethod, role: 'Student', tenant_id: 1 };
-
-        if (selectedMethod === 'email') {
-            const email = document.getElementById('email').value.trim();
-            if (!email) {
-                showToast('Please enter your Registered College Email', 'error');
-                return;
-            }
-            payload.email = email;
-        } else {
-            const mobile = document.getElementById('mobile-number').value.trim();
-            if (!mobile) {
-                showToast('Please enter your Registered Mobile Number', 'error');
-                return;
-            }
-            payload.mobile_number = mobile;
+        // PHASE 1: Forced Email Method
+        selectedMethod = 'email';
+        const email = document.getElementById('email').value.trim();
+        
+        if (!email) {
+            showToast('Please enter your Registered Official Email', 'error');
+            return;
         }
+        
+        const payload = { 
+            method: 'email', 
+            email: email, 
+            role: 'student', 
+            tenant_id: 1 
+        };
 
         try {
             const response = await fetch(`${API_BASE}/api/auth/request-reset`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
@@ -40,7 +38,7 @@ async function nextStep(step) {
         }
     } else if (step === 2) {
         const otp = document.getElementById('otp-code').value.trim();
-        const identifier = selectedMethod === 'email' ? document.getElementById('email').value.trim() : document.getElementById('mobile-number').value.trim();
+        const identifier = document.getElementById('email').value.trim();
 
         if (!otp) {
             showToast('Please enter OTP', 'error');
@@ -50,7 +48,8 @@ async function nextStep(step) {
         try {
             const response = await fetch(`${API_BASE}/api/auth/validate-activation`, { // Re-using standard validation endpoint
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ identifier, otp, tenant_id: 1 })
             });
 
@@ -81,24 +80,21 @@ async function finishReset() {
         return;
     }
 
-    const identifier = selectedMethod === 'email' ? document.getElementById('email').value.trim() : document.getElementById('mobile-number').value.trim();
+    const identifier = document.getElementById('email').value.trim();
 
     const payload = {
-        method: selectedMethod,
-        identifier: identifier,
+        method: 'email',
+        email: identifier,
         otp: otp,
         password: password,
         tenant_id: 1
     };
 
-    // Keep email/mobile for backward compatibility in the reset function if needed
-    if (selectedMethod === 'email') payload.email = identifier;
-    else payload.mobile_number = identifier;
-
     try {
         const response = await fetch(`${API_BASE}/api/auth/reset-password`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 

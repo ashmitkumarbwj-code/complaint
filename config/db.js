@@ -22,10 +22,11 @@ const poolConfig = {
     password:         process.env.PGPASSWORD || process.env.DB_PASSWORD,
     database:         process.env.PGDATABASE || process.env.DB_NAME,
     port:             process.env.PGPORT || 5432,
-    max:              parseInt(process.env.DB_POOL_SIZE || '10', 10),
+    max:              parseInt(process.env.DB_POOL_SIZE || '25', 10),
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 15000,
 };
+
 
 if (isNeon || process.env.PGSSL === 'true') {
     poolConfig.ssl = { rejectUnauthorized: false };
@@ -56,6 +57,7 @@ async function query(sql, params = []) {
 /**
  * tenantExecute: Native PG with Tenant Isolation
  * Now expects native PG placeholders ($n) in 'sql'
+ * 🛡️ Security: Automatically injects tenant_id filter
  */
 async function tenantExecute(req, sql, params = []) {
     if (!req.user || !req.user.tenant_id) {
@@ -65,31 +67,38 @@ async function tenantExecute(req, sql, params = []) {
     const tenantId = req.user.tenant_id;
     let modifiedSql = sql.trim();
 
-    // Isolation Injection (simplified for native PG)
-    const hasWhere = /\bWHERE\b/i.test(modifiedSql);
-    const isIsolatedKeyword = /\b(UPDATE|DELETE|SELECT)\b/i.test(modifiedSql);
+    // 1. Identify query type
+    const isSelect = /^SELECT\b/i.test(modifiedSql);
+    const isUpdate = /^UPDATE\b/i.test(modifiedSql);
+    const isDelete = /^DELETE\b/i.test(modifiedSql);
 
-    if (isIsolatedKeyword) {
-        // Find the right injection point before GROUP/ORDER/LIMIT
-        const injectionTarget = /GROUP BY|ORDER BY|LIMIT/i.exec(modifiedSql);
-        const injectionPoint = injectionTarget ? injectionTarget.index : modifiedSql.length;
+    if (isSelect || isUpdate || isDelete) {
+        // 2. Determine injection placement
+        // We find the first occurrence of GROUP BY, ORDER BY, LIMIT, or OFFSET
+        const suffixRegex = /\b(GROUP BY|ORDER BY|LIMIT|OFFSET|RETURNING)\b/i;
+        const match = suffixRegex.exec(modifiedSql);
+        const splitIndex = match ? match.index : modifiedSql.length;
         
-        const prefix = modifiedSql.slice(0, injectionPoint).trim();
-        const suffix = modifiedSql.slice(injectionPoint).trim();
+        let head = modifiedSql.slice(0, splitIndex).trim();
+        const tail = modifiedSql.slice(splitIndex).trim();
 
-        // Count existing $ placeholders to find the next index
+        // 3. Find next placeholder index
         const placeholderCount = (modifiedSql.match(/\$\d+/g) || []).length;
         const tenantPlaceholder = `$${placeholderCount + 1}`;
 
+        // 4. Inject tenant filter
+        const hasWhere = /\bWHERE\b/i.test(head);
         if (hasWhere) {
-            modifiedSql = `${prefix} AND tenant_id = ${tenantPlaceholder} ${suffix}`;
+            head += ` AND tenant_id = ${tenantPlaceholder}`;
         } else {
-            modifiedSql = `${prefix} WHERE tenant_id = ${tenantPlaceholder} ${suffix}`;
+            head += ` WHERE tenant_id = ${tenantPlaceholder}`;
         }
-        
+
+        modifiedSql = `${head} ${tail}`.trim();
         return await query(modifiedSql, [...params, tenantId]);
     }
 
+    // Pass through for non-isolated queries (e.g., INSERT is usually handled explicitly)
     return await query(modifiedSql, params);
 }
 

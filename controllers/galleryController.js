@@ -34,7 +34,7 @@ exports.getPublicGallery = async (req, res) => {
     try {
         // 1. Primary: Return featured images (limit to max 5 if frontend doesn't)
         let [images] = await db.execute(
-            'SELECT * FROM gallery_images WHERE is_featured = 1 ORDER BY display_order ASC, created_at DESC LIMIT 5'
+            'SELECT * FROM gallery_images WHERE is_featured = true ORDER BY display_order ASC, created_at DESC LIMIT 5'
         );
 
         // 2. Fallback: If no featured images exist, return the latest 4 to prevent broken UI
@@ -74,7 +74,7 @@ exports.uploadImage = async (req, res) => {
             success: true, 
             message: 'Image uploaded successfully',
             image: {
-                id: result.rows[0].id,
+                id: result[0].id,
                 name: filename,
                 url: url,
                 title: title || ''
@@ -96,7 +96,7 @@ exports.deleteImage = async (req, res) => {
         const tenant_id = req.user.tenant_id;
 
         // 🛑 Backend Guard: Principal Only
-        if (req.user.role !== 'Principal') {
+        if (req.user.role !== 'principal') {
             return res.status(403).json({ success: false, message: 'Access denied: Only Principal can delete images' });
         }
 
@@ -145,14 +145,14 @@ exports.toggleFeatured = async (req, res) => {
         const tenant_id = req.user.tenant_id;
 
         // 🛑 Backend Guard: Principal Only
-        if (req.user.role !== 'Principal') {
+        if (req.user.role !== 'principal') {
             return res.status(403).json({ success: false, message: 'Access denied: Only Principal can control visibility' });
         }
 
         // 🚀 Enforce Featured Limit: MAX 5
         if (is_featured) {
             const [countRows] = await db.execute(
-                'SELECT COUNT(*) as total FROM gallery_images WHERE is_featured = 1 AND tenant_id = $1',
+                'SELECT COUNT(*) as total FROM gallery_images WHERE is_featured = true AND tenant_id = $1',
                 [tenant_id]
             );
             if (countRows[0].total >= 5) {
@@ -165,7 +165,7 @@ exports.toggleFeatured = async (req, res) => {
 
         await db.execute(
             'UPDATE gallery_images SET is_featured = $1 WHERE id = $2 AND tenant_id = $3',
-            [is_featured ? 1 : 0, id, tenant_id]
+            [is_featured ? true : false, id, tenant_id]
         );
 
         res.json({ success: true, message: is_featured ? 'Image featured!' : 'Image hidden' });
@@ -186,7 +186,7 @@ exports.updateDisplayOrder = async (req, res) => {
         const tenant_id = req.user.tenant_id;
 
         // 🛑 Backend Guard: Principal Only
-        if (req.user.role !== 'Principal') {
+        if (req.user.role !== 'principal') {
             return res.status(403).json({ success: false, message: 'Access denied: Only Principal can change order' });
         }
 
@@ -212,7 +212,7 @@ exports.reorderImages = async (req, res) => {
         const tenant_id = req.user.tenant_id;
 
         // 🛑 Backend Guard: Principal Only
-        if (req.user.role !== 'Principal') {
+        if (req.user.role !== 'principal') {
             return res.status(403).json({ success: false, message: 'Access denied: Only Principal can reorder gallery' });
         }
 

@@ -45,7 +45,7 @@ exports.refreshAccessToken = async (refreshToken) => {
 
     // Re-fetch role info
     let roleInfo = {};
-    if (user.role === 'Student') {
+    if (user.role.toLowerCase() === 'student') {
         const [students] = await db.execute('SELECT s.id as student_real_id, s.roll_number FROM students s WHERE s.user_id = $1', [user.id]);
         if (students.length > 0) roleInfo = { student_id: students[0].student_real_id, roll_number: students[0].roll_number };
     } else {

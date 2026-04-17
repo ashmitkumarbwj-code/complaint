@@ -121,6 +121,12 @@ app.use((req, res, next) => {
     next();
 });
 
+// Legacy Flow Hard Kill
+app.get('/activate.html', (req, res) => {
+    logger.info(`[Security] Legacy activate.html request blocked and redirected from ${req.ip}`);
+    res.redirect('/login.html');
+});
+
 // Default route (handles root index.html)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -163,7 +169,7 @@ if (!isServerless && process.env.USE_REDIS === 'true') {
         });
 
         // Protect the dashboard with auth middleware
-        app.use('/admin/queues', requireAuth, checkRole(['Admin', 'Principal']), serverAdapter.getRouter());
+        app.use('/admin/queues', requireAuth, checkRole(['admin', 'principal']), serverAdapter.getRouter());
         logger.info('BullBoard initialized at /admin/queues');
     } catch (err) {
         logger.warn('BullBoard not initialized: ' + err.message);
@@ -224,10 +230,12 @@ if (!isServerless) {
     setInterval(async () => {
         try {
             await complaintControllerCore.cleanupOldMedia();
+            await resyncWorker.deleteOldOrphans(); // 🛡️ Disk Safety Cleanup
         } catch (err) {
-            logger.error('[Cron] Media Cleanup Job Failed:', err);
+            logger.error('[Cron] Media/Disk Cleanup Job Failed:', err);
         }
     }, 24 * 60 * 60 * 1000);
+
 
     // Run SLA Escalation Job every hour
     setInterval(async () => {
@@ -242,7 +250,7 @@ if (!isServerless) {
     setInterval(async () => {
         try {
             const db = require('./config/db');
-            const [dbRows, result] = await db.execute('DELETE FROM otp_verifications WHERE expires_at < NOW() OR verified = 1');
+            const [dbRows, result] = await db.execute('DELETE FROM otp_verifications WHERE expires_at < NOW() OR verified = true');
             if (result && result.rowCount > 0) {
                 logger.info(`[OTP Job] Cleaned up ${result.rowCount} expired/used OTPs`);
             }

@@ -75,13 +75,14 @@ router.get('/departments', auth, checkRole(['Admin', 'Principal', 'HOD']), admin
 
 // @route   PUT /api/admin/complaints/:id/status
 // @desc    Update complaint status (Resolve/Reject)
-// @access  Private (Admin only)
-router.put('/complaints/:id/status', auth, checkRole(['Admin']), adminController.updateComplaintStatus);
+// @access  Private (Admin, Principal)
+router.put('/complaints/:id/status', auth, checkRole(['Admin', 'Principal']), adminController.updateComplaintStatus);
 
 // @route   PATCH /api/admin/complaints/:id/forward
 // @desc    Manually forward (reassign) a complaint to a different department
-// @access  Private (Admin only)
-router.patch('/complaints/:id/forward', auth, checkRole(['Admin']), adminController.forwardComplaint);
+// @access  Private (Admin, Principal)
+router.patch('/complaints/:id/forward', auth, checkRole(['Admin', 'Principal']), adminController.forwardComplaint);
+
 
 // ==========================================
 // ADMIN SLIDES MANAGEMENT

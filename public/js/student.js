@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", async () => {
     // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
-    const userProfile = await window.validateSession('Student');
+    const userProfile = await window.validateSession('student');
     if (!userProfile) return;
 
     // Sync localStorage for UI consistency, but server is the source of truth
@@ -128,8 +128,28 @@ document.addEventListener("DOMContentLoaded", async () => {
                 
                 <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 1.5rem;">${c.description}</p>
                 
+                ${c.media_url ? '' : `
+                    <div class="processing-status-container" style="margin-top: 1rem;">
+                        ${c.processing_status === 'processing' ? `
+                            <div class="status-badge status-processing" style="background: rgba(58, 134, 255, 0.2); color: #3a86ff; border: 1px solid rgba(58, 134, 255, 0.4); padding: 0.5rem 1rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i> Uploading to Cloud...
+                            </div>
+                        ` : ''}
+                        ${c.processing_status === 'pending_resync' ? `
+                            <div class="status-badge status-syncing" style="background: rgba(212, 175, 55, 0.2); color: var(--gold); border: 1px solid var(--gold); padding: 0.5rem 1rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-clock-rotate-left"></i> Syncing via Backup Queue...
+                            </div>
+                        ` : ''}
+                        ${c.processing_status === 'failed' ? `
+                            <div class="status-badge status-failed" style="background: rgba(248, 81, 73, 0.2); color: var(--red); border: 1px solid var(--red); padding: 0.5rem 1rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-circle-exclamation"></i> Upload Failed. Retrying...
+                            </div>
+                        ` : ''}
+                    </div>
+                `}
+                
                 ${c.media_url ? `
-                    <div class="media-preview" style="margin-top: 1rem; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); max-width: 400px;">
+                    <div class="media-preview" style="margin-top: 1rem; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); max-width: 400px;">
                         ${isVideo ? 
                             `<video src="${c.media_url}" controls style="width: 100%; display: block;"></video>` : 
                             `<img src="${c.media_url}" style="width: 100%; display: block; cursor: pointer;" onclick="window.open('${c.media_url}', '_blank')">`

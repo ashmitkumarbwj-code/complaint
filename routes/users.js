@@ -10,9 +10,9 @@ const upload = multer({ dest: 'uploads/' });
 // @route   GET /api/users
 // @desc    Get all users (for admin)
 // @access  Private (Admin)
-router.get('/', auth, checkRole(['Admin']), async (req, res) => {
+router.get('/', auth, checkRole(['admin']), async (req, res) => {
     try {
-        const [rows] = await db.execute(`
+        const [rows] = await db.tenantExecute(req, `
             SELECT u.id, u.username, u.email, u.mobile_number, u.role, u.is_verified, 
                    u.created_at,
                    (CASE WHEN u.role = 'Student' THEN s.roll_number ELSE NULL END) as roll_number

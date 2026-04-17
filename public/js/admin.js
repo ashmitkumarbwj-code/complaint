@@ -289,8 +289,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             const res = await fetch(`${API_BASE}/api/admin/complaints/${id}/status`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
                 credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: status.toLowerCase() })
             });
 
@@ -576,7 +576,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                         <button class="action-btn" style="background:rgba(212,175,55,0.1); color:var(--gold); border: 1px solid var(--gold);" onclick="viewComplaintMedia('${c.media_url}', '${c.title || 'Complaint Media'}')">
                             <i class="fa-solid ${isVideo ? 'fa-video' : 'fa-image'}"></i> View
                         </button>
-                    ` : '<span style="opacity:0.3;">None</span>'}
+                    ` : `
+                        <div class="admin-process-monitor">
+                            ${c.processing_status === 'processing' ? '<i class="fa-solid fa-spinner fa-spin" style="color:#3a86ff;" title="Uploading..."></i>' : ''}
+                            ${c.processing_status === 'pending_resync' ? '<i class="fa-solid fa-clock-rotate-left" style="color:var(--gold);" title="Syncing..."></i>' : ''}
+                            ${c.processing_status === 'failed' ? '<i class="fa-solid fa-triangle-exclamation" style="color:var(--red);" title="Upload Failed"></i>' : ''}
+                            ${!c.processing_status || c.processing_status === 'ready' ? '<span style="opacity:0.3;">None</span>' : ''}
+                        </div>
+                    `}
                 </td>
                 <td style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                     <button class="action-btn btn-resolve" ${c.status.toLowerCase() === 'resolved' ? 'disabled' : ''} onclick="updateStatus(${c.id}, 'Resolved')">
@@ -700,8 +707,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             const token = localStorage.getItem('scrs_token');
             const res = await fetch(`${API_BASE}/api/admin/complaints/${forwardTargetId}/forward`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
                 credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ department_id: deptId, admin_notes: notes || null })
             });
             const data = await res.json();
@@ -848,8 +855,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const res = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
                 credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, description, email, categories })
             });
             const data = await res.json();
@@ -992,8 +999,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             const res = await fetch(`${API_BASE}/api/departments/${activeDeptIdForMembers}/members`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
                 credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id, role_in_dept })
             });
             const data = await res.json();
@@ -1249,8 +1256,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             const res = await fetch(`${API_BASE}/api/gallery/${id}/featured`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
                 credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ is_featured })
             });
             const data = await res.json();
@@ -1271,8 +1278,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             const res = await fetch(`${API_BASE}/api/gallery/${id}/display-order`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
                 credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ display_order })
             });
             const data = await res.json();
@@ -1289,8 +1296,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             const res = await fetch(`${API_BASE}/api/gallery/${id}/title`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
                 credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title })
             });
             const data = await res.json();
@@ -1317,7 +1324,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/admin/add-student`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                    credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify(formData)
                 });
@@ -1353,7 +1361,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/admin/add-staff`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' , credentials: 'include' },
+                    credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify(staffData)
                 });
@@ -1439,8 +1448,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             const res = await fetch(`${API_BASE}/api/gallery/reorder`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' , credentials: 'include' },
                 credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ order })
             });
             const data = await res.json();
@@ -1773,8 +1782,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         ];
         const staffSample = [
             ['name', 'email', 'department', 'role', 'mobile'],
-            ['Dr. Sharma', 'sharma@college.edu', 'Physics', 'Staff', '9988776655'],
-            ['Anjali HOD', 'anjali@college.edu', 'Computer Science', 'HOD', '9988776644']
+            ['Dr. Sharma', 'sharma@college.edu', 'Physics', 'staff', '9988776655'],
+            ['Anjali HOD', 'anjali@college.edu', 'Computer Science', 'hod', '9988776644']
         ];
         
         const content = bulkType === 'student' ? studentSample : staffSample;
@@ -1930,7 +1939,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         formData.append('display_order', document.getElementById('slide-order').value);
         formData.append('is_active', document.getElementById('slide-active').checked);
 
-        const url = id ? \`\${API_BASE}/api/admin/slides/\${id}\` : \`\${API_BASE}/api/admin/slides\`;
+        const url = id ? `${API_BASE}/api/admin/slides/${id}` : `${API_BASE}/api/admin/slides`;
         const method = id ? 'PUT' : 'POST';
 
         try {
@@ -1957,7 +1966,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     window.toggleSlide = async (id, isActive) => {
         try {
-            const res = await fetch(\`\${API_BASE}/api/admin/slides/\${id}/toggle\`, {
+            const res = await fetch(`${API_BASE}/api/admin/slides/${id}/toggle`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ is_active: isActive }),
@@ -1979,7 +1988,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.deleteSlide = (id) => {
         showConfirmModal('Delete Slide', 'Are you sure you want to delete this slide? The image will be permanently removed.', async () => {
             try {
-                const res = await fetch(\`\${API_BASE}/api/admin/slides/\${id}\`, {
+                const res = await fetch(`${API_BASE}/api/admin/slides/${id}`, {
                     method: 'DELETE',
                     credentials: 'include'
                 });

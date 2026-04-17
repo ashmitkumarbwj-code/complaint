@@ -327,7 +327,7 @@ exports.removeMember = async (req, res) => {
 exports.getAvailableStaff = async (req, res) => {
     try {
         const [rows] = await db.tenantExecute(req, 
-            "SELECT id, username, email, role FROM users WHERE role IN ('Staff','HOD') AND is_verified = 1 ORDER BY username ASC"
+            "SELECT id, username, email, role FROM users WHERE role IN ('staff','hod') AND is_verified = 1 ORDER BY username ASC"
         );
         res.json({ success: true, staff: rows });
     } catch (error) {

@@ -21,6 +21,7 @@ exports.getDashboardStats = async (req, res) => {
         }
 
         // 2. Aggregate Data from DB
+        // 🛡️ Pro Analytics: Every query below is hardened via tenantExecute
         const summaryQuery = `
             SELECT 
                 COUNT(*) as total,
@@ -29,18 +30,18 @@ exports.getDashboardStats = async (req, res) => {
                 -- 🚀 Pro Intelligence: Count SLA Breaches (> 48h)
                 COUNT(CASE WHEN status = 'Pending' AND created_at < CURRENT_TIMESTAMP - INTERVAL '48 hours' THEN 1 END) as sla_breaches
             FROM complaints
-            WHERE tenant_id = $1
+            WHERE 1=1
         `;
         const studentsQuery = `
-            SELECT COUNT(*) as count FROM users WHERE tenant_id = $1 AND role = 'Student'
+            SELECT COUNT(*) as count FROM users WHERE role = 'student'
         `;
         const statusDistributionQuery = `
-            SELECT status, COUNT(*) as count FROM complaints WHERE tenant_id = $1 GROUP BY status
+            SELECT status, COUNT(*) as count FROM complaints GROUP BY status
         `;
         const dailyTrendsQuery = `
             SELECT created_at::DATE as date, COUNT(*) as count 
             FROM complaints 
-            WHERE tenant_id = $1 AND created_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+            WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '30 days'
             GROUP BY created_at::DATE 
             ORDER BY date ASC
         `;
@@ -55,7 +56,7 @@ exports.getDashboardStats = async (req, res) => {
                      ELSE 0 END as pressure_score
             FROM departments d
             LEFT JOIN complaints c ON d.id = c.department_id
-            WHERE d.tenant_id = $1
+            WHERE 1=1
             GROUP BY d.id, d.name
         `;
 
@@ -63,7 +64,7 @@ exports.getDashboardStats = async (req, res) => {
         const categoryIntensityQuery = `
             SELECT category, COUNT(*) as count 
             FROM complaints 
-            WHERE tenant_id = $1 
+            WHERE 1=1
             GROUP BY category 
             ORDER BY count DESC 
             LIMIT 5
@@ -73,16 +74,16 @@ exports.getDashboardStats = async (req, res) => {
         const avgResolutionTimeQuery = `
             SELECT ROUND(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600), 1) as avg_hours
             FROM complaints
-            WHERE tenant_id = $1 AND status = 'Resolved'
+            WHERE status = 'Resolved'
         `;
 
-        const [summary] = await db.execute(summaryQuery, [tenant_id]);
-        const [students] = await db.execute(studentsQuery, [tenant_id]);
-        const [statusDistribution] = await db.execute(statusDistributionQuery, [tenant_id]);
-        const [dailyTrends] = await db.execute(dailyTrendsQuery, [tenant_id]);
-        const [departmentStats] = await db.execute(departmentStatsQuery, [tenant_id]);
-        const [categoryIntensity] = await db.execute(categoryIntensityQuery, [tenant_id]);
-        const [resolutionTime] = await db.execute(avgResolutionTimeQuery, [tenant_id]);
+        const [summary] = await db.tenantExecute(req, summaryQuery);
+        const [students] = await db.tenantExecute(req, studentsQuery);
+        const [statusDistribution] = await db.tenantExecute(req, statusDistributionQuery);
+        const [dailyTrends] = await db.tenantExecute(req, dailyTrendsQuery);
+        const [departmentStats] = await db.tenantExecute(req, departmentStatsQuery);
+        const [categoryIntensity] = await db.tenantExecute(req, categoryIntensityQuery);
+        const [resolutionTime] = await db.tenantExecute(req, avgResolutionTimeQuery);
 
         const dashboardData = {
             success: true,

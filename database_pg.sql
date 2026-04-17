@@ -251,3 +251,35 @@ CREATE TRIGGER sync_homepage_slides_updated_at
     BEFORE UPDATE ON homepage_slides
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- 12. Gallery System
+CREATE TABLE gallery_images (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL DEFAULT 1 REFERENCES tenants(id) ON DELETE CASCADE,
+    filename VARCHAR(255) NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    title VARCHAR(255),
+    display_order INT DEFAULT 0,
+    is_featured BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER sync_gallery_images_updated_at
+    BEFORE UPDATE ON gallery_images
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 13. Audit & Logs
+CREATE TABLE bulk_import_logs (
+    id SERIAL PRIMARY KEY,
+    admin_id INT REFERENCES users(id) ON DELETE SET NULL,
+    import_type VARCHAR(20) NOT NULL, -- 'students' or 'staff'
+    total_rows INT DEFAULT 0,
+    inserted_count INT DEFAULT 0,
+    duplicate_count INT DEFAULT 0,
+    error_count INT DEFAULT 0,
+    original_filename VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'completed',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);

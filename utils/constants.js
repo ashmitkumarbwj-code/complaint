@@ -14,11 +14,11 @@ const STATUS = {
 };
 
 const ROLE = {
-    STUDENT: 'Student',
-    STAFF: 'Staff',
-    HOD: 'HOD',
-    PRINCIPAL: 'Principal',
-    ADMIN: 'Admin'
+    STUDENT: 'student',
+    STAFF: 'staff',
+    HOD: 'hod',
+    PRINCIPAL: 'principal',
+    ADMIN: 'admin'
 };
 
 const ACTION_TYPE = {

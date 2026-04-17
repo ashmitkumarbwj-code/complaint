@@ -6,7 +6,7 @@ let allComplaints = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
     // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
-    const userProfile = await window.validateSession(['Staff', 'HOD']);
+    const userProfile = await window.validateSession(['staff', 'hod']);
     if (!userProfile) return;
 
     // Sync localStorage for UI consistency, but server is the source of truth
@@ -169,8 +169,8 @@ async function updateComplaintStatus(id, newStatus) {
     try {
         const res = await fetch(`${API_BASE}/api/complaints/status/${id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' , credentials: 'include' },
-            credentials: 'include', // ← httpOnly cookie auth
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: newStatus, admin_notes: notes })
         });
         const data = await res.json();
