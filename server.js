@@ -57,7 +57,8 @@ socketService.init(http);
 
 // Security and CORS middlewares
 app.use(helmet({
-  contentSecurityPolicy: false // disabled for simple CDN loading of GSAP and Charts
+  contentSecurityPolicy: false, // disabled for simple CDN loading of GSAP and Charts
+  crossOriginResourcePolicy: false // disable strict CORP to allow CDN assets
 }));
 
 const allowedOrigins = process.env.FRONTEND_URLS

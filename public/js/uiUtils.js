@@ -102,7 +102,7 @@ window.validateSession = async (requiredRole) => {
         } else {
             console.error('[Security] Role mismatch detected!', { 
                 expected: allowedRoles, 
-                received: data.user?.role 
+                received: (data.user && data.user.role) 
             });
             throw new Error('Forbidden');
         }

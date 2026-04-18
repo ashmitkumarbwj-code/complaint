@@ -477,8 +477,8 @@ exports.login = async (req, res) => {
         // Set Secure HttpOnly Cookies
         const cookieOptions = {
             httpOnly: true,
-            secure: true, // Required for SameSite: 'None'
-            sameSite: 'None',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.COOKIE_SAMESITE || 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days (matching typical refresh token)
         };
 
@@ -789,8 +789,8 @@ exports.refreshToken = async (req, res) => {
         
         const cookieOptions = {
             httpOnly: true,
-            secure: true,
-            sameSite: 'None',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.COOKIE_SAMESITE || 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         };
 

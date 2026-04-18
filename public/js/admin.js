@@ -395,7 +395,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function renderStatusPieChart(distribution) {
-        const ctx = document.getElementById('statusPieChart')?.getContext('2d');
+        const statusEl = document.getElementById('statusPieChart');
+        const ctx = statusEl ? statusEl.getContext('2d') : null;
         if (!ctx) return;
         if (dashboardCharts.status) dashboardCharts.status.destroy();
 
@@ -421,7 +422,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function renderCategoryIntensityChart(categories) {
-        const ctx = document.getElementById('categoryChart')?.getContext('2d');
+        const catEl = document.getElementById('categoryChart');
+        const ctx = catEl ? catEl.getContext('2d') : null;
         if (!ctx) return;
         if (dashboardCharts.category) dashboardCharts.category.destroy();
 
@@ -520,8 +522,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     async function fetchComplaints() {
         try {
-            const status = document.getElementById('filter-status')?.value || '';
-            const dept = document.getElementById('filter-dept')?.value || '';
+            const statusEl = document.getElementById('filter-status');
+            const status = statusEl ? statusEl.value : '';
+            const deptEl = document.getElementById('filter-dept');
+            const dept = deptEl ? deptEl.value : '';
             
             let url = `${API_BASE}/api/complaints/all?page=${window.currentCompPage}&limit=10`;
             if (status) url += `&status=${encodeURIComponent(status)}`;
