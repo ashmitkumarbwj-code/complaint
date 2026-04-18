@@ -525,11 +525,10 @@ async function initHeroSlider() {
         console.log(`[Hero Slider] Fetch complete. Found ${data.slides ? data.slides.length : 0} slides.`);
 
         if (data.success && data.slides && data.slides.length > 0) {
-            // Render slides with lazy loading imgs
+            // Render slides with native lazy loading
             swiperWrapper.innerHTML = data.slides.map(slide => `
                 <div class="swiper-slide">
                     <img loading="lazy" src="${slide.image_url}" alt="${slide.title}" style="width:100%; height:100%; object-fit:cover; filter: brightness(0.5); position: absolute; top:0; left:0; z-index:0;">
-                    <div class="swiper-lazy-preloader swiper-lazy-preloader-white"></div>
                     <div style="position:absolute; bottom:15%; left:5%; z-index:10; max-width:600px; text-shadow: 0 4px 10px rgba(0,0,0,0.8);">
                         <h2 style="color:var(--gold); font-size:2.5rem; font-weight:800; margin-bottom:10px;">${slide.title}</h2>
                         ${slide.description ? `<p style="color:white; font-size:1.2rem;">${slide.description}</p>` : ''}
@@ -537,10 +536,9 @@ async function initHeroSlider() {
                 </div>
             `).join('');
 
-            // Initialize Swiper with lazy properties
+            // Initialize Swiper (lazy module removed in v11)
             new Swiper('.swiper', {
                 loop: data.slides.length > 1,
-                lazy: true,
                 autoplay: data.slides.length > 1 ? {
                     delay: 5000,
                     disableOnInteraction: false,
