@@ -95,7 +95,7 @@ window.validateSession = async (requiredRole) => {
         const data = await res.json();
         
         // Final sanity check: Role must match one of the allowed roles
-        if (data.success && data.user && allowedRoles.includes(data.user.role)) {
+        if (data.success && data.user && allowedRoles.map(r => r.toLowerCase()).includes(String(data.user.role).toLowerCase())) {
             // Success: Reveal the UI
             document.body.style.display = 'block';
             return data.user;

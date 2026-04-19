@@ -163,7 +163,7 @@ exports.completeActivation = async (req, res) => {
             // Insert into Users (Username = Roll Number)
             const [uRows] = await conn.execute(
                 'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                [tenantId, vData.roll_number, vData.email, vData.mobile_number, hashedPassword, 'Student', true]
+                [tenantId, vData.roll_number, vData.email, vData.mobile_number, hashedPassword, 'student', true]
             );
             const userId = uRows[0].id;
 
@@ -189,10 +189,9 @@ exports.completeActivation = async (req, res) => {
             if (vData.is_account_created) throw new Error('ALREADY_ACTIVATED');
 
             // Insert into Users (Username = Name)
-            const normalizedEnumRole = normalizedRole.charAt(0).toUpperCase() + normalizedRole.slice(1);
             const [uRows] = await conn.execute(
                 'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                [tenantId, vData.name, vData.email, vData.mobile_number, hashedPassword, normalizedEnumRole, true]
+                [tenantId, vData.name, vData.email, vData.mobile_number, hashedPassword, normalizedRole, true]
             );
             const userId = uRows[0].id;
 
@@ -476,10 +475,11 @@ exports.login = async (req, res) => {
         const tokens = await authService.generateTokens(userData);
 
         // Set Secure HttpOnly Cookies
+        const isProd = process.env.NODE_ENV === 'production';
         const cookieOptions = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.COOKIE_SAMESITE || 'lax',
+            secure: isProd,
+            sameSite: isProd ? 'None' : 'Lax',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days (matching typical refresh token)
         };
 
@@ -791,10 +791,11 @@ exports.refreshToken = async (req, res) => {
     try {
         const tokens = await authService.refreshAccessToken(refreshToken);
         
+        const isProd = process.env.NODE_ENV === 'production';
         const cookieOptions = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.COOKIE_SAMESITE || 'lax',
+            secure: isProd,
+            sameSite: isProd ? 'None' : 'Lax',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         };
 
@@ -826,15 +827,9 @@ exports.logout = async (req, res) => {
         }
     }
 
-    // Clear cookies with exact same options as they were set
-    const clearOptions = {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'None'
-    };
-
-    res.clearCookie('accessToken', clearOptions);
-    res.clearCookie('refreshToken', clearOptions);
+    const isProd = process.env.NODE_ENV === 'production';
+    res.clearCookie('accessToken', { httpOnly: true, secure: isProd, sameSite: isProd ? 'None' : 'Lax' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: isProd, sameSite: isProd ? 'None' : 'Lax' });
 
     res.json({ success: true, message: 'Logged out successfully' });
 };

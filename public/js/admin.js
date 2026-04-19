@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById('welcome-user-name').textContent = user.name || 'Admin';
 
         // Role-based Navigation Guard
-        if (user.role !== 'Principal') {
+        if (String(user.role).toLowerCase() !== 'principal') {
             const principalOnlyTabs = ['tab-staff', 'tab-students'];
             document.querySelectorAll('.nav-item').forEach(item => {
                 if (principalOnlyTabs.includes(item.dataset.tab)) {
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         
         // Admin-only Navigation Guard
-        if (user.role === 'Admin') {
+        if (String(user.role).toLowerCase() === 'admin') {
             const slidesTab = document.getElementById('nav-item-slides');
             if (slidesTab) slidesTab.style.display = 'flex';
             const dynamicSlidesTab = document.getElementById('nav-item-dynamic-slides');
