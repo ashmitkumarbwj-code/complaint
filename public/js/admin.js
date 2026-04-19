@@ -33,6 +33,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (user.role === 'Admin') {
             const slidesTab = document.getElementById('nav-item-slides');
             if (slidesTab) slidesTab.style.display = 'flex';
+            const dynamicSlidesTab = document.getElementById('nav-item-dynamic-slides');
+            if (dynamicSlidesTab) dynamicSlidesTab.style.display = 'flex';
         }
     }
 
@@ -187,7 +189,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         'tab-staff': { title: 'Faculty & Administration', sub: 'Staff permissions and roles' },
         'tab-students': { title: 'Student Registry', sub: 'Identity and credentials' },
         'tab-gallery': { title: 'Homepage Gallery', sub: 'Public slider control' },
-        'tab-slides': { title: 'Homepage Hero Slider', sub: 'Dynamic animated background slides' }
+        'tab-slides': { title: 'Homepage Hero Slider', sub: 'Dynamic animated background slides' },
+        'tab-dynamic-slides': { title: 'Dynamic Slider Manager', sub: 'Image & video slide management' }
     };
 
     function switchTab(tabId) {
@@ -213,6 +216,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (tabId === 'tab-complaints') fetchComplaints();
         if (tabId === 'tab-gallery') loadGallery();
         if (tabId === 'tab-slides') loadSlides();
+        if (tabId === 'tab-dynamic-slides') window.loadDynamicSlides();
     }
 
     navItems.forEach(item => {
@@ -2000,6 +2004,257 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (data.success) {
                     showToast('Slide deleted successfully', 'success');
                     loadSlides();
+                } else {
+                    showToast(data.message || 'Delete failed', 'error');
+                }
+            } catch (err) {
+                showToast('Network error', 'error');
+            } finally {
+                closeConfirmModal();
+            }
+        });
+    };
+
+    // =============================================
+    // DYNAMIC SLIDES MANAGEMENT (Parallel System)
+    // =============================================
+
+    // --- Load & Render ---
+    window.loadDynamicSlides = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/dynamic-slides`, { credentials: 'include' });
+            const data = await res.json();
+            if (data.success) {
+                renderDynamicSlidesTable(data.slides);
+            } else {
+                showToast('Failed to load dynamic slides', 'error');
+            }
+        } catch (err) {
+            console.error('Failed to load dynamic slides', err);
+            showToast('Network error loading slides', 'error');
+        }
+    };
+
+    function renderDynamicSlidesTable(slides) {
+        const tbody = document.getElementById('dynamic-slides-tbody');
+        if (!tbody) return;
+        if (!slides || slides.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 2rem; opacity:0.5;">No dynamic slides yet. Click "Add Dynamic Slide" to get started.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = slides.map(s => {
+            const isVideo = s.media_type === 'video';
+            const mediaPreview = isVideo
+                ? `<video src="${s.media_url}" style="width:80px;height:50px;object-fit:cover;border-radius:6px;" muted></video>`
+                : `<img src="${s.media_url}" style="width:80px;height:50px;object-fit:cover;border-radius:6px;" alt="${s.title}">`;
+
+            const typeBadge = isVideo
+                ? `<span class="status-badge" style="background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);">🎬 Video</span>`
+                : `<span class="status-badge" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">🖼 Image</span>`;
+
+            return `
+            <tr class="fade-in">
+                <td style="text-align:center; font-weight:600; color:var(--gold);">${s.display_order}</td>
+                <td>${mediaPreview}</td>
+                <td>${typeBadge}</td>
+                <td>
+                    <div style="font-weight:600;">${s.title}</div>
+                    <div style="font-size:0.75rem;opacity:0.6;margin-top:3px;">${s.description || '—'}</div>
+                </td>
+                <td>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" ${s.is_active ? 'checked' : ''} 
+                               onchange="toggleDynamicSlide(${s.id}, this.checked)"
+                               style="width:18px;height:18px;cursor:pointer;">
+                        <span style="font-size:0.8rem;color:${s.is_active ? '#10b981' : '#ef4444'};">
+                            ${s.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                    </label>
+                </td>
+                <td>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                        <button class="action-btn" style="background:rgba(212,175,55,0.1);color:var(--gold);border:1px solid rgba(212,175,55,0.3);" 
+                                onclick="openDynamicSlideModal(${s.id})">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit
+                        </button>
+                        <button class="action-btn btn-reject" onclick="deleteDynamicSlide(${s.id})">
+                            <i class="fa-solid fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    // --- Modal Open/Close ---
+    window.openDynamicSlideModal = async (id = null) => {
+        document.getElementById('dynamic-slide-id').value = id || '';
+        document.getElementById('dynamicSlideModalTitle').textContent = id ? 'Edit Dynamic Slide' : 'Add Dynamic Slide';
+        document.getElementById('dynamic-slide-media').value = '';
+        document.getElementById('dynamic-slide-preview-wrapper').style.display = 'none';
+        document.getElementById('dynamic-slide-media-preview-container').innerHTML = '';
+        document.getElementById('dynamic-slide-title').value = '';
+        document.getElementById('dynamic-slide-description').value = '';
+        document.getElementById('dynamic-slide-order').value = '0';
+        document.getElementById('dynamic-slide-active').checked = true;
+
+        if (id) {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/dynamic-slides`, { credentials: 'include' });
+                const data = await res.json();
+                if (data.success) {
+                    const slide = data.slides.find(s => s.id === id);
+                    if (slide) {
+                        document.getElementById('dynamic-slide-title').value = slide.title;
+                        document.getElementById('dynamic-slide-description').value = slide.description || '';
+                        document.getElementById('dynamic-slide-order').value = slide.display_order;
+                        document.getElementById('dynamic-slide-active').checked = slide.is_active;
+
+                        // Show current media preview
+                        const previewContainer = document.getElementById('dynamic-slide-media-preview-container');
+                        if (slide.media_type === 'video') {
+                            previewContainer.innerHTML = `<video src="${slide.media_url}" style="width:100%;max-height:200px;object-fit:contain;" controls muted></video>`;
+                        } else {
+                            previewContainer.innerHTML = `<img src="${slide.media_url}" style="width:100%;max-height:200px;object-fit:cover;" alt="Current">`;
+                        }
+                        document.getElementById('dynamic-slide-preview-wrapper').style.display = 'block';
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading slide for edit:', err);
+            }
+        }
+
+        window.showModal('dynamicSlideModal');
+    };
+
+    window.closeDynamicSlideModal = () => {
+        window.closeModal('dynamicSlideModal');
+    };
+
+    // --- Preview media before upload ---
+    window.previewDynamicSlideMedia = (input) => {
+        const file = input.files[0];
+        if (!file) return;
+
+        const wrapper = document.getElementById('dynamic-slide-preview-wrapper');
+        const container = document.getElementById('dynamic-slide-media-preview-container');
+        container.innerHTML = '';
+
+        const url = URL.createObjectURL(file);
+        if (file.type.startsWith('video/')) {
+            container.innerHTML = `<video src="${url}" style="width:100%;max-height:200px;object-fit:contain;" controls muted playsinline></video>`;
+        } else {
+            container.innerHTML = `<img src="${url}" style="width:100%;max-height:200px;object-fit:cover;" alt="Preview">`;
+        }
+        wrapper.style.display = 'block';
+    };
+
+    // --- Save (Create or Update) ---
+    window.saveDynamicSlide = async (event) => {
+        event.preventDefault();
+        const id = document.getElementById('dynamic-slide-id').value;
+        const title = document.getElementById('dynamic-slide-title').value.trim();
+        const description = document.getElementById('dynamic-slide-description').value.trim();
+        const display_order = document.getElementById('dynamic-slide-order').value;
+        const is_active = document.getElementById('dynamic-slide-active').checked;
+        const mediaFile = document.getElementById('dynamic-slide-media').files[0];
+
+        if (!id && !mediaFile) {
+            showToast('Please select a media file (image or video)', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('saveDynamicSlideBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        try {
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('display_order', display_order);
+            formData.append('is_active', is_active);
+            if (mediaFile) formData.append('media', mediaFile);
+
+            const url = id
+                ? `${API_BASE}/api/admin/dynamic-slides/${id}`
+                : `${API_BASE}/api/admin/dynamic-slides`;
+            const method = id ? 'PUT' : 'POST';
+
+            const res = await fetch(url, { method, body: formData, credentials: 'include' });
+            const data = await res.json();
+
+            if (data.success) {
+                showToast(id ? 'Slide updated successfully!' : 'Slide created successfully!', 'success');
+                closeDynamicSlideModal();
+                window.loadDynamicSlides();
+            } else {
+                showToast(data.message || 'Failed to save slide', 'error');
+            }
+        } catch (err) {
+            console.error('Error saving dynamic slide:', err);
+            showToast('Network error saving slide', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Save Slide';
+        }
+    };
+
+    // --- Toggle Active ---
+    window.toggleDynamicSlide = async (id, isActive) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/dynamic-slides/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: isActive }),
+                credentials: 'include'
+            });
+            // Note: We need title to do a PUT, so we fetch first
+            const listRes = await fetch(`${API_BASE}/api/admin/dynamic-slides`, { credentials: 'include' });
+            const listData = await listRes.json();
+            if (listData.success) {
+                const slide = listData.slides.find(s => s.id === id);
+                if (slide) {
+                    const toggleRes = await fetch(`${API_BASE}/api/admin/dynamic-slides/${id}`, {
+                        method: 'PUT',
+                        credentials: 'include',
+                        body: (() => {
+                            const fd = new FormData();
+                            fd.append('title', slide.title);
+                            fd.append('description', slide.description || '');
+                            fd.append('display_order', slide.display_order);
+                            fd.append('is_active', isActive);
+                            return fd;
+                        })()
+                    });
+                    const toggleData = await toggleRes.json();
+                    if (toggleData.success) {
+                        showToast(`Slide ${isActive ? 'activated' : 'deactivated'}`, 'success');
+                    } else {
+                        showToast('Failed to toggle status', 'error');
+                        window.loadDynamicSlides();
+                    }
+                }
+            }
+        } catch (err) {
+            showToast('Network error', 'error');
+            window.loadDynamicSlides();
+        }
+    };
+
+    // --- Delete ---
+    window.deleteDynamicSlide = (id) => {
+        showConfirmModal('Delete Dynamic Slide', 'Are you sure? This will permanently delete the slide and its media from Cloudinary.', async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/dynamic-slides/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Dynamic slide deleted', 'success');
+                    window.loadDynamicSlides();
                 } else {
                     showToast(data.message || 'Delete failed', 'error');
                 }

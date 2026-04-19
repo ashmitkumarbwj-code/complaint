@@ -93,4 +93,28 @@ router.put('/slides/:id', auth, checkRole(['Admin']), slideUpload.single('image'
 router.delete('/slides/:id', auth, checkRole(['Admin']), slidesController.deleteSlide);
 router.patch('/slides/:id/toggle', auth, checkRole(['Admin']), slidesController.toggleSlide);
 
+const dynamicSlidesController = require('../controllers/dynamicSlidesController');
+
+// Multer memory storage setup for dynamic slides (images + videos)
+const dynamicSlideUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB max for videos
+    fileFilter: (req, file, cb) => {
+        const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/ogg'];
+        if (allowedMimes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only JPEG, PNG, WebP images and MP4, WebM, OGG videos are allowed'));
+        }
+    }
+});
+
+// ==========================================
+// ADMIN DYNAMIC SLIDES MANAGEMENT
+// ==========================================
+router.get('/dynamic-slides', auth, checkRole(['Admin']), dynamicSlidesController.getAllSlides);
+router.post('/dynamic-slides', auth, checkRole(['Admin']), dynamicSlideUpload.single('media'), dynamicSlidesController.createSlide);
+router.put('/dynamic-slides/:id', auth, checkRole(['Admin']), dynamicSlideUpload.single('media'), dynamicSlidesController.updateSlide);
+router.delete('/dynamic-slides/:id', auth, checkRole(['Admin']), dynamicSlidesController.deleteSlide);
+
 module.exports = router;

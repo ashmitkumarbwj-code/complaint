@@ -101,6 +101,7 @@ const usersRoutes = require('./routes/users');
 const departmentRoutes = require('./routes/departments');
 const healthRoutes = require('./routes/health');
 const slidesRoutes = require('./routes/slides');
+const dynamicSlidesRoutes = require('./routes/dynamicSlides');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
@@ -108,6 +109,7 @@ app.use('/api/dashboards', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/slides', slidesRoutes); // added
+app.use('/api/dynamic-slides', dynamicSlidesRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/departments', departmentRoutes);
