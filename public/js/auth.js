@@ -76,7 +76,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 localStorage.setItem('scrs_user', JSON.stringify(uiUser));
                 localStorage.setItem('scrs_role_hint', data.user.role);
                 
-                window.location.href = data.redirect || 'admin.html';
+                if (data.redirect && data.redirect !== 'index.html') {
+                    console.log(`[Auth] Redirecting to server-verified path: ${data.redirect}`);
+                    window.location.href = data.redirect;
+                } else {
+                    console.error(`[Auth] Server returned invalid or missing redirect path. Role: ${data.user.role}`);
+                    showToast('Role unrecognized or missing redirect path. Please contact support.', 'error');
+                    btnLogin.innerHTML = origHtml;
+                    btnLogin.disabled = false;
+                }
             } else {
                 showToast(data.message || 'Login failed', 'error');
                 btnLogin.innerHTML = origHtml;

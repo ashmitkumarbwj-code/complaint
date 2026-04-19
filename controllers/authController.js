@@ -485,13 +485,14 @@ exports.login = async (req, res) => {
 
         res.cookie('accessToken', tokens.accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 }); // 15 mins
         res.cookie('refreshToken', tokens.refreshToken, cookieOptions);
+        const finalRedirect = getRedirectPath(user.role);
 
         return res.json({
             success: true,
             message: 'Login successful',
             // token: tokens.accessToken, // REMOVED - Using Cookies
             // refreshToken: tokens.refreshToken, // REMOVED - Using Cookies
-            redirect: getRedirectPath(user.role),
+            redirect: finalRedirect,
             user: userData
         });
 
@@ -653,21 +654,26 @@ exports.verifyFirebase = async (req, res) => {
     }
 };
 
+const ROLE_REDIRECTS = {
+    'student': 'student.html',
+    'staff': 'department.html',
+    'hod': 'department.html',
+    'admin': 'admin.html',
+    'principal': 'principal_dashboard.html'
+};
+
+function normalizeRole(role) {
+    if (!role) return 'student';
+    return String(role).toLowerCase().trim();
+}
+
 /**
  * Role-based redirect path.
- * FIX: Normalizes role to lowercase before matching — prevents case-sensitivity bugs.
- * FIX: HOD now has an explicit case (mapped to department.html same as Staff,
- *      but kept separate so it's easy to change to a dedicated HOD dashboard later).
+ * FIX: Uses centralized normalizeRole and ROLE_REDIRECTS map.
  */
 function getRedirectPath(role) {
-    switch ((role || '').toLowerCase()) {
-        case 'student':     return 'student.html';
-        case 'staff':       return 'department.html';
-        case 'hod':         return 'department.html'; // HOD sees department dashboard; separate case for future HOD-specific page
-        case 'admin':       return 'admin.html';
-        case 'principal':   return 'principal_dashboard.html';
-        default:            return 'index.html';
-    }
+    const normalized = normalizeRole(role);
+    return ROLE_REDIRECTS[normalized] || 'index.html';
 }
 
 /**
@@ -1144,12 +1150,15 @@ async function handleRoleActivationComplete(req, res, targetRole) {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const conn = await db.getTransaction();
+        
+        // Ensure canonical lowercase role is always used
+        const canonicalRole = normalizeRole(targetRole);
 
         try {
             await conn.beginTransaction();
             let vd, userId;
 
-            if (targetRole.toLowerCase() === 'student') {
+            if (canonicalRole === 'student') {
                 const query = method === 'email' ? 'SELECT * FROM verified_students WHERE LOWER(email) = $1 AND tenant_id = $2' : 'SELECT * FROM verified_students WHERE mobile_number = $1 AND tenant_id = $2';
                 const [vRows] = await conn.execute(query, [identifier, tenantId]);
                 if (vRows.length === 0) throw new Error('Registry entry vanished');
@@ -1157,7 +1166,7 @@ async function handleRoleActivationComplete(req, res, targetRole) {
 
                 const [uRows] = await conn.execute(
                     'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                    [tenantId, vd.roll_number, vd.email, vd.mobile_number, hashedPassword, 'Student', true]
+                    [tenantId, vd.roll_number, vd.email, vd.mobile_number, hashedPassword, canonicalRole, true]
                 );
                 userId = uRows[0].id;
 
@@ -1176,13 +1185,13 @@ async function handleRoleActivationComplete(req, res, targetRole) {
 
                 const [uRows] = await conn.execute(
                     'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                    [tenantId, vd.name, vd.email, vd.mobile, hashedPassword, targetRole, true]
+                    [tenantId, vd.name, vd.email, vd.mobile, hashedPassword, canonicalRole, true]
                 );
                 userId = uRows[0].id;
 
                 await conn.execute(
                     'INSERT INTO staff (tenant_id, user_id, department_id, designation, mobile_number) VALUES ($1, $2, $3, $4, $5)',
-                    [tenantId, userId, vd.department_id, targetRole, vd.mobile]
+                    [tenantId, userId, vd.department_id, canonicalRole, vd.mobile]
                 );
 
                 await conn.execute('UPDATE verified_staff SET is_account_created = TRUE WHERE id = $1', [vd.id]);

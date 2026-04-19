@@ -38,6 +38,8 @@ const sendEmail = async (to, subject, text) => {
              return true;
         }
 
+        console.log(`[SMTP INTERCEPT] Subject: ${subject} | Text: ${text}`);
+
         await transporter.sendMail({
             from: `"Smart Campus SCRS" <${process.env.SMTP_USER}>`,
             to,
