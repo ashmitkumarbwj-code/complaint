@@ -370,3 +370,92 @@ exports.bulkImportStaff = async (req, res) => {
         res.status(500).json({ success: false, message: err.message || 'Server error during staff bulk import.' });
     }
 };
+/**
+ * Safe Read-Only Database Audit (Admin Only)
+ */
+exports.dbAudit = async (req, res) => {
+    try {
+        // 1. Fetch tables
+        const [tableRows] = await db.execute(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_type = 'BASE TABLE'
+        `);
+        const tables = tableRows.map(r => r.table_name);
+
+        const auditData = [];
+        const importantTables = [
+            'users', 'students', 'staff', 'complaints', 
+            'otp_verifications', 'homepage_slides', 
+            'dynamic_homepage_slides', 'gallery_images', 'department_members'
+        ];
+
+        const sensitiveFields = [
+            'password_hash', 'otp_code', 'token', 'secret', 
+            'api_key', 'api_secret', 'password', 'jwt_secret',
+            'smtp_pass', 'smtp_user', 'mobile_number'
+        ];
+
+        for (const table of tables) {
+            const isImportant = importantTables.includes(table);
+            
+            // Get count
+            const [countRes] = await db.execute(`SELECT COUNT(*) FROM ${table}`);
+            const count = parseInt(countRes[0].count);
+
+            // Get samples (limit 5)
+            let samples = [];
+            if (count > 0) {
+                const [sampleRows] = await db.execute(`SELECT * FROM ${table} LIMIT 5`);
+                
+                // Mask sensitive fields
+                samples = sampleRows.map(row => {
+                    const maskedRow = { ...row };
+                    for (const key in maskedRow) {
+                        const lowKey = key.toLowerCase();
+                        if (sensitiveFields.some(f => lowKey.includes(f))) {
+                            maskedRow[key] = '[MASKED]';
+                        }
+                    }
+                    return maskedRow;
+                });
+            }
+
+            // Generate warnings
+            const warnings = [];
+            if (isImportant && count === 0) warnings.push('Table is empty');
+            
+            if (table === 'users') {
+                const [testData] = await db.execute("SELECT COUNT(*) FROM users WHERE username LIKE 'test_%'");
+                if (parseInt(testData[0].count) > 0) warnings.push(`Found ${testData[0].count} test accounts`);
+                
+                const [mixedRoles] = await db.execute("SELECT DISTINCT role FROM users");
+                const roles = mixedRoles.map(r => r.role);
+                const hasMixedCasing = roles.some(r => r && r !== r.toLowerCase());
+                if (hasMixedCasing) warnings.push('Mixed role casing detected (e.g. Admin vs admin)');
+            }
+
+            auditData.push({
+                table,
+                count,
+                samples,
+                isImportant,
+                warnings
+            });
+        }
+
+        res.json({
+            success: true,
+            audit: auditData,
+            timestamp: new Date(),
+            server_info: {
+                engine: 'PostgreSQL',
+                mode: 'READ-ONLY AUDIT'
+            }
+        });
+    } catch (error) {
+        logger.error('[Admin] dbAudit error:', error);
+        res.status(500).json({ success: false, message: 'Audit failed' });
+    }
+};

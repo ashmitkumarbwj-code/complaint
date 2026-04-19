@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB Audit Viewer | Admin Dashboard</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --success-color: #10b981;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-readonly {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            transition: transform 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .table-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .row-count {
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        .count-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .warnings {
+            margin-top: 12px;
+        }
+
+        .warning-item {
+            background: #fffbeb;
+            color: #92400e;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .btn-sample {
+            margin-top: 16px;
+            background: #f1f5f9;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-main);
+            width: 100%;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sample-content {
+            display: none;
+            margin-top: 12px;
+            overflow-x: auto;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th {
+            text-align: left;
+            padding: 8px;
+            background: #f8fafc;
+            color: var(--text-muted);
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #f1f5f9;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .masked {
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 11px;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: var(--text-muted);
+        }
+
+        .important-tag {
+            background: #eef2ff;
+            color: #4338ca;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1><i class="fas fa-database"></i> Production DB Audit Viewer</h1>
+                <p style="color: var(--text-muted); margin: 5px 0 0 0;">Safe Read-Only Administrative Inspection Tool</p>
+            </div>
+            <span class="badge badge-readonly">Read-Only Mode</span>
+        </header>
+
+        <div id="loading">
+            <i class="fas fa-circle-notch fa-spin"></i> Analyzing production database...
+        </div>
+
+        <div id="audit-grid" class="grid"></div>
+    </div>
+
+    <script src="../js/toast.js"></script>
+    <script>
+        async function fetchAudit() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = '../login.html';
+                    return;
+                }
+
+                const res = await fetch('/api/admin/db-audit', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                    window.location.href = '../login.html';
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.success) {
+                    renderAudit(data.audit);
+                } else {
+                    alert('Audit failed: ' + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection error');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function renderAudit(audit) {
+            const grid = document.getElementById('audit-grid');
+            grid.innerHTML = '';
+
+            // Sort so important tables come first
+            audit.sort((a, b) => b.isImportant - a.isImportant);
+
+            audit.forEach(item => {
+                const card = document.createElement('div');
+                card.className = `card ${item.isImportant ? 'important' : ''}`;
+                
+                let warningsHtml = '';
+                if (item.warnings && item.warnings.length > 0) {
+                    warningsHtml = `
+                        <div class="warnings">
+                            ${item.warnings.map(w => `<div class="warning-item"><i class="fas fa-exclamation-triangle"></i> ${w}</div>`).join('')}
+                        </div>
+                    `;
+                }
+
+                let sampleHtml = '';
+                if (item.samples && item.samples.length > 0) {
+                    const keys = Object.keys(item.samples[0]);
+                    sampleHtml = `
+                        <button class="btn-sample" onclick="toggleSample('${item.table}')">
+                            <span><i class="fas fa-table"></i> View Sample Rows</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div id="sample-${item.table}" class="sample-content">
+                            <table>
+                                <thead>
+                                    <tr>${keys.map(k => `<th>${k}</th>`).join('')}</tr>
+                                </thead>
+                                <tbody>
+                                    ${item.samples.map(row => `
+                                        <tr>
+                                            ${keys.map(k => {
+                                                const val = row[k];
+                                                if (val === '[MASKED]') return `<td class="masked">[MASKED]</td>`;
+                                                return `<td>${val === null ? '<em>null</em>' : val}</td>`;
+                                            }).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="table-name">
+                            ${item.table}
+                            ${item.isImportant ? '<span class="important-tag">Focus</span>' : ''}
+                        </div>
+                        <i class="fas fa-info-circle" style="color: #cbd5e1"></i>
+                    </div>
+                    <div class="row-count">${item.count.toLocaleString()}</div>
+                    <div class="count-label">Total Records</div>
+                    ${warningsHtml}
+                    ${sampleHtml}
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function toggleSample(tableName) {
+            const content = document.getElementById(`sample-${tableName}`);
+            const btn = content.previousElementSibling;
+            const icon = btn.querySelector('.fa-chevron-down, .fa-chevron-up');
+
+            if (content.style.display === 'block') {
+                content.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            } else {
+                content.style.display = 'block';
+                icon.className = 'fas fa-chevron-up';
+            }
+        }
+
+        fetchAudit();
+    </script>
+</body>
+</html>

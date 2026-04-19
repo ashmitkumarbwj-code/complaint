@@ -117,4 +117,9 @@ router.post('/dynamic-slides', auth, checkRole(['Admin']), dynamicSlideUpload.si
 router.put('/dynamic-slides/:id', auth, checkRole(['Admin']), dynamicSlideUpload.single('media'), dynamicSlidesController.updateSlide);
 router.delete('/dynamic-slides/:id', auth, checkRole(['Admin']), dynamicSlidesController.deleteSlide);
 
+// @route   GET /api/admin/db-audit
+// @desc    Safe Read-Only Database Audit
+// @access  Private (Admin only)
+router.get('/db-audit', auth, checkRole(['Admin']), adminController.dbAudit);
+
 module.exports = router;
