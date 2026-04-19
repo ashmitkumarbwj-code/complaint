@@ -55,9 +55,9 @@ exports.profileLimiter = rateLimit({
  * Prevents email/SMS abuse for account claims.
  */
 exports.activationLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
+    windowMs: 10 * 60 * 1000, // 10 minutes
     max: 5,
-    message: { success: false, message: 'Too many activation attempts. Please try again in an hour.' },
+    message: { success: false, message: 'Too many activation attempts. Please try again in 10 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
 });
