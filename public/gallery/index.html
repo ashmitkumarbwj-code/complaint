@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <title>Campus Gallery | Smart Complaint System - GDC Dharamshala</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="../css/style.css?v=5">
+    <style>
+        .gallery-page {
+            padding: 8rem 2rem 4rem;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
+        }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .gallery-item {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            aspect-ratio: 4/3;
+            cursor: pointer;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .gallery-item:hover {
+            transform: scale(1.03) translateY(-5px);
+            border-color: var(--gold);
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.4s ease;
+        }
+        .gallery-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 1.5rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .gallery-item:hover .gallery-overlay {
+            opacity: 1;
+        }
+        .gallery-item:hover img {
+            filter: brightness(0.7);
+        }
+        .gallery-overlay h3 {
+            color: var(--gold);
+            font-size: 1.1rem;
+            margin-bottom: 0.2rem;
+        }
+        .gallery-overlay p {
+            font-size: 0.9rem;
+            color: white;
+            margin: 0;
+        }
+        .back-nav {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            z-index: 100;
+        }
+        .loading-spinner {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem;
+            color: var(--gold);
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js" class="particles-bg"></div>
+
+    <nav class="back-nav">
+        <a href="/" class="btn btn-glass"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+    </nav>
+
+    <main class="gallery-page">
+        <div class="content-wrapper">
+            <h1 class="main-title text-center" style="margin-bottom: 3rem;">Campus <span class="text-gold">Gallery</span></h1>
+            
+            <div id="full-gallery-grid" class="gallery-grid">
+                <div class="loading-spinner">
+                    <i class="fa-solid fa-circle-notch fa-spin fa-3x"></i>
+                    <p style="margin-top: 1rem; color: #adb5bd;">Loading campus highlights...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer style="padding: 3rem 0; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); text-align: center; color: rgba(255,255,255,0.5); font-size: 0.8rem;">
+        <p>&copy; 2026 Government Degree College Dharamshala. All rights reserved.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="../js/config.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Particles
+            particlesJS("particles-js", {
+                "particles": {
+                    "number": { "value": 50, "density": { "enable": true, "value_area": 800 } },
+                    "color": { "value": "#d4af37" },
+                    "shape": { "type": "circle" },
+                    "opacity": { "value": 0.3 },
+                    "size": { "value": 2 },
+                    "line_linked": { "enable": true, "distance": 150, "color": "#d4af37", "opacity": 0.1 },
+                    "move": { "enable": true, "speed": 1 }
+                }
+            });
+
+            // Fetch Gallery
+            const grid = document.getElementById('full-gallery-grid');
+            fetch(`${window.API_BASE || ''}/api/gallery/public`)
+                .then(res => res.json())
+                .then(data => {
+                    grid.innerHTML = '';
+                    if (data.success && data.images && data.images.length > 0) {
+                        data.images.forEach((img, idx) => {
+                            const item = document.createElement('div');
+                            item.className = 'gallery-item';
+                            
+                            const title = img.title || img.filename.split('.')[0].replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                            
+                            item.innerHTML = `
+                                <img src="${img.url}" alt="${img.filename}">
+                                <div class="gallery-overlay">
+                                    <h3>${title}</h3>
+                                    <p>Campus Highlight</p>
+                                </div>
+                            `;
+                            grid.appendChild(item);
+                            
+                            // Animate in
+                            gsap.from(item, {
+                                opacity: 0,
+                                y: 30,
+                                duration: 0.6,
+                                delay: idx * 0.1,
+                                ease: "power2.out"
+                            });
+                        });
+                    } else {
+                        grid.innerHTML = '<div class="loading-spinner"><p>No images found in the gallery.</p></div>';
+                    }
+                })
+                .catch(err => {
+                    console.error('Gallery Error:', err);
+                    grid.innerHTML = '<div class="loading-spinner"><p>Failed to load gallery. Please refresh.</p></div>';
+                });
+        });
+    </script>
+</body>
+</html>
