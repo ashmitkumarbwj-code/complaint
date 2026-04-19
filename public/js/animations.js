@@ -7,7 +7,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Register GSAP ScrollTrigger
     gsap.registerPlugin(ScrollTrigger);
 
-    initStorytellingBG();
     initParticles();
     initGSAPAnimations();
     initChart();
@@ -16,73 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* --- Storytelling Background Logic --- */
-function initStorytellingBG() {
-    const layers = {
-        town: document.querySelector('.layer-town'),
-        college: document.querySelector('.layer-college'),
-        mountains: document.querySelector('.layer-mountains')
-    };
 
-    if (!layers.town) return; // Prevent errors on other pages
-
-    function setActiveLayer(activeKey) {
-        Object.keys(layers).forEach(key => {
-            if (key === activeKey) {
-                layers[key].classList.add('active');
-            } else {
-                layers[key].classList.remove('active');
-            }
-        });
-    }
-
-    // Section 1 (Welcome) -> Town
-    ScrollTrigger.create({
-        trigger: "#section-1",
-        start: "top center",
-        onEnter: () => setActiveLayer('town'),
-        onEnterBack: () => setActiveLayer('town')
-    });
-
-    // Section 2 (Intro) -> Admin
-    ScrollTrigger.create({
-        trigger: "#section-2",
-        start: "top center",
-        onEnter: () => setActiveLayer('admin'),
-        onEnterBack: () => setActiveLayer('admin')
-    });
- 
-    // Section 3 (Solution) -> College
-    ScrollTrigger.create({
-        trigger: "#section-3",
-        start: "top center",
-        onEnter: () => setActiveLayer('college'),
-        onEnterBack: () => setActiveLayer('college')
-    });
-
-    // Section 4 (Transparency) -> Governance
-    ScrollTrigger.create({
-        trigger: "#section-4",
-        start: "top center",
-        onEnter: () => setActiveLayer('governance'),
-        onEnterBack: () => setActiveLayer('governance')
-    });
-
-    // Section 5 (Analytics) -> Mountains
-    ScrollTrigger.create({
-        trigger: "#section-5",
-        start: "top center",
-        onEnter: () => setActiveLayer('mountains'),
-        onEnterBack: () => setActiveLayer('mountains')
-    });
-
-    // Section 6 (Community) -> Student
-    ScrollTrigger.create({
-        trigger: "#section-6",
-        start: "top center",
-        onEnter: () => setActiveLayer('student'),
-        onEnterBack: () => setActiveLayer('student')
-    });
-}
 
 /* =========================================================================
    1. Particles.js Initialization
@@ -557,9 +490,7 @@ async function initHeroSlider() {
                 }
             });
             
-            // Hide the default static storyboard bg layer that is active to prevent clashing
-            const storyboardbg = document.getElementById('storyboard-bg');
-            if (storyboardbg) storyboardbg.style.display = 'none';
+
 
         } else {
             // Fallback: hide the loading slider entirely

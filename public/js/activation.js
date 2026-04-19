@@ -20,6 +20,7 @@ async function nextStep(step) {
         // PHASE 1: Forced Email Method
         selectedMethod = 'email';
         const email = document.getElementById('email').value.trim();
+        const mobile = document.getElementById('mobile-number') ? document.getElementById('mobile-number').value.trim() : '';
         
         // Handle Identifier
         savedIdentifier = email;

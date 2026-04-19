@@ -38,11 +38,11 @@ exports.saveOTP = async (identifier, otpCode, userId = null, ip = null) => {
         [identifier]
     );
 
-    // Insert new OTP record with IP auditing
+    // Insert new OTP record
     await db.execute(
-        `INSERT INTO otp_verifications (user_id, identifier, otp_hash, expires_at, ip_address) 
-         VALUES ($1, $2, $3, $4, $5)`,
-        [userId, identifier, hashedOtp, expiresAt, ip]
+        `INSERT INTO otp_verifications (user_id, identifier, otp_hash, expires_at) 
+         VALUES ($1, $2, $3, $4)`,
+        [userId, identifier, hashedOtp, expiresAt]
     );
 
     logger.info(`[OTP Service] OTP enqueued for: ${identifier} (IP: ${ip || 'unknown'})`);
@@ -121,7 +121,8 @@ exports.checkRateLimit = async (identifier, ip = null) => {
         return 'limit';
     }
 
-    // 2. Check Per-IP Limit (Global Abuse Prevention)
+    // 2. Check Per-IP Limit (Disabled due to schema mismatch - ip_address column missing)
+    /*
     if (ip) {
         const [ipRows] = await db.execute(
             `SELECT COUNT(*) AS count FROM otp_verifications 
@@ -134,6 +135,7 @@ exports.checkRateLimit = async (identifier, ip = null) => {
             return 'limit';
         }
     }
+    */
 
     return 'ok';
 };

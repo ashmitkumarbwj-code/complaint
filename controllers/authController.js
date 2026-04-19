@@ -56,7 +56,7 @@ exports.requestActivation = async (req, res) => {
             const [rows] = await db.execute(query, [identifier, tenantId]);
             entry = rows[0];
         } else {
-            const field = method === 'email' ? 'email' : 'mobile_number';
+            const field = method === 'email' ? 'email' : 'mobile';
             const [rows] = await db.execute(
                 `SELECT * FROM verified_staff WHERE ${field} = $1 AND LOWER(role) = $2 AND tenant_id = $3`, 
                 [identifier, normalizedRole, tenantId]
@@ -163,7 +163,7 @@ exports.completeActivation = async (req, res) => {
             // Insert into Users (Username = Roll Number)
             const [uRows] = await conn.execute(
                 'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                [tenantId, vData.roll_number, vData.email, vData.mobile_number, hashedPassword, 'student', true]
+                [tenantId, vData.roll_number, vData.email, vData.mobile_number, hashedPassword, 'Student', true]
             );
             const userId = uRows[0].id;
 
@@ -189,9 +189,10 @@ exports.completeActivation = async (req, res) => {
             if (vData.is_account_created) throw new Error('ALREADY_ACTIVATED');
 
             // Insert into Users (Username = Name)
+            const normalizedEnumRole = normalizedRole.charAt(0).toUpperCase() + normalizedRole.slice(1);
             const [uRows] = await conn.execute(
                 'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                [tenantId, vData.name, vData.email, vData.mobile_number, hashedPassword, normalizedRole, true]
+                [tenantId, vData.name, vData.email, vData.mobile_number, hashedPassword, normalizedEnumRole, true]
             );
             const userId = uRows[0].id;
 
@@ -510,7 +511,7 @@ exports.activateStaff = async (req, res) => {
         const tenantId = db.getTenantId(req);
         // 1. Verify token in verified_staff
         const [rows] = await db.execute(
-            'SELECT * FROM verified_staff WHERE email = $1 AND activation_token = $2 AND is_account_created = 0 AND tenant_id = $3',
+            'SELECT * FROM verified_staff WHERE email = $1 AND activation_token = $2 AND is_account_created = FALSE AND tenant_id = $3',
             [email, token, tenantId]
         );
 
@@ -520,13 +521,16 @@ exports.activateStaff = async (req, res) => {
 
         const staffData = rows[0];
         const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Normalize role for enum
+        const normalizedRole = staffData.role.charAt(0).toUpperCase() + staffData.role.slice(1).toLowerCase();
 
         // 2. Create entry in users table
         const [uResult] = await db.execute(
             'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-            [staffData.tenant_id || 1, email, email, staffData.mobile_number, hashedPassword, staffData.role, 1]
+            [staffData.tenant_id || 1, email, email, staffData.mobile_number, hashedPassword, normalizedRole, true]
         );
-        const userId = uResult.rows[0].id;
+        const userId = uResult[0].id;
 
         // 3. Create entry in staff table
         await db.execute(
@@ -535,7 +539,7 @@ exports.activateStaff = async (req, res) => {
         );
 
         // 4. Update verified_staff
-        await db.execute('UPDATE verified_staff SET is_account_created = 1, activation_token = NULL WHERE id = $1', [staffData.id]);
+        await db.execute('UPDATE verified_staff SET is_account_created = TRUE, activation_token = NULL WHERE id = $1', [staffData.id]);
 
         const deptName = staffData.department_name || 'General';
         const userData = { id: userId, username: email, role: staffData.role, staff_id: staffData.id, department_id: deptName };
@@ -1046,18 +1050,20 @@ exports.firebaseCompleteActivation = async (req, res) => {
  * Generic Helper for Requesting Activation with Strict Role Isolation
  */
 async function handleRoleActivationRequest(req, res, targetRole) {
+    const { email, mobile_number, method, role } = req.body;
+    
     // PHASE 1: Email-Only Enforcement
     if (method === 'sms') {
         return res.status(400).json({ success: false, message: 'SMS verification is currently disabled. Please use your registered email.' });
     }
 
-    let identifier = (email || '').trim().toLowerCase();
+    let identifier = (method === 'email' ? email : mobile_number || '').trim().toLowerCase();
     
     const tenantId = db.getTenantId(req) || 1;
 
     try {
         if (!identifier) {
-            return res.status(400).json({ success: false, message: 'Official Email is required.' });
+            return res.status(400).json({ success: false, message: 'Identifier is required.' });
         }
 
         let entry = null;

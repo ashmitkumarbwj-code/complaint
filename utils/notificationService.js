@@ -26,7 +26,7 @@ if (sid && sid.startsWith('AC')) {
 /**
  * Send an email notification (Direct Call - No Queue)
  */
-exports.sendEmail = async (to, subject, text) => {
+const sendEmail = async (to, subject, text) => {
     try {
         if (process.env.OTP_MODE === 'mock') {
             console.log(`[MOCK EMAIL] To: ${to} | Subject: ${subject} | Text: ${text}`);
@@ -51,6 +51,8 @@ exports.sendEmail = async (to, subject, text) => {
     }
 };
 
+exports.sendEmail = sendEmail;
+
 /**
  * Send an SMS notification (Roadmap / Currently Disabled)
  */
@@ -65,7 +67,7 @@ exports.sendSMS = async (to, message) => {
 exports.notifyStudent = async (studentEmail, complaintId, status) => {
     const subject = `Complaint #${complaintId} Update`;
     const text = `Your complaint #${complaintId} has been updated to: ${status}. Log in to the dashboard for details.`;
-    return this.sendEmail(studentEmail, subject, text);
+    return sendEmail(studentEmail, subject, text);
 };
 
 /**
@@ -74,7 +76,7 @@ exports.notifyStudent = async (studentEmail, complaintId, status) => {
 exports.notifyAuthority = async (authorityEmail, complaintId, category) => {
     const subject = `New Complaint Assigned: #${complaintId}`;
     const text = `A new complaint regarding "${category}" has been assigned to your department. Please review it in the dashboard.`;
-    return this.sendEmail(authorityEmail, subject, text);
+    return sendEmail(authorityEmail, subject, text);
 };
 
 /**
@@ -83,5 +85,5 @@ exports.notifyAuthority = async (authorityEmail, complaintId, category) => {
 exports.sendOTPEmail = async (email, otp) => {
     const subject = "Smart Campus Verification Code";
     const text = `Your verification code is: ${otp}\n\nThis code will expire in 5 minutes.\nDo not share this code with anyone.`;
-    return this.sendEmail(email, subject, text);
+    return sendEmail(email, subject, text);
 };
