@@ -1,7 +1,7 @@
 # Principal Dashboard Workflow & Logic Flow
 
 ## Overview
-The Principal Dashboard is the highest oversight layer in the Smart Campus Complaint & Response System. It enables the Principal of Government Degree College Dharamshala (approx. 40,000 students) to monitor campus issues, analyze department performance, and intervene in critical or escalated situations.
+The Principal Dashboard is the highest oversight layer in the Smart Campus Complaint & Response System. It enables the Principal of Govt. College Dharamshala (approx. 40,000 students) to monitor campus issues, analyze department performance, and intervene in critical or escalated situations.
 
 This document outlines the system architecture, access control, and logic flows required to implement this role.
 

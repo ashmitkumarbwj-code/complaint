@@ -46,5 +46,5 @@ A professional, real-time complaint management platform designed for educational
 - Periodically clear expired OTPs using a cron job.
 
 ## 👨‍💻 Developed for
-Govt Degree College Dharamshala
+Govt. College Dharamshala
 "A digital nervous system for the campus."
