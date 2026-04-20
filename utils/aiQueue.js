@@ -185,6 +185,15 @@ class AIQueue {
         if (updateFields.length > 0) {
             params.push(complaintId);
             await db.execute(`UPDATE complaints SET ${updateFields.join(', ')} WHERE id = $${params.length}`, params);
+            
+            // 🚨 REAL-TIME ALERT: If emergency is confirmed, notify Principal/Admin immediately
+            if (finalPriority === 'Emergency') {
+                const socketService = require('../utils/socketService');
+                const [rows] = await db.execute('SELECT * FROM complaints WHERE id = $1', [complaintId]);
+                if (rows.length > 0) {
+                    socketService.emitEmergencyAlert(rows[0]);
+                }
+            }
         }
     }
 }
