@@ -145,6 +145,112 @@
         </div>
     </section>
 
+    <!-- Section 1.5 — Leadership & Guidance -->
+    <section id="section-leadership" class="fullscreen-section section-leadership" style="background: linear-gradient(135deg, rgba(11, 19, 43, 0.95), rgba(10, 15, 30, 0.98)); position: relative; z-index: 5;">
+        <div class="content-wrapper" style="padding-top: 5rem; padding-bottom: 5rem;">
+            <div class="text-center gsap-fade-up">
+                <h2 class="section-title" style="color: var(--gold); font-size: 2.5rem; margin-bottom: 1rem;">Leadership & Guidance</h2>
+                <p style="color: rgba(255,255,255,0.8); max-width: 700px; margin: 0 auto 3rem; font-size: 1.1rem; line-height: 1.6;">Guided by visionaries dedicated to academic excellence, student welfare, and technological innovation at Govt. College Dharamshala.</p>
+            </div>
+
+            <div class="leadership-grid">
+                <!-- Principal Card -->
+                <div class="leader-card glass-panel gsap-fade-up delay-1">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/prof_rakesh.png" alt="Prof. Rakesh Pathania" class="leader-image">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-principal')">Read Full Profile</button>
+                        </div>
+                    </div>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Prof. Rakesh Pathania</h3>
+                        <p class="leader-title text-gold">Principal</p>
+                        <p class="leader-snippet">An architect of progressive change, continually redefining the contours of academic excellence and student welfare.</p>
+                    </div>
+                </div>
+
+                <!-- Mentor Card 1 -->
+                <div class="leader-card glass-panel gsap-fade-up delay-2">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/dr_naresh.png" alt="Dr. Naresh Sharma" class="leader-image">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-naresh')">Read Full Profile</button>
+                        </div>
+                    </div>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Dr. Naresh Sharma</h3>
+                        <p class="leader-title text-gold">Project Guide & Mentor</p>
+                        <p class="leader-snippet">Providing expert guidance and shaping the technical foundation of the Smart Campus initiative.</p>
+                    </div>
+                </div>
+
+                <!-- Mentor Card 2 -->
+                <div class="leader-card glass-panel gsap-fade-up delay-3">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/mr_harsh.png" alt="Mr. Harsh Guleria" class="leader-image">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-harsh')">Read Full Profile</button>
+                        </div>
+                    </div>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Mr. Harsh Guleria</h3>
+                        <p class="leader-title text-gold">Technical Advisor</p>
+                        <p class="leader-snippet">Driving innovation and ensuring seamless integration of modern systems for student success.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bio Modals -->
+        <div id="bio-modal" class="bio-modal-overlay" style="display: none;">
+            <div class="bio-modal-content glass-panel">
+                <button class="bio-modal-close" onclick="closeBioModal()"><i class="fa-solid fa-times"></i></button>
+                <div id="bio-principal" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Prof. Rakesh Pathania</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Principal, Govt. College Dharamshala</h4>
+                    <div style="color: rgba(255,255,255,0.9); line-height: 1.8; font-size: 1.05rem;">
+                        <p style="margin-bottom: 1rem;">In the ever-evolving landscape of higher education, where institutions are not merely centers of learning but ecosystems of growth, safety, and innovation, the role of a Principal transcends administration—it becomes a vision. At the helm of Government College Dharamshala stands Prof. Rakesh Pathania, a leader whose foresight, commitment, and transformative approach have continually redefined the contours of academic excellence and student welfare.</p>
+                        <p style="margin-bottom: 1rem;">Prof. Pathania is not just an administrator; he is an architect of progressive change. Under his stewardship, the college has witnessed a remarkable shift toward modernization, inclusivity, and student-centric development. His vision extends beyond conventional academics—he envisions an institution where students feel secure, empowered, and inspired to innovate. It is within this framework of forward-thinking leadership that initiatives like the Smart Complaint System find their roots.</p>
+                        <p>What sets Prof. Pathania apart is his unwavering dedication to fostering an environment where every student's voice is heard and valued. His proactive stance on campus development continues to elevate the institution to new heights of prestige and operational efficiency.</p>
+                    </div>
+                </div>
+                <div id="bio-naresh" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Dr. Naresh Sharma</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Project Guide & Mentor</h4>
+                    <div style="color: rgba(255,255,255,0.9); line-height: 1.8; font-size: 1.05rem;">
+                        <p style="margin-bottom: 1rem;">Dr. Naresh Sharma brings extensive academic experience and technical expertise to the Smart Campus initiative. As a mentor, his guidance has been instrumental in shaping the architecture and vision of the Smart Complaint and Response System.</p>
+                        <p>His commitment to empowering students through practical, technology-driven solutions has helped bridge the gap between theoretical knowledge and real-world application, ensuring the platform's robust and scalable design.</p>
+                        <p style="margin-top: 1rem; font-style: italic; color: var(--gold); font-size: 0.9rem;">(Note: Full biography to be updated)</p>
+                    </div>
+                </div>
+                <div id="bio-harsh" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Mr. Harsh Guleria</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Technical Advisor</h4>
+                    <div style="color: rgba(255,255,255,0.9); line-height: 1.8; font-size: 1.05rem;">
+                        <p style="margin-bottom: 1rem;">Mr. Harsh Guleria's strategic insights and technical advisement have been a cornerstone in the successful deployment of the campus digital infrastructure.</p>
+                        <p>With a focus on innovation, security, and user experience, he continues to support initiatives that modernize institutional operations and enhance overall student engagement at Govt. College Dharamshala.</p>
+                        <p style="margin-top: 1rem; font-style: italic; color: var(--gold); font-size: 0.9rem;">(Note: Full biography to be updated)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            function openBioModal(id) {
+                document.getElementById('bio-modal').style.display = 'flex';
+                document.querySelectorAll('.bio-content-block').forEach(b => b.style.display = 'none');
+                document.getElementById(id).style.display = 'block';
+                // Small animation
+                gsap.fromTo(".bio-modal-content", {y: 50, opacity: 0}, {y: 0, opacity: 1, duration: 0.4, ease: "power2.out"});
+            }
+            function closeBioModal() {
+                gsap.to(".bio-modal-content", {y: 20, opacity: 0, duration: 0.3, ease: "power2.in", onComplete: () => {
+                    document.getElementById('bio-modal').style.display = 'none';
+                }});
+            }
+        </script>
+    </section>
+
     <!-- Section 2 — The Problem -->
     <section id="section-2" class="fullscreen-section section-problem">
         <div class="ambient-shapes"></div>
