@@ -406,7 +406,8 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     gap: 1rem;
-    margin-bottom: 4rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
 }
 
 .scroll-indicator {
