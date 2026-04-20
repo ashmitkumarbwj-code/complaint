@@ -9,31 +9,71 @@ module.exports = {
             ? process.env.FRONTEND_URLS.split(',').map(u => u.trim()) 
             : ['http://localhost:3000', 'https://smart-complaint-and-response-system.vercel.app'];
 
+        const jwt = require('jsonwebtoken');
+        const cookie = require('cookie');
+
         io = new Server(server, {
             cors: {
                 origin: frontendUrls,
                 methods: ['GET', 'POST'],
                 credentials: true
             },
+            pingInterval: 10000,
+            pingTimeout: 20000
+        });
 
-            // ─── Heartbeat settings ─────────────────────────────────────────
-            // If client misses 2 pings (2 × 10s = 20s), the server forcefully
-            // disconnects the stale socket to free up memory.
-            pingInterval: 10000,    // Send a ping every 10 seconds
-            pingTimeout:  20000     // Wait 20s for pong before disconnect
+        // 🛡️ SECURITY: Socket.io JWT Authentication Middleware
+        io.use((socket, next) => {
+            try {
+                const cookies = cookie.parse(socket.handshake.headers.cookie || '');
+                const token = cookies.accessToken;
+
+                if (!token) {
+                    console.warn(`[Socket.io Auth] Connection rejected: No token for socket ${socket.id}`);
+                    return next(new Error('Authentication error: No token provided'));
+                }
+
+                if (!process.env.JWT_SECRET) {
+                    console.error('[Socket.io Auth] JWT_SECRET is missing!');
+                    return next(new Error('Internal server error'));
+                }
+
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                socket.user = decoded.user; // Attach verified identity
+                next();
+            } catch (err) {
+                console.error(`[Socket.io Auth] Authentication failed for ${socket.id}:`, err.message);
+                return next(new Error('Authentication error: Invalid token'));
+            }
         });
 
         io.on('connection', (socket) => {
-            console.log('[Socket.io] Client connected:', socket.id);
+            const user = socket.user;
+            const normalizedRole = (user.role || '').toLowerCase().trim();
+            
+            console.log(`[Socket.io] Authenticated connection: ${socket.id} | User: ${user.id} | Role: ${normalizedRole}`);
 
+            // ─── Server-Assigned Room Joins (Secure) ─────────────────────────
+            // We ignore client-side 'join' requests and assign rooms based on verified identity
+            
+            // 1. All users join their own private identity room
+            socket.join(`user_${user.id}`);
+
+            // 2. Role-specific rooms
+            if (normalizedRole === 'student' && user.student_id) {
+                socket.join(`student_${user.student_id}`);
+            } else if (normalizedRole === 'admin' || normalizedRole === 'principal') {
+                socket.join('admin');
+                if (normalizedRole === 'principal') socket.join('principal_room');
+            } else if (user.department_id) {
+                socket.join(`dept_${user.department_id}`);
+            }
+
+            // Reject any manual join attempts (Security Hardening)
             socket.on('join', (room) => {
-                socket.join(room);
-                console.log(`[Socket.io] ${socket.id} joined room: ${room}`);
+                console.warn(`[Socket.io Security] Blocked manual join attempt by ${user.id} to room: ${room}`);
             });
 
-            // ─── Transport Error Fallback ────────────────────────────────────
-            // If WebSocket upgrade fails, Socket.io automatically falls back
-            // to HTTP long-polling. We log the error for monitoring visibility.
             socket.on('error', (err) => {
                 console.error(`[Socket.io] Transport error on ${socket.id}:`, err.message);
             });

@@ -835,31 +835,7 @@ body {
 }
 
 /* --- Slider / Carousel --- */
-.slider-frame {
-    width: 100%;
-    max-width: 900px;
-    height: 450px;
-    /* Increased slightly */
-    margin: 2.5rem auto;
-    position: relative;
-    overflow: hidden;
-    border-radius: 20px;
-    border: 1px solid var(--glass-border);
-    background: rgba(0, 0, 0, 0.4);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-    touch-action: pan-y;
-}
-
-.slider-slide::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 40%;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-    z-index: 2;
-}
+/* Consolidated in Section: HOMEPAGE SLIDER & GALLERY SYSTEM */
 
 .slider-caption {
     position: absolute;
@@ -980,25 +956,11 @@ body {
     backdrop-filter: blur(5px);
 }
 
-.slider-arrow:hover {
-    background: var(--gold);
-    color: var(--deep-blue);
-    border-color: var(--gold);
-    transform: translateY(-50%) scale(1.1);
-}
 
-.arrow-prev {
-    left: 20px;
-}
+/* Arrows consolidated below */
 
-.arrow-next {
-    right: 20px;
-}
 
-.dynamic-gallery {
-    opacity: 0;
-    transform: translateY(30px);
-}
+/* Dynamic Gallery consolidated below */
 
 /* --- Admin Dashboard Enhancements --- */
 #admin-bg-container {
@@ -1086,6 +1048,80 @@ body {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
     border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* AI Insight Styles (Admin Dashboard) */
+.ai-insight-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    vertical-align: middle;
+}
+.ai-mini-report {
+    font-size: 0.65rem;
+    margin-top: 6px;
+    padding: 6px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.ai-metric {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+}
+.ai-bar-bg {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.ai-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), #f59e0b);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+}
+.ai-tag {
+    display: inline-block;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.55rem;
+    letter-spacing: 0.5px;
+}
+.ai-tag.emergency { 
+    background: rgba(239, 68, 68, 0.2); 
+    color: #ef4444; 
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.ai-tag.review { 
+    background: rgba(245, 158, 11, 0.2); 
+    color: #f59e0b; 
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.ai-glowing-row {
+    position: relative;
+    background: rgba(212, 175, 55, 0.03) !important;
+}
+.ai-glowing-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--gold);
+    box-shadow: 0 0 10px var(--gold);
 }
 
 .fade-in {
@@ -1263,24 +1299,54 @@ button[disabled] {
     opacity: 0;
 }
 
-/* === Dynamic Gallery / Slider Styles === */
+/* =========================================================================
+   HOMEPAGE SLIDER & GALLERY SYSTEM (Consolidated)
+   ========================================================================= */
+
+/* Hero Slider (Section 1) */
+.swiper {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
+#hero-slider {
+    display: block !important; /* Ensure visibility once JS triggers */
+    min-height: 500px; /* Fallback height if parent fails */
+}
+
+/* Ensure Swiper controls are above particles */
+.hero-nav-next,
+.hero-nav-prev,
+.hero-pagination {
+    z-index: 100 !important;
+    position: absolute;
+}
+
+/* Dynamic Gallery (Section 7) */
 .dynamic-gallery {
     margin: 4rem auto;
     max-width: 1000px;
     width: 95%;
-    opacity: 0;
+    opacity: 0; /* JS reveal via ScrollTrigger */
     transform: translateY(30px);
+    position: relative;
+    z-index: 10;
 }
 
 .slider-frame {
     position: relative;
     width: 100%;
-    aspect-ratio: 2 / 1;
+    aspect-ratio: 16 / 9; /* Professional widescreen ratio */
     border-radius: 20px;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.4);
     border: 1px solid var(--glass-border);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    touch-action: pan-y;
 }
 
 .slider-track {

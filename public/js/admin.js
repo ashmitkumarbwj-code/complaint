@@ -560,6 +560,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     window.fetchComplaints = fetchComplaints; // expose to HTML onchange handlers
 
+
     function renderTable(complaints) {
         const tbody = document.getElementById('complaints-tbody');
         tbody.innerHTML = complaints.map(c => {
@@ -567,14 +568,44 @@ document.addEventListener("DOMContentLoaded", async () => {
             
             // Priority Visual Indicator (Smart Feature)
             const prioClass = c.priority === 'Emergency' ? 'spi-high' : c.priority === 'High' ? 'spi-medium' : 'spi-low';
-            const aiBadge = ['Emergency', 'High'].includes(c.priority) ? `<span class="ai-badge" title="AI Priority Engine">⚡ AI Escalate</span>` : '';
-            const rowClass = ['Emergency', 'High'].includes(c.priority) ? 'fade-in ai-glowing-row' : 'fade-in';
+            
+            // AI Status Indicators
+            const aiStatusDot = c.ai_status === 'completed' 
+                ? `<span class="ai-insight-dot" style="background:#10b981;" title="AI Analysis: Completed"></span>`
+                : c.ai_status === 'processing'
+                ? `<span class="ai-insight-dot" style="background:#3b82f6;" title="AI Analysis: Processing..."></span>`
+                : c.ai_status === 'failed'
+                ? `<span class="ai-insight-dot" style="background:#ef4444;" title="AI Analysis: Failed"></span>`
+                : `<span class="ai-insight-dot" style="background:rgba(255,255,255,0.1);" title="AI Analysis: Pending"></span>`;
+
+            const aiBadge = (c.priority === 'Emergency' || c.priority === 'High' || c.ai_is_emergency) 
+                ? `<span class="ai-badge" title="AI Priority Engine">⚡ AI Escalate</span>` : '';
+            
+            const rowClass = (c.priority === 'Emergency' || c.ai_is_emergency) ? 'fade-in ai-glowing-row' : 'fade-in';
+
+            // AI Insight Box
+            const aiInsightBox = c.ai_status === 'completed' ? `
+                <div class="ai-mini-report" title="${c.ai_reasoning || 'No details available'}">
+                    <div class="ai-metric">
+                        <small>Evidence Match:</small>
+                        <div class="ai-bar-bg"><div class="ai-bar-fill" style="width: ${Math.round((c.ai_score || 0) * 100)}%;"></div></div>
+                    </div>
+                    <div style="display:flex; gap:4px; margin-top:2px;">
+                        ${c.ai_is_emergency ? '<span class="ai-tag emergency">Emergency</span>' : ''}
+                        ${c.ai_review ? '<span class="ai-tag review">Review Req</span>' : ''}
+                    </div>
+                </div>
+            ` : '';
 
             return `
             <tr class="${rowClass}">
                 <td>#${c.id}</td>
-                <td style="font-weight: 700; color: var(--gold);">${c.title || 'Untitled'} ${aiBadge}
+                <td style="font-weight: 700; color: var(--gold);">
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        ${aiStatusDot} ${c.title || 'Untitled'} ${aiBadge}
+                    </div>
                     <div style="margin-top: 4px;"><span class="smart-priority-indicator ${prioClass}">${c.priority || 'Medium'}</span></div>
+                    ${aiInsightBox}
                 </td>
                 <td>${c.student_name || 'Student #' + c.student_id}</td>
                 <td><span style="font-size:0.8rem; opacity:0.8;">${c.category} @ ${c.location}</span></td>
@@ -1404,7 +1435,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             
             if (cropper) cropper.destroy();
             cropper = new Cropper(image, {
-                aspectRatio: 2 / 1,
+                aspectRatio: 16 / 9,
                 viewMode: 2,
                 responsive: true
             });

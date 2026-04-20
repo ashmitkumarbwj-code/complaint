@@ -50,10 +50,14 @@ exports.requestActivation = async (req, res) => {
         // 2. Lookup in Master Registry
         let entry;
         if (normalizedRole === 'student') {
+            const { roll_number } = req.body;
+            if (!roll_number) {
+                return res.status(400).json({ success: false, message: 'Roll number is required for students.' });
+            }
             const query = method === 'email' 
-                ? 'SELECT * FROM verified_students WHERE email = $1 AND tenant_id = $2' 
-                : 'SELECT * FROM verified_students WHERE mobile_number = $1 AND tenant_id = $2';
-            const [rows] = await db.execute(query, [identifier, tenantId]);
+                ? 'SELECT * FROM verified_students WHERE roll_number = $1 AND email = $2 AND tenant_id = $3' 
+                : 'SELECT * FROM verified_students WHERE roll_number = $1 AND mobile_number = $2 AND tenant_id = $3';
+            const [rows] = await db.execute(query, [roll_number.trim(), identifier, tenantId]);
             entry = rows[0];
         } else {
             const field = method === 'email' ? 'email' : 'mobile';
@@ -66,7 +70,7 @@ exports.requestActivation = async (req, res) => {
 
         // 3. Security: If not found or already created, exit with generic success
         if (!entry || entry.is_account_created) {
-            console.log(`[AUTH-SEC] Activation attempt for non-existent or active account: ${identifier} (IP: ${ip})`);
+            console.log(`[AUTH-SEC] Activation attempt for non-existent, mismatch, or active account: ${identifier} (IP: ${ip})`);
             return res.json(genericResponse);
         }
 
@@ -151,33 +155,34 @@ exports.completeActivation = async (req, res) => {
 
         let vData;
         if (normalizedRole === 'student') {
+            const { roll_number } = req.body;
             const query = method === 'email' 
-                ? 'SELECT * FROM verified_students WHERE email = $1 AND tenant_id = $2 FOR UPDATE' 
-                : 'SELECT * FROM verified_students WHERE mobile_number = $1 AND tenant_id = $2 FOR UPDATE';
-            const [vRows] = await conn.execute(query, [identifier, tenantId]);
+                ? 'SELECT * FROM verified_students WHERE roll_number = $1 AND email = $2 AND tenant_id = $3 FOR UPDATE' 
+                : 'SELECT * FROM verified_students WHERE roll_number = $1 AND mobile_number = $2 AND tenant_id = $3 FOR UPDATE';
+            const [vRows] = await conn.execute(query, [roll_number?.trim(), identifier, tenantId]);
             if (vRows.length === 0) throw new Error('NOT_IN_REGISTRY');
             vData = vRows[0];
 
             if (vData.is_account_created) throw new Error('ALREADY_ACTIVATED');
 
-            // Insert into Users (Username = Roll Number)
+            // Insert into Users
             const [uRows] = await conn.execute(
-                'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                [tenantId, vData.roll_number, vData.email, vData.mobile_number, hashedPassword, 'student', true]
+                'INSERT INTO users (tenant_id, username, full_name, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+                [tenantId, vData.roll_number, vData.name || vData.roll_number, vData.email, vData.mobile_number, hashedPassword, 'student', true]
             );
             const userId = uRows[0].id;
 
             // Insert into Students
             await conn.execute(
-                'INSERT INTO students (tenant_id, user_id, roll_number, department_id, mobile_number, id_card_image) VALUES ($1, $2, $3, $4, $5, $6)',
-                [tenantId, userId, vData.roll_number, vData.department_id || 1, vData.mobile_number, vData.id_card_image]
+                'INSERT INTO students (tenant_id, user_id, roll_number, department_id, mobile_number, id_card_image, course, semester, admission_year) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+                [tenantId, userId, vData.roll_number, vData.department_id || 1, vData.mobile_number, vData.id_card_image, vData.department, vData.year, new Date().getFullYear()]
             );
 
             // Update Registry
             await conn.execute('UPDATE verified_students SET is_account_created = TRUE WHERE id = $1', [vData.id]);
 
         } else {
-            const field = method === 'email' ? 'email' : 'mobile_number';
+            const field = method === 'email' ? 'email' : 'mobile'; // Match verified_staff column name
             const [vRows] = await conn.execute(
                 `SELECT * FROM verified_staff WHERE ${field} = $1 AND LOWER(role) = $2 AND tenant_id = $3 FOR UPDATE`, 
                 [identifier, normalizedRole, tenantId]
@@ -188,17 +193,17 @@ exports.completeActivation = async (req, res) => {
 
             if (vData.is_account_created) throw new Error('ALREADY_ACTIVATED');
 
-            // Insert into Users (Username = Name)
+            // Insert into Users
             const [uRows] = await conn.execute(
-                'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                [tenantId, vData.name, vData.email, vData.mobile_number, hashedPassword, normalizedRole, true]
+                'INSERT INTO users (tenant_id, username, full_name, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+                [tenantId, vData.name, vData.name, vData.email, vData.mobile, hashedPassword, normalizedRole, true]
             );
             const userId = uRows[0].id;
 
             // Insert into Staff
             await conn.execute(
                 'INSERT INTO staff (tenant_id, user_id, department_id, designation, mobile_number) VALUES ($1, $2, $3, $4, $5)',
-                [tenantId, userId, vData.department_id, vData.role, vData.mobile_number]
+                [tenantId, userId, vData.department_id, vData.designation || vData.role, vData.mobile]
             );
 
             // Update Registry
@@ -437,8 +442,8 @@ exports.login = async (req, res) => {
             }
         }
 
-        // Success: Reset failed attempts
-        await db.execute('UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = $1', [user.id]);
+        // Success: Reset failed attempts and update last login
+        await db.execute('UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
         await logLoginAttempt(req, {
             tenantId: user.tenant_id,
@@ -458,17 +463,28 @@ exports.login = async (req, res) => {
                 roleInfo = { student_id: students[0].student_real_id, roll_number: students[0].roll_number };
             }
         } else if (['admin', 'staff', 'hod', 'principal', 'studenthead'].includes(normalizedUserRole)) {
-            const [staff] = await db.execute('SELECT s.id as staff_id, s.department_id FROM staff s WHERE s.user_id = $1 AND s.tenant_id = $2', [user.id, user.tenant_id]);
+            const [staff] = await db.execute(`
+                SELECT s.id as staff_id, s.department_id, d.name as department_name 
+                FROM staff s 
+                LEFT JOIN departments d ON s.department_id = d.id 
+                WHERE s.user_id = $1 AND s.tenant_id = $2
+            `, [user.id, user.tenant_id]);
             if (staff.length > 0) {
-                roleInfo = { staff_id: staff[0].staff_id, department_id: staff[0].department_id };
+                roleInfo = { 
+                    staff_id: staff[0].staff_id, 
+                    department_id: staff[0].department_id,
+                    department_name: staff[0].department_name 
+                };
             }
         }
 
         const userData = {
             id: user.id,
             username: user.username,
+            full_name: user.full_name,
             role: normalizedUserRole,
             tenant_id: user.tenant_id,
+            profile_image: user.profile_image,
             ...roleInfo
         };
 

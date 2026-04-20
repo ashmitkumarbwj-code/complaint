@@ -49,6 +49,7 @@ CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     tenant_id INT NOT NULL DEFAULT 1 REFERENCES tenants(id),
     username VARCHAR(50) NOT NULL,
+    full_name VARCHAR(100),
     email VARCHAR(100),
     mobile_number VARCHAR(15),
     password_hash VARCHAR(255),
@@ -56,8 +57,14 @@ CREATE TABLE users (
     is_verified BOOLEAN DEFAULT FALSE,
     failed_attempts INT DEFAULT 0,
     locked_until TIMESTAMPTZ DEFAULT NULL,
+    profile_image VARCHAR(255),
+    last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(20) DEFAULT 'active'
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'active',
+    UNIQUE (tenant_id, username),
+    UNIQUE (tenant_id, email),
+    UNIQUE (tenant_id, mobile_number)
 );
 
 -- 4. Verified Registries
@@ -65,6 +72,7 @@ CREATE TABLE verified_students (
     id SERIAL PRIMARY KEY,
     tenant_id INT NOT NULL DEFAULT 1 REFERENCES tenants(id),
     roll_number VARCHAR(20) NOT NULL,
+    name VARCHAR(100),
     department VARCHAR(100),
     year VARCHAR(10),
     mobile_number VARCHAR(15),
@@ -82,6 +90,7 @@ CREATE TABLE verified_staff (
     email VARCHAR(100) NOT NULL,
     mobile VARCHAR(15) NOT NULL,
     department_id INT, 
+    designation VARCHAR(100),
     role user_role NOT NULL,
     is_account_created BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -93,10 +102,12 @@ CREATE TABLE departments (
     id SERIAL PRIMARY KEY,
     tenant_id INT NOT NULL DEFAULT 1 REFERENCES tenants(id),
     name VARCHAR(100) NOT NULL,
+    code VARCHAR(10),
     description TEXT,
     email VARCHAR(100),
     head VARCHAR(100),
-    hod_id INT REFERENCES users(id) ON DELETE SET NULL
+    hod_id INT REFERENCES users(id) ON DELETE SET NULL,
+    is_active BOOLEAN DEFAULT TRUE
 );
 
 -- 6. Students & Staff (Profile Tables)
@@ -110,6 +121,9 @@ CREATE TABLE students (
     id_card_image VARCHAR(255),
     registration_no VARCHAR(50) UNIQUE,
     semester INT,
+    course VARCHAR(100),
+    section VARCHAR(10),
+    admission_year INT,
     admission_date DATE,
     UNIQUE (tenant_id, roll_number)
 );
@@ -122,6 +136,8 @@ CREATE TABLE staff (
     designation VARCHAR(50),
     employee_id VARCHAR(50) UNIQUE,
     mobile_number VARCHAR(15),
+    subject_specialization VARCHAR(100),
+    employment_type VARCHAR(50),
     joining_date DATE
 );
 
@@ -140,6 +156,7 @@ CREATE TABLE department_members (
 CREATE TABLE complaints (
     id SERIAL PRIMARY KEY,
     tenant_id INT NOT NULL DEFAULT 1 REFERENCES tenants(id) ON DELETE CASCADE,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
     student_id INT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
     title VARCHAR(255),
     department_id INT NOT NULL REFERENCES departments(id),

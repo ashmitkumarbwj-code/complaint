@@ -147,9 +147,10 @@ exports.getPrincipalCriticalComplaints = async (req, res) => {
             JOIN students s ON c.student_id = s.id
             JOIN users u ON s.user_id = u.id
             WHERE (c.status = 'Escalated' OR c.priority = 'Emergency')
+            AND c.tenant_id = $1
             ORDER BY c.priority = 'Emergency' DESC, c.created_at DESC
             LIMIT 10
-        `);
+        `, [req.user.tenant_id || 1]);
         res.json({ success: true, complaints: rows });
     } catch (error) {
         logger.error('[Dashboard] getPrincipalCriticalComplaints error:', error);
@@ -203,11 +204,11 @@ exports.getAuthorityComplaints = async (req, res) => {
             JOIN students s ON c.student_id = s.id
             JOIN users u ON s.user_id = u.id
             JOIN departments d ON c.department_id = d.id
-            WHERE c.department_id = $1
+            WHERE c.department_id = $1 AND c.tenant_id = $2
             ORDER BY 
                 CASE WHEN c.priority = 'High' AND c.status != 'Resolved' THEN 1 ELSE 2 END,
                 c.created_at DESC
-        `, [department_id]);
+        `, [department_id, req.user.tenant_id || 1]);
         res.json({ success: true, complaints: rows });
     } catch (error) {
         logger.error('[Dashboard] getAuthorityComplaints error:', error);
@@ -225,9 +226,9 @@ exports.getAdminStats = async (req, res) => {
             SUM(CASE WHEN c.status = 'Resolved' THEN 1 ELSE 0 END) as resolved
             FROM departments d
             LEFT JOIN complaints c ON d.id = c.department_id
-            WHERE 1=1
-            GROUP BY d.id
-        `);
+            WHERE d.tenant_id = $1
+            GROUP BY d.id, d.name
+        `, [req.user.tenant_id || 1]);
 
         res.json({
             success: true,

@@ -26,13 +26,18 @@ exports.submitComplaint = async (req, res) => {
         // 2. Routing AI & Priority Detection
         const analysis = priorityEngine.analyze(title, description, priority);
         const finalPriority = analysis.priority;
-        const targetDeptId = await complaintService.getTargetDepartment(category, tenantId);
+        const suggestedDeptId = await complaintService.getTargetDepartment(category, tenantId);
+
+        // 🛡️ WORKFLOW ENFORCEMENT: All new complaints go to Admin Queue first
+        const { ADMIN_DEPT_ID } = require('../utils/constants');
+        const initialDeptId = ADMIN_DEPT_ID; 
 
         // 3. Save to Database via Service
         const complaintId = await complaintService.submitComplaint({
+            user_id: req.user.id,
             student_id, 
             title: title || category, 
-            department_id: targetDeptId, 
+            department_id: initialDeptId, // Admin first
             category, 
             description, 
             location, 
@@ -40,10 +45,23 @@ exports.submitComplaint = async (req, res) => {
             local_file_path: req.file ? req.file.filename : null
         }, tenantId);
 
-        // 4. Audit Logging - Using raw pool since it's an internal system action
-        const auditNote = analysis.isAutoAssigned 
-            ? `AI Auto-escalated priority to ${finalPriority}` 
-            : 'Auto-routed by system based on category';
+        // 3.5 Queue AI Analysis (Asynchronous / Non-blocking)
+        const aiQueue = require('../utils/aiQueue');
+        aiQueue.add(complaintId, {
+            title,
+            description,
+            category,
+            localPath: req.file ? req.file.path : null,
+            imageUrl: null // Updated later via processing if needed
+        });
+
+        // 4. Audit Logging with AI Suggestions
+        const auditNote = `Initial submission. System Priority: ${finalPriority}. AI Analysis enqueued.`; 
+        
+        const metadata = {
+            ai_status: 'pending',
+            initial_priority: finalPriority
+        };
 
         // 4. Audit Trail Logic (Initial Submission)
         const audit = require('../utils/auditService');
@@ -55,6 +73,7 @@ exports.submitComplaint = async (req, res) => {
             from_status: null,
             to_status: 'Pending',
             note: auditNote,
+            metadata: metadata,
             visibility: 'STUDENT_VISIBLE',
             req
         });
@@ -86,9 +105,9 @@ exports.submitComplaint = async (req, res) => {
         }
 
         // 6. Socket & Notifications
-        socketService.emitNewComplaint({ id: complaintId, student_id, department_id, category, location, status: 'Pending', created_at: new Date() });
+        socketService.emitNewComplaint({ id: complaintId, student_id, department_id: initialDeptId, category, location, status: 'Pending', created_at: new Date() });
 
-        res.json({ success: true, message: 'Complaint submitted successfully', complaint_id: complaintId, assigned_department: department_id });
+        res.json({ success: true, message: 'Complaint submitted successfully', complaint_id: complaintId, assigned_department: initialDeptId });
     } catch (error) {
         logger.error('[Complaint] submitComplaint error:', error);
         res.status(500).json({ success: false, message: 'Failed to submit complaint' });

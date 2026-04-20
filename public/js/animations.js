@@ -300,6 +300,7 @@ function initCounters() {
 /* =========================================================================
    5. Fetch and Render Dynamic Gallery
    ========================================================================= */
+
 function initDynamicGallery() {
     const galleryContainer = document.getElementById('dynamic-gallery');
     const sliderFrame = document.getElementById('slider-frame');
@@ -310,22 +311,23 @@ function initDynamicGallery() {
     
     if (!galleryContainer || !sliderTrack) return;
 
+    const apiBase = window.API_BASE || '';
     let isPaused = false;
     let currentSlide = 0;
     let slideInterval;
 
-    fetch(`${API_BASE}/api/gallery/public`, { credentials: 'include' })
+    fetch(`${apiBase}/api/gallery/public`, { credentials: 'include' })
         .then(response => response.json())
         .then(data => {
             if (data.success && data.images && data.images.length > 0) {
                 const totalSlides = data.images.length;
+                sliderTrack.innerHTML = '';
+                sliderNav.innerHTML = '';
 
-                // Populate Slides & Dots
                 data.images.forEach((img, idx) => {
                     const slide = document.createElement('div');
                     slide.className = `slider-slide ${idx === 0 ? 'active' : ''}`;
                     
-                    // prioritize DB title, fallback to cleaned filename
                     const captionTitle = img.title && img.title.trim() !== "" 
                                             ? img.title 
                                             : img.filename.split('.')[0].replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -348,40 +350,20 @@ function initDynamicGallery() {
                     sliderNav.appendChild(dot);
                 });
 
-                // Swipe Support
-                let touchStartX = 0;
-                let touchEndX = 0;
-
-                sliderFrame.addEventListener('touchstart', e => {
-                    touchStartX = e.changedTouches[0].screenX;
-                }, {passive: true});
-
-                sliderFrame.addEventListener('touchend', e => {
-                    touchEndX = e.changedTouches[0].screenX;
-                    handleSwipe();
-                }, {passive: true});
-
-                function handleSwipe() {
-                    if (touchEndX < touchStartX - 50) nextSlide(); // Swipe Left
-                    if (touchEndX > touchStartX + 50) prevSlide(); // Swipe Right
-                }
-
                 function goToSlide(index) {
-                    const slides = document.querySelectorAll('.slider-slide');
-                    const dots = document.querySelectorAll('.slider-dot');
+                    const slides = sliderTrack.querySelectorAll('.slider-slide');
+                    const dots = sliderNav.querySelectorAll('.slider-dot');
+                    if (!slides[index]) return;
                     
                     slides[currentSlide].classList.remove('active');
                     dots[currentSlide].classList.remove('active');
-                    
                     currentSlide = index;
-                    
                     slides[currentSlide].classList.add('active');
                     dots[currentSlide].classList.add('active');
                     
-                    // Premium Transition Effect
                     gsap.fromTo(slides[currentSlide], 
-                        { filter: 'blur(10px)', opacity: 0, scale: 1.1 }, 
-                        { filter: 'blur(0)', opacity: 1, scale: 1, duration: 1.2, ease: "power2.out" }
+                        { filter: 'blur(10px)', opacity: 0 }, 
+                        { filter: 'blur(0)', opacity: 1, duration: 0.8, ease: "power2.out" }
                     );
                 }
 
@@ -400,27 +382,24 @@ function initDynamicGallery() {
                     slideInterval = setInterval(nextSlide, 5000);
                 }
 
-                // Internal interval
                 slideInterval = setInterval(nextSlide, 5000);
-
-                // Event Listeners
                 btnNext.addEventListener('click', () => { resetInterval(); nextSlide(); });
                 btnPrev.addEventListener('click', prevSlide);
                 
                 sliderFrame.addEventListener('mouseenter', () => isPaused = true);
                 sliderFrame.addEventListener('mouseleave', () => isPaused = false);
 
-                // Reveal Gallery
+                // Immediate reveal if already in view, or scroll reveal
                 gsap.to(galleryContainer, {
-                    scrollTrigger: { trigger: ".section-cta", start: "top 70%" },
-                    y: 0, opacity: 1, duration: 1, ease: "power3.out"
+                    scrollTrigger: { trigger: galleryContainer, start: "top 85%" },
+                    y: 0, opacity: 1, duration: 1.2, ease: "power3.out"
                 });
             } else {
                 galleryContainer.style.display = 'none';
             }
         })
         .catch(err => {
-            console.error('Error fetching gallery images:', err);
+            console.error('[Gallery] Load failed:', err);
             galleryContainer.style.display = 'none';
         });
 }
@@ -477,12 +456,12 @@ async function initHeroSlider() {
                     disableOnInteraction: false,
                 } : false,
                 pagination: {
-                    el: '.swiper-pagination',
+                    el: '.hero-pagination',
                     clickable: true,
                 },
                 navigation: {
-                    nextEl: '.swiper-button-next',
-                    prevEl: '.swiper-button-prev',
+                    nextEl: '.hero-nav-next',
+                    prevEl: '.hero-nav-prev',
                 },
                 effect: 'fade',
                 fadeEffect: {

@@ -266,6 +266,10 @@ if (!isServerless) {
     setTimeout(async () => {
         await complaintControllerCore.cleanupOldMedia();
         await escalationService.processEscalations();
+        
+        // Recover stuck AI analysis jobs
+        const aiQueue = require('./utils/aiQueue');
+        await aiQueue.recover();
     }, 5000);
 
     // Start Server

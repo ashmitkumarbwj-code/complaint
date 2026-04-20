@@ -40,5 +40,6 @@ module.exports = {
     STATUS,
     ROLE,
     ACTION_TYPE,
-    VISIBILITY
+    VISIBILITY,
+    ADMIN_DEPT_ID: 1 // Centralized Admin Queue ID
 };

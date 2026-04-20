@@ -74,6 +74,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     fetchComplaints();
 
     async function fetchComplaints() {
+        if (!user || !user.student_id || user.student_id === 'undefined') {
+            console.error('[Student] Missing student identity. Aborting fetch.');
+            complaintList.innerHTML = '<div class="error-msg">Unable to load reports. Profile incomplete.</div>';
+            return;
+        }
+
         try {
             // Skeleton loader for student list
             complaintList.innerHTML = `

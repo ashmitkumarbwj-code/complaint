@@ -45,6 +45,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function fetchDashboardData() {
     const user = JSON.parse(localStorage.getItem('scrs_user'));
+    
+    if (!user || !user.department_id || user.department_id === 'undefined') {
+        console.error('[Dept] Missing department identity. Aborting fetch.');
+        return;
+    }
 
     try {
         // Fetch Stats

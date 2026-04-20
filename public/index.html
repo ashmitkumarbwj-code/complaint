@@ -54,12 +54,12 @@
             <div class="swiper-wrapper" id="hero-swiper-wrapper">
                 <!-- Dynamic slides inject here -->
             </div>
-            <!-- Add Pagination -->
-            <div class="swiper-pagination"></div>
-            <!-- Add Navigation -->
-            <div class="swiper-button-next" style="color: var(--gold);"></div>
-            <div class="swiper-button-prev" style="color: var(--gold);"></div>
         </div>
+
+        <!-- Add Pagination & Navigation (Outside slider for z-index layering) -->
+        <div class="swiper-pagination hero-pagination"></div>
+        <div class="swiper-button-next hero-nav-next" style="color: var(--gold); z-index: 10;"></div>
+        <div class="swiper-button-prev hero-nav-prev" style="color: var(--gold); z-index: 10;"></div>
 
         <!-- Particles container -->
         <div id="particles-js" class="particles-bg" style="z-index: 1;"></div>

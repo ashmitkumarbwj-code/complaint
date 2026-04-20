@@ -68,12 +68,18 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
 
             if (data.success) {
-                const uiUser = {
+                // Store minimal safe user identity for UI hydration
+                const userContext = {
+                    id: data.user.id,
                     name: data.user.username || data.user.name,
-                    avatar: data.user.profile_image,
-                    dept: data.user.department_name
+                    username: data.user.username || data.user.name, // Legacy support
+                    role: data.user.role,
+                    student_id: data.user.student_id,
+                    staff_id: data.user.staff_id,
+                    department_id: data.user.department_id,
+                    profile_image: data.user.profile_image
                 };
-                localStorage.setItem('scrs_user', JSON.stringify(uiUser));
+                localStorage.setItem('scrs_user', JSON.stringify(userContext));
                 localStorage.setItem('scrs_role_hint', data.user.role);
                 
                 if (data.redirect && data.redirect !== 'index.html') {

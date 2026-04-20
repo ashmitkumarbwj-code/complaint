@@ -28,11 +28,11 @@ class ComplaintService {
      * Submit a new complaint
      */
     async submitComplaint(complaintData, tenantId) {
-        const { student_id, title, department_id, category, description, location, priority, local_file_path } = complaintData;
+        const { user_id, student_id, title, department_id, category, description, location, priority, local_file_path } = complaintData;
         const [rows] = await db.tenantExecute({ user: { tenant_id: tenantId } },
-            `INSERT INTO complaints (tenant_id, student_id, title, department_id, category, description, location, priority, local_file_path) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-            [tenantId, student_id, title, department_id, category, description, location, priority, local_file_path || null]
+            `INSERT INTO complaints (tenant_id, user_id, student_id, title, department_id, category, description, location, priority, local_file_path) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+            [tenantId, user_id, student_id, title, department_id, category, description, location, priority, local_file_path || null]
         );
         return rows[0].id;
     }
@@ -41,17 +41,22 @@ class ComplaintService {
      * Get complaints with pagination and filters
      * Triple-Lock: Tenant + Role + Ownership/Membership
      */
+
     async getComplaints(filters, tenantId, user) {
         const { page = 1, limit = 10, status, department_id, student_id } = filters;
         const offset = (page - 1) * limit;
         const { role, staff_id, student_id: sessionStudentId } = user;
 
         let query = `
-            SELECT c.*, d.name as department_name, u.username as student_name
+            SELECT c.*, d.name as department_name, u.username as student_name,
+                   ai.suggested_priority as ai_priority, ai.evidence_match_score as ai_score,
+                   ai.is_emergency as ai_is_emergency, ai.requires_manual_review as ai_review,
+                   ai.reasoning_summary as ai_reasoning
             FROM complaints c
             JOIN departments d ON c.department_id = d.id
             JOIN students s ON c.student_id = s.id
             JOIN users u ON s.user_id = u.id
+            LEFT JOIN complaint_ai_analysis ai ON c.id = ai.complaint_id
             WHERE c.tenant_id = $1
         `;
         const params = [tenantId];

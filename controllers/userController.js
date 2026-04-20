@@ -90,8 +90,36 @@ exports.updateProfile = async (req, res) => {
  */
 exports.getProfile = async (req, res) => {
     try {
-        const [rows] = await db.tenantExecute(req, 'SELECT id, username, email, role, profile_image, mobile_number FROM users WHERE id = $1', [req.user.id]);
-        if (rows.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
+        const userId = req.user.id;
+        const role = (req.user.role || '').toLowerCase().trim();
+        
+        // 1. Base query from users table
+        let query = `
+            SELECT u.id, u.username, u.full_name, u.email, u.role, u.profile_image, u.mobile_number, u.last_login_at
+        `;
+        
+        // 2. Conditional joins based on role to get required IDs
+        if (role === 'student') {
+            query += `, s.id as student_id, s.roll_number, s.course, s.semester, s.section, s.admission_year, d.name as department_name, d.code as department_code
+                      FROM users u 
+                      LEFT JOIN students s ON u.id = s.user_id 
+                      LEFT JOIN departments d ON s.department_id = d.id `;
+        } else {
+            query += `, st.id as staff_id, st.department_id, st.designation, st.subject_specialization, st.employment_type, d.name as department_name, d.code as department_code
+                      FROM users u 
+                      LEFT JOIN staff st ON u.id = st.user_id 
+                      LEFT JOIN departments d ON st.department_id = d.id `;
+        }
+        
+        query += ` WHERE u.id = $1 AND u.tenant_id = $2 `;
+        
+        const tenantId = db.getTenantId(req) || 1;
+        const [rows] = await db.execute(query, [userId, tenantId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
         res.json({ success: true, user: rows[0] });
     } catch (error) {
         logger.error('Get profile error:', error);
