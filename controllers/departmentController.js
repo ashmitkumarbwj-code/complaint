@@ -34,7 +34,7 @@ exports.getAllDepartments = async (req, res) => {
             WHERE 1=1
             GROUP BY d.id
             ORDER BY d.name ASC
-        `);
+        `, [], 'd');
 
         // Fetch categories for each department (Refactored for Postgres STRING_AGG)
         const [catRows] = await db.tenantExecute(req, `
@@ -85,7 +85,7 @@ exports.getAllDeptStats = async (req, res) => {
             WHERE 1=1
             GROUP BY d.id
             ORDER BY d.name ASC
-        `);
+        `, [], 'd');
 
         const [catRows] = await db.tenantExecute(req, `
             SELECT department_id, STRING_AGG(category, ',' ORDER BY category) AS categories
@@ -136,7 +136,7 @@ exports.getDepartmentById = async (req, res) => {
             JOIN users u ON dm.user_id = u.id
             WHERE dm.department_id = $1
             ORDER BY dm.role_in_dept DESC, u.username ASC
-        `, [id]);
+        `, [id], 'dm');
 
         // Get categories
         const [cats] = await db.tenantExecute(req, 

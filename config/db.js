@@ -56,10 +56,10 @@ async function query(sql, params = []) {
 
 /**
  * tenantExecute: Native PG with Tenant Isolation
- * Now expects native PG placeholders ($n) in 'sql'
  * 🛡️ Security: Automatically injects tenant_id filter
+ * @param {string} alias - Optional table alias for tenant_id (e.g. 'c' for complaints)
  */
-async function tenantExecute(req, sql, params = []) {
+async function tenantExecute(req, sql, params = [], alias = null) {
     if (!req.user || !req.user.tenant_id) {
         throw new Error('[DB SEC] Tenant context missing.');
     }
@@ -67,14 +67,19 @@ async function tenantExecute(req, sql, params = []) {
     const tenantId = req.user.tenant_id;
     let modifiedSql = sql.trim();
 
-    // 1. Identify query type
+    // 1. Identify query type and complexity
     const isSelect = /^SELECT\b/i.test(modifiedSql);
     const isUpdate = /^UPDATE\b/i.test(modifiedSql);
     const isDelete = /^DELETE\b/i.test(modifiedSql);
+    const hasJoin = /\bJOIN\b/i.test(modifiedSql);
+
+    // 🛡️ Safety Enforcement: JOIN queries MUST provide an alias to prevent ambiguity
+    if (hasJoin && !alias) {
+        console.error(`[DB SEC] AMBIGUITY RISK: JOIN query detected without alias prefix. SQL: ${modifiedSql.substring(0, 100)}...`);
+        throw new Error('[DB SEC] Alias required for multi-table tenant isolation.');
+    }
 
     if (isSelect || isUpdate || isDelete) {
-        // 2. Determine injection placement
-        // We find the first occurrence of GROUP BY, ORDER BY, LIMIT, or OFFSET
         const suffixRegex = /\b(GROUP BY|ORDER BY|LIMIT|OFFSET|RETURNING)\b/i;
         const match = suffixRegex.exec(modifiedSql);
         const splitIndex = match ? match.index : modifiedSql.length;
@@ -82,23 +87,23 @@ async function tenantExecute(req, sql, params = []) {
         let head = modifiedSql.slice(0, splitIndex).trim();
         const tail = modifiedSql.slice(splitIndex).trim();
 
-        // 3. Find next placeholder index
         const placeholderCount = (modifiedSql.match(/\$\d+/g) || []).length;
         const tenantPlaceholder = `$${placeholderCount + 1}`;
 
-        // 4. Inject tenant filter
+        // 🛡️ Dynamic Column Targeting
+        const colName = alias ? `${alias}.tenant_id` : 'tenant_id';
         const hasWhere = /\bWHERE\b/i.test(head);
+        
         if (hasWhere) {
-            head += ` AND tenant_id = ${tenantPlaceholder}`;
+            head += ` AND ${colName} = ${tenantPlaceholder}`;
         } else {
-            head += ` WHERE tenant_id = ${tenantPlaceholder}`;
+            head += ` WHERE ${colName} = ${tenantPlaceholder}`;
         }
 
         modifiedSql = `${head} ${tail}`.trim();
         return await query(modifiedSql, [...params, tenantId]);
     }
 
-    // Pass through for non-isolated queries (e.g., INSERT is usually handled explicitly)
     return await query(modifiedSql, params);
 }
 

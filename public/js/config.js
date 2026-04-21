@@ -17,10 +17,10 @@ window.RoleManager = {
         if (!role) return this.STUDENT;
         const r = role.toLowerCase().trim();
         
-        if (r === 'student') return this.STUDENT;
-        if (r === 'staff' || r === 'faculty' || r === 'hod') return this.STAFF;
+        if (r.includes('staff') || r.includes('faculty')) return this.STAFF;
         if (r === 'principal') return this.PRINCIPAL;
-        if (r === 'admin' || r === 'admin aux') return this.ADMIN;
+        if (r === 'admin') return this.ADMIN;
+        if (r === 'student') return this.STUDENT;
         
         return this.STUDENT; // Safe fallback
     },
@@ -46,7 +46,7 @@ window.RoleManager = {
         switch(r) {
             case this.STAFF: return 'Staff/Faculty';
             case this.PRINCIPAL: return 'Principal';
-            case this.ADMIN: return 'Administrator';
+            case this.ADMIN: return 'Admin';
             default: return 'Student';
         }
     },

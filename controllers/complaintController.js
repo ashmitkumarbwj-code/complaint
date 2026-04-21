@@ -278,7 +278,7 @@ exports.getComplaintHistory = async (req, res) => {
             LEFT JOIN users u ON cd.assigned_by = u.id
             WHERE cd.complaint_id = $1
             ORDER BY cd.assigned_at DESC
-        `, [id]);
+        `, [id], 'cd');
 
         res.json({ success: true, history: rows });
     } catch (error) {

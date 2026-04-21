@@ -192,12 +192,12 @@
                         <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">
                             <a id="forgot-link" href="forgot-password.html" style="color: #888; text-decoration: none;">Forgot Password?</a>
                         </p>
-                        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.4rem;">
-                            <a id="activate-link" href="activate-student.html" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Student? Activate Account</a>
-                        </p>
-                        <p id="activate-admin-wrap" style="font-size: 0.9rem; color: var(--text-secondary); display: none;">
-                            <a id="activate-admin-link" href="activate-admin.html" style="color: #ef4444; text-decoration: none; font-weight: 600;">Admin? Activate Account</a>
-                        </p>
+                        <div id="activation-area">
+                            <!-- Dynamically populated by auth.js -->
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.4rem;">
+                                <a id="activate-link" href="activate-student.html" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Student? Activate Account</a>
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -213,86 +213,6 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const rawRole = urlParams.get('role');
-            const roleBtns = document.querySelectorAll('.role-btn');
-            const activateLink = document.getElementById('activate-link');
-            const forgotLink = document.getElementById('forgot-link');
-            const adminActivateLink = document.getElementById('activate-admin-link');
-            const authHeader = document.querySelector('.auth-header p');
-            const adminWrap = document.getElementById('activate-admin-wrap');
-
-            // 1. Detect and Normalize Role
-            const normalizedRole = window.RoleManager.normalize(rawRole);
-            console.log(`[Role Detection] Raw: ${rawRole}, Normalized: ${normalizedRole}`);
-
-            function updateLinksForRole(role) {
-                const canonical = window.RoleManager.normalize(role);
-                const activationPage = window.RoleManager.getActivationPage(canonical);
-                const forgotPage = window.RoleManager.getForgotPage(canonical);
-                const displayName = window.RoleManager.getDisplayName(canonical);
-
-                console.log(`[Routing] Updating links for: ${canonical} -> ${activationPage}`);
-
-                // Update Primary Activate Link
-                if (canonical === window.RoleManager.ADMIN) {
-                    // Admin selected: Special case as per user request
-                    // Primary link becomes Staff activation, Admin activation appears separately
-                    activateLink.href = 'activate-staff.html';
-                    activateLink.textContent = 'Staff/Faculty? Activate Account';
-                    activateLink.style.color = '#f59e0b';
-                    
-                    adminWrap.style.display = 'block';
-                    adminActivateLink.href = 'activate-admin.html';
-                    adminActivateLink.textContent = 'Admin? Activate Account';
-                } else {
-                    // Standard roles
-                    activateLink.href = activationPage;
-                    activateLink.textContent = `${displayName}? Activate Account`;
-                    activateLink.style.color = (canonical === window.RoleManager.STUDENT) ? 'var(--primary-color)' : '#f59e0b';
-                    adminWrap.style.display = 'none';
-                }
-
-                // Update Forgot Link
-                forgotLink.href = forgotPage;
-                forgotLink.textContent = 'Forgot Password?';
-            }
-
-            // 2. Setup Role Button Listeners
-            roleBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const roleText = btn.textContent.trim();
-                    updateLinksForRole(roleText);
-                });
-            });
-
-            // 3. Handle Initial State / URL Forcing
-            if (rawRole) {
-                // Find button that matches normalized role
-                const target = Array.from(roleBtns).find(btn =>
-                    window.RoleManager.normalize(btn.textContent.trim()) === normalizedRole
-                );
-
-                if (target) {
-                    roleBtns.forEach(btn => {
-                        if (btn !== target) btn.style.display = 'none';
-                        else btn.classList.add('active');
-                    });
-                    const displayName = window.RoleManager.getDisplayName(normalizedRole);
-                    if (authHeader) authHeader.textContent = `Verify your identity to access the ${displayName} portal.`;
-                    updateLinksForRole(normalizedRole);
-                } else {
-                    // Fallback to Student if role in URL was invalid
-                    updateLinksForRole(window.RoleManager.STUDENT);
-                }
-            } else {
-                // Default: Student
-                updateLinksForRole(window.RoleManager.STUDENT);
-            }
-        });
-    </script>
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/animations.js"></script>

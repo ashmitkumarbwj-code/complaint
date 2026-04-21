@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #4f46e5;
+            --primary-color: #9961e8;
             --danger-color: #ef4444;
             --warning-color: #f59e0b;
             --success-color: #10b981;
@@ -189,12 +190,14 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
             <div>
                 <h1><i class="fas fa-database"></i> Production DB Audit Viewer</h1>
-                <p style="color: var(--text-muted); margin: 5px 0 0 0;">Safe Read-Only Administrative Inspection Tool</p>
+                <p style="color: var(--text-muted); margin: 5px 0 0 0;">Safe Read-Only Administrative Inspection Tool
+                </p>
             </div>
             <span class="badge badge-readonly">Read-Only Mode</span>
         </header>
@@ -249,7 +252,7 @@
             audit.forEach(item => {
                 const card = document.createElement('div');
                 card.className = `card ${item.isImportant ? 'important' : ''}`;
-                
+
                 let warningsHtml = '';
                 if (item.warnings && item.warnings.length > 0) {
                     warningsHtml = `
@@ -276,10 +279,10 @@
                                     ${item.samples.map(row => `
                                         <tr>
                                             ${keys.map(k => {
-                                                const val = row[k];
-                                                if (val === '[MASKED]') return `<td class="masked">[MASKED]</td>`;
-                                                return `<td>${val === null ? '<em>null</em>' : val}</td>`;
-                                            }).join('')}
+                        const val = row[k];
+                        if (val === '[MASKED]') return `<td class="masked">[MASKED]</td>`;
+                        return `<td>${val === null ? '<em>null</em>' : val}</td>`;
+                    }).join('')}
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -322,4 +325,5 @@
         fetchAudit();
     </script>
 </body>
+
 </html>

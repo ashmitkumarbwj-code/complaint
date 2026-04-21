@@ -58,8 +58,8 @@ exports.getAllStaff = async (req, res) => {
             FROM verified_staff sm
             LEFT JOIN departments d ON sm.department_id = d.id
             WHERE 1=1
-            ORDER BY sm.created_at DESC
-        `);
+            ORDER BY sm.name ASC
+        `, [], 'sm');
         res.json({ success: true, staff: rows });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error fetching staff' });
@@ -146,10 +146,10 @@ exports.updateComplaintStatus = async (req, res) => {
             // Notify Student via email
             try {
                 const [userRows] = await db.tenantExecute(req, `
-                    SELECT email FROM users 
-                    JOIN students ON users.id = students.user_id 
-                    WHERE students.id = $1
-                `, [student_id]);
+                    SELECT u.email FROM users u 
+                    JOIN students s ON u.id = s.user_id 
+                    WHERE s.id = $1
+                `, [student_id], 'u');
                 
                 if (userRows.length > 0) {
                     notifier.notifyStudent(userRows[0].email, id, status);

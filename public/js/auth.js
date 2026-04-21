@@ -5,37 +5,86 @@ document.addEventListener("DOMContentLoaded", () => {
     const passwordInput = document.getElementById('password-input');
     const authForm = document.getElementById('auth-form');
     const btnLogin = document.getElementById('btn-login');
+    const activationArea = document.getElementById('activation-area');
+    const forgotLink = document.getElementById('forgot-link');
+    const authHeaderDesc = document.querySelector('.auth-header p');
 
     let currentRole = window.RoleManager.STUDENT;
 
-    // Role Selection
+    /**
+     * Updates the UI based on the selected role
+     */
+    function setRoleUI(role) {
+        currentRole = window.RoleManager.normalize(role);
+        
+        // 1. Update Tabs
+        roleBtns.forEach(btn => {
+            const btnRole = window.RoleManager.normalize(btn.getAttribute('data-role') || btn.textContent);
+            if (btnRole === currentRole) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // 2. Update Identifier Labels
+        switch (currentRole) {
+            case window.RoleManager.STUDENT:
+                identifierLabel.textContent = 'Roll Number';
+                identifierInput.placeholder = 'e.g. 21DCS010';
+                break;
+            case window.RoleManager.STAFF:
+                identifierLabel.textContent = 'Staff ID / Email';
+                identifierInput.placeholder = 'e.g. faculty@gdc.edu';
+                break;
+            case window.RoleManager.ADMIN:
+                identifierLabel.textContent = 'Admin ID';
+                identifierInput.placeholder = 'e.g. admin_portal';
+                break;
+            case window.RoleManager.PRINCIPAL:
+                identifierLabel.textContent = 'Principal ID';
+                identifierInput.placeholder = 'e.g. principal_gdc';
+                break;
+        }
+
+        // 3. Update Activation Link
+        const activationPage = window.RoleManager.getActivationPage(currentRole);
+        const displayName = window.RoleManager.getDisplayName(currentRole);
+        
+        // Clean and rebuild activation area to prevent duplicates
+        activationArea.innerHTML = `
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.4rem;">
+                <a href="${activationPage}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">
+                    ${displayName}? Activate Account
+                </a>
+            </p>
+        `;
+
+        // 4. Update Forgot Link
+        forgotLink.href = window.RoleManager.getForgotPage(currentRole);
+
+        // 5. Update Header Text
+        if (authHeaderDesc) {
+            authHeaderDesc.textContent = `Verify your identity to access the ${displayName} portal.`;
+        }
+
+        // 6. Sync URL (Silent)
+        const url = new URL(window.location);
+        url.searchParams.set('role', currentRole);
+        window.history.replaceState({}, '', url);
+        
+        console.log(`[Auth UI] Role synchronized: ${currentRole}`);
+    }
+
+    // Role Selection Click Handlers
     roleBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            roleBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            const rawRole = btn.textContent.trim();
-            currentRole = window.RoleManager.normalize(rawRole);
-            
-            console.log(`[Auth] Role Selected: ${rawRole} -> Canonical: ${currentRole}`);
-
-            if (currentRole === window.RoleManager.STUDENT) {
-                identifierLabel.textContent = 'Roll Number / Email';
-                identifierInput.placeholder = 'e.g. 21DCS010';
-            } else if (currentRole === window.RoleManager.STAFF) {
-                identifierLabel.textContent = 'Email / Username';
-                identifierInput.placeholder = 'e.g. facult@gdc.edu';
-            } else if (currentRole === window.RoleManager.ADMIN) {
-                identifierLabel.textContent = 'Admin ID';
-                identifierInput.placeholder = 'e.g. admin_01';
-            } else if (currentRole === window.RoleManager.PRINCIPAL) {
-                identifierLabel.textContent = 'Email / Official ID';
-                identifierInput.placeholder = 'e.g. principal@gdc.edu';
-            }
+            const role = btn.getAttribute('data-role') || btn.textContent;
+            setRoleUI(role);
         });
     });
 
-    // Handle Login
+    // Handle Login Submit
     authForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -52,7 +101,6 @@ document.addEventListener("DOMContentLoaded", () => {
         btnLogin.disabled = true;
 
         try {
-            console.log(`[Auth] Attempting login as: ${currentRole}`);
             const response = await fetch(`${API_BASE}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -68,11 +116,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
 
             if (data.success) {
-                // Store minimal safe user identity for UI hydration
                 const userContext = {
                     id: data.user.id,
                     name: data.user.username || data.user.name,
-                    username: data.user.username || data.user.name, // Legacy support
                     role: data.user.role,
                     student_id: data.user.student_id,
                     staff_id: data.user.staff_id,
@@ -80,16 +126,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     profile_image: data.user.profile_image
                 };
                 localStorage.setItem('scrs_user', JSON.stringify(userContext));
-                localStorage.setItem('scrs_role_hint', data.user.role);
                 
-                if (data.redirect && data.redirect !== 'index.html') {
-                    console.log(`[Auth] Redirecting to server-verified path: ${data.redirect}`);
+                if (data.redirect) {
                     window.location.href = data.redirect;
                 } else {
-                    console.error(`[Auth] Server returned invalid or missing redirect path. Role: ${data.user.role}`);
-                    showToast('Role unrecognized or missing redirect path. Please contact support.', 'error');
-                    btnLogin.innerHTML = origHtml;
-                    btnLogin.disabled = false;
+                    showToast('Redirect failed. Contact admin.', 'error');
                 }
             } else {
                 showToast(data.message || 'Login failed', 'error');
@@ -104,20 +145,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Support Role Pre-selection from URL (e.g. login.html?role=staff)
+    // Initial Role Detection
     const urlParams = new URLSearchParams(window.location.search);
-    const preSelectRoleRaw = urlParams.get('role');
-    if (preSelectRoleRaw) {
-        const normalized = window.RoleManager.normalize(preSelectRoleRaw);
-        console.log(`[Auth] Pre-selection URL role: ${preSelectRoleRaw} -> Normalized: ${normalized}`);
-        
-        const targetBtn = Array.from(roleBtns).find(btn => 
-            window.RoleManager.normalize(btn.textContent.trim()) === normalized
-        );
-        if (targetBtn) targetBtn.click();
-    } else {
-        // Default UI state
-        const studentBtn = Array.from(roleBtns).find(btn => btn.textContent.trim() === 'Student');
-        if (studentBtn) studentBtn.click();
-    }
+    const initialRole = urlParams.get('role') || window.RoleManager.STUDENT;
+    setRoleUI(initialRole);
 });
