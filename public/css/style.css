@@ -154,7 +154,7 @@ body {
 
 .btn-gold {
     background: var(--gold);
-    color: var(--deep-blue) !important;
+    color: var(--deep-blue);
     border: none;
 }
 
@@ -231,12 +231,12 @@ body {
     box-shadow: 0 0 20px var(--blue-glow);
 }
 
-.btn-gold {
+.btn-glass.btn-gold {
     border-color: var(--gold);
     color: var(--gold);
 }
 
-.btn-gold.btn-glow:hover {
+.btn-glass.btn-gold.btn-glow:hover {
     box-shadow: 0 0 20px var(--gold-glow);
     background: rgba(212, 175, 55, 0.1);
 }
