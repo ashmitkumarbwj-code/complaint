@@ -2448,22 +2448,25 @@ canvas {
 .leader-image-wrapper {
     position: relative;
     width: 100%;
-    height: 300px;
+    height: 280px;
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.2);
+    background: #0b132b;
+    border-radius: 0;
+    flex-shrink: 0;
 }
 
 .leader-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: top center;
+    object-position: center top;
+    display: block;
     transition: transform 0.3s ease;
 }
 
 @media (max-width: 768px) {
     .leader-image-wrapper {
-        height: 280px;
+        height: 240px;
     }
 }
 
