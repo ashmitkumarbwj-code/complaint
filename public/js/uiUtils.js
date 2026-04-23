@@ -42,6 +42,15 @@ window.showModal = (id) => {
     if (modal) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+
+        if (!modal.dataset.overlayListenerAdded) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    window.closeModal(id);
+                }
+            });
+            modal.dataset.overlayListenerAdded = 'true';
+        }
     }
 };
 
@@ -69,6 +78,8 @@ document.addEventListener('keydown', (e) => {
         window.forceCleanupModals();
     }
 });
+
+
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
