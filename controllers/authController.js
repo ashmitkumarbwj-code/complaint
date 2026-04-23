@@ -362,7 +362,7 @@ exports.resetPassword = async (req, res) => {
  * Secure Login with Account Locking
  */
 exports.login = async (req, res) => {
-    const { identifier, password } = req.body;
+    const { identifier, password, role: requestedRole } = req.body;
 
     try {
         const tenantId = db.getTenantId(req) || 1;
@@ -412,6 +412,35 @@ exports.login = async (req, res) => {
                 success: false, 
                 message: `Account is temporarily locked. Try again after ${new Date(user.locked_until).toLocaleTimeString()}` 
             });
+        }
+
+        // 3. Portal/Role Verification
+        if (requestedRole) {
+            const normalizedRequested = requestedRole.toLowerCase().trim();
+            const normalizedActual = (user.role || '').toLowerCase().trim();
+
+            let allowed = false;
+            if (normalizedRequested === 'student' && normalizedActual === 'student') allowed = true;
+            else if (normalizedRequested === 'staff' && ['staff', 'hod'].includes(normalizedActual)) allowed = true;
+            else if (normalizedRequested === 'admin' && normalizedActual === 'admin') allowed = true;
+            else if (normalizedRequested === 'principal' && normalizedActual === 'principal') allowed = true;
+
+            if (!allowed) {
+                await logLoginAttempt(req, {
+                    tenantId: user.tenant_id,
+                    userId: user.id,
+                    identifier,
+                    success: false,
+                    reason: 'role_mismatch',
+                    meta: { requestedRole, actualRole: user.role }
+                });
+                // Ensure proper capitalization for error message
+                const displayPortal = requestedRole.charAt(0).toUpperCase() + requestedRole.slice(1).toLowerCase();
+                return res.status(403).json({ 
+                    success: false, 
+                    message: `These credentials do not belong to the ${displayPortal} portal. Please switch to the correct portal.` 
+                });
+            }
         }
 
         const isMatch = await bcrypt.compare(password, user.password_hash);
@@ -495,8 +524,8 @@ exports.login = async (req, res) => {
         const cookieOptions = {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? 'None' : 'Lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days (matching typical refresh token)
+            sameSite: isProd ? 'Lax' : 'Lax', // Enforce Lax for standard security
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         };
 
         res.cookie('accessToken', tokens.accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 }); // 15 mins
