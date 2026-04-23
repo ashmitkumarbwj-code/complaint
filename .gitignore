@@ -50,3 +50,39 @@ desktop.ini
 # ── Firebase service account key ──────────────────────────────
 **/firebase_service_account.json
 **/serviceAccountKey.json
+
+# ── Dev / Debug / One-off Utility Scripts ─────────────────────
+# These are temporary scripts used for local development, DB inspection,
+# one-time migrations, or debugging. They must never be committed to the
+# production repository.
+
+# Cleanup scripts
+cleanup_*.js
+cleanup_*/
+
+# Debug inspection scripts
+debug_*.js
+
+# One-off lookup/find scripts
+find_*.js
+
+# Forensic / audit report scripts
+forensic_*.js
+
+# DB migration scripts (must be reviewed, documented and moved to scripts/ before committing)
+run_migration*.js
+update_pass.js
+
+# Local health check / config snapshots
+health_check.json
+health_check.*.json
+
+# Local DB inspection scripts
+inspect_*.js
+
+# Test scripts (PowerShell / shell)
+test_*.ps1
+test_*.sh
+
+# Find-principal test helpers
+find_principal*.js
