@@ -73,6 +73,16 @@ document.addEventListener("DOMContentLoaded", () => {
         url.searchParams.set('role', currentRole);
         window.history.replaceState({}, '', url);
         
+        // 7. Clear Form Inputs on Role Switch
+        if (identifierInput) identifierInput.value = '';
+        if (passwordInput) passwordInput.value = '';
+        
+        // 8. Reset Button State
+        if (btnLogin) {
+            btnLogin.innerHTML = currentRole === 'principal' ? '<i class="fa-solid fa-chart-pie"></i> Principal Login' : '<i class="fa-solid fa-right-to-bracket"></i> Login';
+            btnLogin.disabled = false;
+        }
+
         console.log(`[Auth UI] Role synchronized: ${currentRole}`);
     }
 

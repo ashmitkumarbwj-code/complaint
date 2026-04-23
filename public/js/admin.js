@@ -625,19 +625,42 @@ document.addEventListener("DOMContentLoaded", async () => {
                     `}
                 </td>
                 <td style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-                    <button class="action-btn btn-resolve" ${c.status.toLowerCase() === 'resolved' ? 'disabled' : ''} onclick="updateStatus(${c.id}, 'Resolved')">
-                        <i class="fa-solid fa-check-double"></i> Resolve
-                    </button>
-                    <button class="action-btn btn-reject" ${c.status.toLowerCase() === 'rejected' ? 'disabled' : ''} onclick="updateStatus(${c.id}, 'Rejected')">
-                        <i class="fa-solid fa-ban"></i> Reject
-                    </button>
-                    <button class="action-btn" style="background:#54a0ff; color:white;" onclick="openForwardModal(${c.id})">
-                        <i class="fa-solid fa-share-from-square"></i> Forward
-                    </button>
+                    ${c.status === 'SUBMITTED' ? `
+                        <button class="action-btn" style="background:var(--primary-color); color:white;" onclick="openForwardModal(${c.id})">
+                            <i class="fa-solid fa-share-from-square"></i> Forward
+                        </button>
+                        <button class="action-btn btn-reject" onclick="handleV2AdminAction(${c.id}, 'REJECTED_BY_ADMIN')">
+                            <i class="fa-solid fa-ban"></i> Reject
+                        </button>
+                    ` : `
+                        <span style="font-size: 0.7rem; opacity: 0.5;">In Workflow Queue</span>
+                    `}
                 </td>
             </tr>
         `}).join('');
     }
+
+    // 🔥 V2 ADMIN ACTION HANDLER
+    window.handleV2AdminAction = async (id, status, reason = '', targetDeptId = null) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/complaints/${id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status, reason, targetDeptId }),
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Complaint ${status} successfully`, 'success');
+                fetchComplaints();
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (err) {
+            showToast('Action failed', 'error');
+        }
+    };
+
 
     // New utility for seamless media viewing
     window.viewComplaintMedia = (url, title) => {
@@ -742,31 +765,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Forwarding...';
 
-        try {
-            const token = localStorage.getItem('scrs_token');
-            const res = await fetch(`${API_BASE}/api/admin/complaints/${forwardTargetId}/forward`, {
-                method: 'PATCH',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ department_id: deptId, admin_notes: notes || null })
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                showToast(data.message, 'success');
-                closeForwardModal();
-                fetchStats();
-                fetchComplaints();
-            } else {
-                showToast(data.message || 'Forward failed', 'error');
-            }
-        } catch (err) {
-            showToast('Network error. Please try again.', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-share-from-square"></i> Confirm Forward';
-        }
+        await handleV2AdminAction(forwardTargetId, 'FORWARDED', notes, deptId);
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-share-from-square"></i> Confirm Forward';
+        closeForwardModal();
     };
+
     // ─────────────────────────────────────────────────────────────────────────
 
     // ── Department Management ─────────────────────────────────────────────────

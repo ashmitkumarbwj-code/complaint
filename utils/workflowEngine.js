@@ -13,14 +13,17 @@ class WorkflowEngine {
      * @param {string} userRole 
      * @returns {boolean}
      */
-    isValidTransition(currentStatus, targetStatus, userRole) {
+    isValidTransition(currentStatus, targetStatus, userRole, workflowVersion = 1) {
         // Normalization
         const current = currentStatus;
         const target = targetStatus;
 
-        if (!WORKFLOW_MATRIX[current]) return false;
+        const { WORKFLOW_V2 } = require('./workflowMatrix');
+        const matrix = workflowVersion === 2 ? WORKFLOW_V2 : WORKFLOW_MATRIX;
+
+        if (!matrix[current]) return false;
         
-        const allowedRoles = WORKFLOW_MATRIX[current][target];
+        const allowedRoles = matrix[current][target];
         if (!allowedRoles) return false;
 
         return allowedRoles.includes(userRole);
@@ -29,12 +32,23 @@ class WorkflowEngine {
     /**
      * Checks if a reason/note is mandatory for a specific action.
      * @param {string} targetStatus 
+     * @param {number} workflowVersion
      * @returns {boolean}
      */
-    isReasonRequired(targetStatus) {
+    isReasonRequired(targetStatus, workflowVersion = 1) {
+        if (workflowVersion === 2) {
+            const mandatoryStatus = [
+                STATUS.REOPENED, 
+                STATUS.HOD_REWORK_REQUIRED, 
+                STATUS.REJECTED_BY_ADMIN, 
+                STATUS.RETURNED_TO_ADMIN
+            ];
+            return mandatoryStatus.includes(targetStatus);
+        }
         const mandatoryStatus = [STATUS.REJECTED, STATUS.ESCALATED, STATUS.REOPENED];
         return mandatoryStatus.includes(targetStatus);
     }
+
 
     /**
      * Enforces the 7-day student reopening window.

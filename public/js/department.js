@@ -147,19 +147,91 @@ function viewDetails(c) {
         <div><strong>Current Status:</strong> <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span></div>
     `;
 
+    const user = JSON.parse(localStorage.getItem('scrs_user'));
     actions.innerHTML = `
-        <textarea id="admin-notes" placeholder="Enter remarks/notes here..." class="form-control mb-3" style="width: 100%;">${c.admin_notes || ''}</textarea>
-        <div class="d-flex gap-2" style="width:100%">
-            ${c.status === 'Pending' ? `<button class="btn btn-primary flex-1" onclick="updateComplaintStatus(${c.id}, 'In Progress')">Start Investigation</button>` : ''}
-            ${(c.status === 'Pending' || c.status === 'In Progress') ? `
-                <button class="btn btn-glass flex-1" style="background:#2ed573; border:none; color:white;" onclick="updateComplaintStatus(${c.id}, 'Resolved')">Resolve</button>
-                <button class="btn btn-glass flex-1" style="background:#ff4757; border:none; color:white;" onclick="updateComplaintStatus(${c.id}, 'Rejected')">Reject</button>
-            ` : ''}
+        <div id="v2-action-container" style="width:100%">
+            <textarea id="admin-notes" placeholder="Reason/Notes (Required for rework/rejection)..." class="form-control mb-3" style="width: 100%; min-height: 80px;"></textarea>
+            <div id="action-buttons-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <!-- Buttons injected dynamically -->
+            </div>
         </div>
     `;
 
+    const btnGrid = document.getElementById('action-buttons-grid');
+    const isV2 = c.workflow_version === 2;
+
+    if (isV2) {
+        if (user.role === 'hod') {
+            if (c.status === 'FORWARDED' || c.status === 'REOPENED') {
+                btnGrid.innerHTML = `
+                    <div style="grid-column: span 2; margin-bottom: 0.5rem;">
+                        <label style="font-size: 0.8rem; opacity: 0.7;">Assign Staff Member:</label>
+                        <select id="target-staff-id" class="form-control" style="width:100%; margin-top: 4px;"></select>
+                    </div>
+                    <button class="btn btn-primary" onclick="executeV2Action(${c.id}, 'HOD_VERIFIED')">Verify & Assign</button>
+                    <button class="btn btn-danger" onclick="executeV2Action(${c.id}, 'RETURNED_TO_ADMIN')">Return to Admin</button>
+                `;
+                loadStaffList(c.department_id);
+            } else if (c.status === 'STAFF_RESOLVED') {
+                btnGrid.innerHTML = `
+                    <button class="btn btn-success" onclick="executeV2Action(${c.id}, 'HOD_APPROVED')">Approve Solution</button>
+                    <button class="btn btn-warning" onclick="executeV2Action(${c.id}, 'HOD_REWORK_REQUIRED')">Request Rework</button>
+                `;
+            }
+        } else if (user.role === 'staff') {
+            if (c.status === 'HOD_VERIFIED' || c.status === 'HOD_REWORK_REQUIRED') {
+                btnGrid.innerHTML = `<button class="btn btn-primary" style="grid-column: span 2" onclick="executeV2Action(${c.id}, 'IN_PROGRESS')">Accept & Start Work</button>`;
+            } else if (c.status === 'IN_PROGRESS') {
+                btnGrid.innerHTML = `<button class="btn btn-success" style="grid-column: span 2" onclick="executeV2Action(${c.id}, 'STAFF_RESOLVED')">Mark as Resolved</button>`;
+            }
+        }
+    } else {
+        // V1 Compatibility
+        btnGrid.innerHTML = `
+            ${c.status === 'Pending' ? `<button class="btn btn-primary" onclick="updateComplaintStatus(${c.id}, 'In Progress')">Start Investigation</button>` : ''}
+            ${(c.status === 'Pending' || c.status === 'In Progress') ? `
+                <button class="btn btn-success" onclick="updateComplaintStatus(${c.id}, 'Resolved')">Resolve</button>
+                <button class="btn btn-danger" onclick="updateComplaintStatus(${c.id}, 'Rejected')">Reject</button>
+            ` : ''}
+        `;
+    }
+
     window.showModal('detailsModal');
 }
+
+async function loadStaffList(deptId) {
+    const select = document.getElementById('target-staff-id');
+    try {
+        const res = await fetch(`${API_BASE}/api/dashboards/authority/staff-members/${deptId}`, { credentials: 'include' });
+        const data = await res.json();
+        if (data.success) {
+            select.innerHTML = data.staff.map(s => `<option value="${s.id}">${s.username} (${s.role})</option>`).join('');
+        }
+    } catch (err) { console.error('Staff load failed'); }
+}
+
+async function executeV2Action(id, status) {
+    const reason = document.getElementById('admin-notes').value;
+    const targetStaffId = document.getElementById('target-staff-id')?.value;
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/complaints/${id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ status, reason, targetStaffId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`Action ${status} successful`, 'success');
+            closeModal();
+            fetchDashboardData();
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (err) { showToast('Action failed', 'error'); }
+}
+
 
 async function updateComplaintStatus(id, newStatus) {
     const notes = document.getElementById('admin-notes').value;

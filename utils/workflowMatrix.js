@@ -34,6 +34,40 @@ const WORKFLOW_MATRIX = {
     }
 };
 
-module.exports = {
-    WORKFLOW_MATRIX
+const WORKFLOW_V2 = {
+    [STATUS.SUBMITTED]: {
+        [STATUS.FORWARDED]: [ROLE.ADMIN],
+        [STATUS.REJECTED_BY_ADMIN]: [ROLE.ADMIN]
+    },
+    [STATUS.FORWARDED]: {
+        [STATUS.HOD_VERIFIED]: [ROLE.HOD],
+        [STATUS.RETURNED_TO_ADMIN]: [ROLE.HOD]
+    },
+    [STATUS.HOD_VERIFIED]: {
+        [STATUS.IN_PROGRESS]: [ROLE.STAFF]
+    },
+    [STATUS.IN_PROGRESS]: {
+        [STATUS.STAFF_RESOLVED]: [ROLE.STAFF]
+    },
+    [STATUS.STAFF_RESOLVED]: {
+        [STATUS.HOD_APPROVED]: [ROLE.HOD],
+        [STATUS.HOD_REWORK_REQUIRED]: [ROLE.HOD]
+    },
+    [STATUS.HOD_REWORK_REQUIRED]: {
+        [STATUS.IN_PROGRESS]: [ROLE.STAFF]
+    },
+    [STATUS.HOD_APPROVED]: {
+        [STATUS.CLOSED]: [ROLE.STUDENT],
+        [STATUS.REOPENED]: [ROLE.STUDENT]
+    },
+    [STATUS.REOPENED]: {
+        [STATUS.HOD_VERIFIED]: [ROLE.HOD] // HOD re-assesses and re-assigns
+    }
+
 };
+
+module.exports = {
+    WORKFLOW_MATRIX,
+    WORKFLOW_V2
+};
+

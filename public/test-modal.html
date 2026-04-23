@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Test</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div style="padding: 50px;">
+        <button class="btn btn-gold" onclick="showModal('testModal')">Open Test Modal</button>
+    </div>
+
+    <div id="testModal" class="modal">
+        <div class="modal-card">
+            <h2>Test Modal Content</h2>
+            <p>This is a test modal to verify:</p>
+            <ul>
+                <li>Width is around 1000px</li>
+                <li>Padding is 3rem</li>
+                <li>Scrolls if content overflows</li>
+                <li>Click outside closes it</li>
+                <li>Click inside does NOT close it</li>
+                <li>ESC key closes it</li>
+            </ul>
+            <div style="height: 1500px; background: rgba(255,255,255,0.05); margin-top: 20px; padding: 20px;">
+                <p>Scroll down...</p>
+                <p style="margin-top: 1400px;">Bottom of content.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('testModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/uiUtils.js"></script>
+</body>
+</html>

@@ -129,21 +129,22 @@ exports.getStudentComplaints = async (req, res) => {
 
 exports.updateStatus = async (req, res) => {
     const { complaint_id } = req.params;
-    const { status, admin_notes, action_type } = req.body;
+    const { status, admin_notes, reason, targetStaffId, targetDeptId, action_type } = req.body;
 
     try {
         const result = await complaintService.updateStatus(req, {
             complaintId: complaint_id,
             newStatus: status,
-            adminNotes: admin_notes,
+            reason: reason || admin_notes,
+            targetStaffId,
+            targetDeptId,
             actionType: action_type || 'STATUS_CHANGE'
         });
 
-        // Socket & Notifications are now partially handled or triggered from here
-        // (Service handles DB, Controller handles UI side-effects)
         if (!result.noOp) {
             socketService.emitStatusUpdate(complaint_id, status, result.data.student_id, result.data.department_id);
         }
+
 
 
         res.json({ 

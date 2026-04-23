@@ -163,6 +163,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                     </div>
                 ` : ''}
                 
+                ${c.status === 'HOD_APPROVED' ? `
+                    <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                        <button onclick="handleComplaintAction(${c.id}, 'CLOSED')" class="btn-primary" style="flex: 1; font-weight: 800; background: var(--success); color: white;">
+                            <i class="fa-solid fa-check-double"></i> Confirm & Close
+                        </button>
+                        <button onclick="promptReopen(${c.id})" class="btn-secondary" style="flex: 1; font-weight: 800; border-color: var(--red); color: var(--red);">
+                            <i class="fa-solid fa-rotate-left"></i> Reopen
+                        </button>
+                    </div>
+                ` : ''}
+                
                 <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center;">
                     <span><i class="fa-solid fa-building"></i> Assigned: <strong>${c.department_name}</strong></span>
                     <span style="font-family: monospace; opacity: 0.5;">ID: #${c.id}</span>
@@ -170,6 +181,37 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
         `}).join('');
     }
+
+    // 🔥 V2 ACTION HANDLERS
+    window.handleComplaintAction = async (id, status, reason = '') => {
+        try {
+            const res = await fetch(`${API_BASE}/api/complaints/${id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status, reason }),
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Complaint ${status} successfully`, 'success');
+                fetchComplaints();
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (err) {
+            showToast('Action failed', 'error');
+        }
+    };
+
+    window.promptReopen = (id) => {
+        const reason = prompt("Please provide a detailed reason for reopening (min 10 characters):");
+        if (reason && reason.length >= 10) {
+            handleComplaintAction(id, 'REOPENED', reason);
+        } else if (reason) {
+            showToast("Reason is too short", "error");
+        }
+    };
+
 });
 
 async function logout() {
