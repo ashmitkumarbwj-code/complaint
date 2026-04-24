@@ -220,13 +220,16 @@ exports.getAdminStats = async (req, res) => {
         const [total] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints');
         const [pending] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Pending'");
         const [resolved] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Resolved'");
-        const [deptStats] = await db.tenantExecute(req, `
-            SELECT d.name, COUNT(c.id) as total, 
-            SUM(CASE WHEN c.status = 'Resolved' THEN 1 ELSE 0 END) as resolved
+        const deptQuery = `
+            SELECT 
+                d.name,
+                COUNT(c.id) as total,
+                COUNT(CASE WHEN c.status IN ('HOD_APPROVED', 'CLOSED', 'Resolved') THEN 1 END) as resolved
             FROM departments d
             LEFT JOIN complaints c ON d.id = c.department_id
-            GROUP BY d.id, d.name
-        `, [], 'd');
+            GROUP BY d.name
+        `;
+        const [deptStats] = await db.tenantExecute(req, deptQuery, [], 'd');
 
         res.json({
             success: true,
@@ -311,8 +314,8 @@ exports.getPublicWeeklyStats = async (req, res) => {
         const [rows] = await db.execute(`
             SELECT 
                 FLOOR(EXTRACT(DAY FROM (CURRENT_TIMESTAMP - created_at)) / 7) as weeks_ago,
-                SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) as resolved,
-                SUM(CASE WHEN status IN ('Pending', 'In Progress', 'Escalated') THEN 1 ELSE 0 END) as unresolved
+                COUNT(CASE WHEN status IN ('HOD_APPROVED', 'CLOSED', 'Resolved') THEN 1 END) as resolved,
+                COUNT(CASE WHEN status NOT IN ('HOD_APPROVED', 'CLOSED', 'Resolved', 'Rejected', 'REJECTED_BY_ADMIN') THEN 1 END) as unresolved
             FROM complaints
             WHERE tenant_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '4 weeks'
             GROUP BY weeks_ago
@@ -328,8 +331,8 @@ exports.getPublicWeeklyStats = async (req, res) => {
         rows.forEach(row => {
             const index = 3 - row.weeks_ago;
             if (index >= 0 && index < 4) {
-                result.resolved[index] = row.resolved;
-                result.unresolved[index] = row.unresolved;
+                result.resolved[index] = parseInt(row.resolved);
+                result.unresolved[index] = parseInt(row.unresolved);
             }
         });
 
@@ -341,26 +344,120 @@ exports.getPublicWeeklyStats = async (req, res) => {
 };
 
 exports.getPublicStats = async (req, res) => {
+    const { performance } = require('perf_hooks');
+    const startTime = performance.now();
+
     try {
-        const tenantId = req.query.tenant_id;
-        let totalQuery = 'SELECT COUNT(*) as count FROM complaints';
-        let resolvedQuery = 'SELECT COUNT(*) as count FROM complaints WHERE status = \'Resolved\'';
-        let params = [];
+        const tenantId = req.query?.tenant_id || 1;
 
-        if (tenantId) {
-            totalQuery += ' WHERE tenant_id = $1';
-            resolvedQuery += ' AND tenant_id = $1';
-            params = [tenantId];
+        /**
+         * 🛡️ PERFORMANCE SAFETY:
+         * We use specific COUNT(CASE) aggregations within a single table scan 
+         * filtered by tenant_id to avoid full table scans and multiple queries.
+         * 
+         * ⚡ EMERGENCY ALERTS LOGIC:
+         * Defined as:
+         * 1. Priority is 'High' or 'Emergency' (Immediate action required)
+         * 2. ANY unresolved complaint older than 48 hours (Overdue SLA)
+         */
+        const summaryQuery = `
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN status IN ('HOD_APPROVED', 'CLOSED', 'Resolved') THEN 1 END) as resolved,
+                COUNT(CASE WHEN status NOT IN ('HOD_APPROVED', 'CLOSED', 'Resolved', 'Rejected', 'REJECTED_BY_ADMIN') THEN 1 END) as unresolved,
+                COUNT(CASE 
+                    WHEN priority IN ('Emergency', 'High') 
+                    OR (status NOT IN ('HOD_APPROVED', 'CLOSED', 'Resolved') AND created_at < NOW() - INTERVAL '48 hours') 
+                    THEN 1 
+                END) as emergency_alerts
+            FROM complaints
+            WHERE tenant_id = $1
+        `;
+
+        const deptQuery = `
+            SELECT 
+                d.name as "departmentName",
+                COUNT(c.id) as total,
+                COUNT(CASE WHEN c.status IN ('HOD_APPROVED', 'CLOSED', 'Resolved') THEN 1 END) as resolved,
+                COUNT(CASE WHEN c.status NOT IN ('HOD_APPROVED', 'CLOSED', 'Resolved', 'Rejected', 'REJECTED_BY_ADMIN') THEN 1 END) as pending
+            FROM departments d
+            LEFT JOIN complaints c ON d.id = c.department_id
+            WHERE d.tenant_id = $1
+            GROUP BY d.id, d.name
+        `;
+
+        const weeklyQuery = `
+            SELECT 
+                FLOOR(EXTRACT(DAY FROM (CURRENT_TIMESTAMP - created_at)) / 7) as weeks_ago,
+                COUNT(CASE WHEN status IN ('HOD_APPROVED', 'CLOSED', 'Resolved') THEN 1 END) as resolved,
+                COUNT(CASE WHEN status NOT IN ('HOD_APPROVED', 'CLOSED', 'Resolved', 'Rejected', 'REJECTED_BY_ADMIN') THEN 1 END) as unresolved
+            FROM complaints
+            WHERE tenant_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '4 weeks'
+            GROUP BY weeks_ago
+            ORDER BY weeks_ago DESC
+        `;
+
+        // 🚀 Parallel Execution for Speed
+        const [[summaryRows], [deptRows], [weeklyRows]] = await Promise.all([
+            db.execute(summaryQuery, [tenantId]),
+            db.execute(deptQuery, [tenantId]),
+            db.execute(weeklyQuery, [tenantId])
+        ]);
+
+        const summary = summaryRows[0];
+        
+        let topEfficiency = 0;
+        const departmentSummary = deptRows.map(d => {
+            const total = parseInt(d.total);
+            const resolved = parseInt(d.resolved);
+            const efficiency = total > 0 ? Math.round((resolved / total) * 100) : 0;
+            if (efficiency > topEfficiency) topEfficiency = efficiency;
+            return {
+                departmentName: d.departmentName,
+                total,
+                resolved,
+                pending: parseInt(d.pending),
+                efficiency
+            };
+        });
+
+        const weekly = [
+            { label: "Week 4", resolved: 0, unresolved: 0 },
+            { label: "Week 3", resolved: 0, unresolved: 0 },
+            { label: "Week 2", resolved: 0, unresolved: 0 },
+            { label: "Week 1", resolved: 0, unresolved: 0 }
+        ];
+
+        weeklyRows.forEach(row => {
+            const index = 3 - row.weeks_ago;
+            if (index >= 0 && index < 4) {
+                weekly[index].resolved = parseInt(row.resolved);
+                weekly[index].unresolved = parseInt(row.unresolved);
+            }
+        });
+
+        const duration = performance.now() - startTime;
+        if (duration > 500) {
+            logger.warn(`[Performance] getPublicStats SLOW: ${duration.toFixed(2)}ms (Tenant: ${tenantId})`);
+        } else {
+            logger.info(`[Metrics] getPublicStats response time: ${duration.toFixed(2)}ms`);
         }
-
-        const [total] = await db.execute(totalQuery, params);
-        const [resolved] = await db.execute(resolvedQuery, params);
 
         res.json({
             success: true,
-            solved: resolved[0].count,
-            unresolved: total[0].count - resolved[0].count
+            data: {
+                totalComplaints: parseInt(summary.total),
+                resolvedComplaints: parseInt(summary.resolved),
+                unresolvedComplaints: parseInt(summary.unresolved),
+                emergencyAlerts: parseInt(summary.emergency_alerts),
+                topDepartmentEfficiency: topEfficiency,
+                weekly,
+                departmentSummary,
+                lastUpdated: new Date().toISOString(),
+                responseTimeMs: parseFloat(duration.toFixed(2))
+            }
         });
+
     } catch (error) {
         logger.error('[Dashboard] getPublicStats error:', error);
         res.status(500).json({ success: false, message: 'Error fetching public stats' });

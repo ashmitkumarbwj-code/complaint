@@ -393,7 +393,12 @@
                 <div class="table-card glass-panel">
                     <div class="table-header">
                         <h2>Student Identity Registry</h2>
-                        <div class="header-actions">
+                        <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
+                            <div class="pagination-controls" style="margin-right: 15px;">
+                                <button class="btn btn-glass" onclick="window.changeStudentPage(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                                <span id="student-page-info" style="font-size: 0.85rem; min-width: 80px; display: inline-block; text-align: center;">Page 1</span>
+                                <button class="btn btn-glass" onclick="window.changeStudentPage(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
                             <button class="btn btn-glass" onclick="openBulkImport('student')"><i class="fa-solid fa-file-import"></i> Bulk Import</button>
                             <button class="btn btn-primary" onclick="toggleStudentForm()">+ Register Student</button>
                         </div>
@@ -402,6 +407,7 @@
                     <div id="student-form-container" style="display: none;" class="form-container-panel">
                         <form id="add-student-form" class="horizontal-form">
                             <input type="text" id="stu-roll" class="elegant-input" placeholder="Roll No" required>
+                            <input type="text" id="stu-name" class="elegant-input" placeholder="Full Name" required>
                             <input type="text" id="stu-dept" class="elegant-input" placeholder="Dept" required>
                             <input type="text" id="stu-year" class="elegant-input" placeholder="Year" required>
                             <input type="text" id="stu-mobile" class="elegant-input" placeholder="Mobile" required>
@@ -713,6 +719,112 @@
                     </div>
 
                     <button class="btn btn-glass" style="width: 100%;" onclick="closeBulkImportModal()">Close Wizard</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🤖 NEW: AI Suggestion & Complaint Detail Modal 🤖 -->
+        <div id="complaintDetailModal" class="modal">
+            <div class="glass-panel modal-card extra-large">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3><i class="fa-solid fa-robot" style="color: var(--gold); margin-right: 10px;"></i> Complaint Detail & AI Analysis</h3>
+                    <button class="btn btn-icon" onclick="window.closeModal('complaintDetailModal')"><i class="fa-solid fa-times"></i></button>
+                </div>
+
+                <div class="modal-body-scrollable">
+                    <div class="row">
+                        <!-- Left: Complaint Details -->
+                        <div class="col-md-7">
+                            <div class="detail-section">
+                                <h4 class="text-gold mb-3">Submission Details</h4>
+                                <div id="detail-complaint-info" class="glass-panel p-3">
+                                    <p><b>ID:</b> <span id="det-id"></span></p>
+                                    <p><b>Student:</b> <span id="det-student"></span></p>
+                                    <p><b>Subject:</b> <span id="det-title"></span></p>
+                                    <p><b>Description:</b></p>
+                                    <div id="det-desc" class="p-2 mb-2" style="background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.9rem;"></div>
+                                    <p><b>Location:</b> <span id="det-location"></span></p>
+                                    <p><b>Current Category:</b> <span id="det-category"></span></p>
+                                    <p><b>Current Priority:</b> <span id="det-prio"></span></p>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-section mt-4">
+                                <h4 class="text-gold mb-3">Attached Evidence</h4>
+                                <div id="det-media" class="glass-panel p-3 text-center">
+                                    <span class="text-muted">No media attached.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: AI Suggestion Panel -->
+                        <div class="col-md-5">
+                            <div id="ai-suggestion-panel" class="ai-suggestion-container">
+                                <div class="ai-header">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI Recommendation Engine
+                                    <span id="ai-conf-badge" class="ai-confidence-tag">Pending</span>
+                                </div>
+                                
+                                <div id="ai-loading-state" style="display: none; padding: 2rem; text-align: center;">
+                                    <i class="fa-solid fa-spinner fa-spin fa-2x mb-2" style="color: var(--gold);"></i>
+                                    <p>Analyzing context...</p>
+                                </div>
+
+                                <div id="ai-content-state" class="ai-suggestion-body">
+                                    <div class="ai-warning-box">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        <span>AI suggestions may be inaccurate. Please verify before applying.</span>
+                                    </div>
+
+                                    <div class="ai-metric-row">
+                                        <div class="ai-metric-card">
+                                            <small>Suggested Priority</small>
+                                            <b id="ai-sug-prio">...</b>
+                                        </div>
+                                        <div class="ai-metric-card">
+                                            <small>Suggested Category</small>
+                                            <b id="ai-sug-cat">...</b>
+                                        </div>
+                                    </div>
+
+                                    <div class="ai-reasoning-box">
+                                        <label>AI Reasoning Summary:</label>
+                                        <p id="ai-sug-reason">Analyzing input data to generate context-aware suggestions...</p>
+                                    </div>
+
+                                    <div class="ai-actions mt-4">
+                                        <button id="btn-apply-ai-prio" class="btn btn-glass btn-sm w-100 mb-2" onclick="applyAiSuggestion('priority')">
+                                            <i class="fa-solid fa-bolt"></i> Apply Priority Suggestion
+                                        </button>
+                                        <button id="btn-apply-ai-cat" class="btn btn-glass btn-sm w-100 mb-2" onclick="applyAiSuggestion('category')">
+                                            <i class="fa-solid fa-tags"></i> Apply Category Suggestion
+                                        </button>
+                                        <button id="btn-apply-ai-both" class="btn btn-primary btn-sm w-100" onclick="applyAiSuggestion('both')">
+                                            <i class="fa-solid fa-check-double"></i> Adopt All Suggestions
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="ai-none-state" style="display: none; padding: 2rem; text-align: center; opacity: 0.6;">
+                                    <i class="fa-solid fa-robot-slash fa-2x mb-2"></i>
+                                    <p>No AI analysis available for this complaint.</p>
+                                    <small>Ensure 'AI_PROCESSING_ENABLED' is on and text is >20 chars.</small>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <h4 class="text-gold mb-3">Human Actions</h4>
+                                <div class="glass-panel p-3 d-flex flex-column gap-2">
+                                    <button class="btn btn-glass" id="det-btn-forward" onclick="openForwardFromDetail()">
+                                        <i class="fa-solid fa-share-from-square"></i> Forward to Dept
+                                    </button>
+                                    <button class="btn btn-glass text-red" id="det-btn-reject" onclick="rejectFromDetail()">
+                                        <i class="fa-solid fa-ban"></i> Reject Complaint
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

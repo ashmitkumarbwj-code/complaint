@@ -218,8 +218,9 @@ exports.validateVerifyFirebase = [
 
 // POST /api/complaints/submit
 exports.validateSubmitComplaint = [
+    // student_id is optional in body — backend uses req.user.student_id (session-bound)
     body('student_id')
-        .notEmpty().withMessage('Student ID is required.')
+        .optional({ checkFalsy: true })
         .isInt({ min: 1 }).withMessage('Student ID must be a positive integer.'),
     body('title')
         .trim()
@@ -249,17 +250,30 @@ exports.validateSubmitComplaint = [
 ];
 
 // PATCH /api/complaints/status/:complaint_id
+// Supports both V1 (legacy) and V2 (strict workflow) status values
 exports.validateUpdateStatus = [
     param('complaint_id')
         .isInt({ min: 1 }).withMessage('Complaint ID must be a positive integer.'),
     body('status')
         .trim()
         .notEmpty().withMessage('Status is required.')
-        .isIn(['Pending', 'In Progress', 'Resolved', 'Rejected']).withMessage('Invalid status value.'),
+        .isIn([
+            // V1 Legacy Statuses
+            'Pending', 'In Progress', 'Resolved', 'Rejected',
+            // V2 Workflow Statuses
+            'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS',
+            'STAFF_RESOLVED', 'HOD_APPROVED', 'CLOSED', 'REOPENED',
+            'HOD_REWORK_REQUIRED', 'RETURNED_TO_ADMIN', 'REJECTED_BY_ADMIN'
+        ]).withMessage('Invalid status value.'),
     body('admin_notes')
         .optional()
         .trim()
         .isLength({ max: 1000 }).withMessage('Admin notes must not exceed 1000 characters.')
+        .escape(),
+    body('reason')
+        .optional()
+        .trim()
+        .isLength({ max: 1000 }).withMessage('Reason must not exceed 1000 characters.')
         .escape(),
     validate
 ];

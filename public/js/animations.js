@@ -268,32 +268,88 @@ function renderChart(canvas) {
 /* =========================================================================
    4. Counters Animation (Section 6 Dashboard)
    ========================================================================= */
+/**
+ * Phase 1: Real-Time Dashboard Logic
+ * Refetch-on-Signal Pattern
+ */
+async function refreshDashboardStats() {
+    // Only fetch if page is active
+    if (document.visibilityState !== 'visible') return;
+
+    try {
+        const res = await fetch(`${API_BASE}/api/public/stats`, { credentials: 'include' });
+        const result = await res.json();
+        
+        if (result.success && result.data) {
+            const { data } = result;
+
+            const animateIfChanged = (selector, newValue, isPercentage = false) => {
+                const el = document.querySelector(selector);
+                if (!el) return;
+
+                const currentValue = parseInt(el.textContent.replace('%', '')) || 0;
+                if (currentValue === newValue) return;
+
+                gsap.to(selector, { 
+                    innerHTML: newValue, 
+                    duration: 2, 
+                    snap: { innerHTML: 1 }, 
+                    ease: "power1.inOut",
+                    onUpdate: function() {
+                        if (isPercentage) {
+                            el.innerHTML = Math.floor(this.targets()[0].innerHTML) + '%';
+                        }
+                    }
+                });
+            };
+
+            animateIfChanged(".counter-total", data.totalComplaints);
+            animateIfChanged(".counter-resolved", data.resolvedComplaints);
+            animateIfChanged(".counter-efficiency", data.topDepartmentEfficiency, true);
+            animateIfChanged(".counter-alerts", data.emergencyAlerts);
+        }
+    } catch (err) { 
+        console.error('[PublicStats] Error fetching public stats:', err);
+    }
+}
+
 function initCounters() {
-    const runCounters = async () => {
-        try {
-            const res = await fetch(`${API_BASE}/api/dashboards/public/stats`, { credentials: 'include' });
-            const data = await res.json();
+    // 1. Initial Polling (Fallback)
+    // Keep 60s polling active as a safety net if socket disconnects
+    setInterval(refreshDashboardStats, 60000);
+
+    // 2. Real-Time Socket Integration
+    if (typeof io !== 'undefined') {
+        const socket = io({
+            withCredentials: true,
+            reconnection: true,
+            reconnectionAttempts: 5
+        });
+
+        let lastFetch = 0;
+        const DEBOUNCE_DELAY = 1000; // max 1 fetch per second
+
+        socket.on('DASHBOARD_STATS_CHANGED', () => {
+            const now = Date.now();
+            if (now - lastFetch < DEBOUNCE_DELAY) return;
             
-            if (data.success) {
-                const total = data.solved + data.unresolved;
-                const efficiency = total > 0 ? Math.round((data.solved / total) * 100) : 0;
+            console.log('[RealTime] Dashboard signal received. Syncing stats...');
+            lastFetch = now;
+            refreshDashboardStats();
+        });
 
-                gsap.to(".counter-total", { innerHTML: total, duration: 2, snap: { innerHTML: 1 , credentials: 'include' }, ease: "power1.inOut" });
-                gsap.to(".counter-resolved", { innerHTML: data.solved, duration: 2.5, snap: { innerHTML: 1 }, ease: "power1.inOut" });
-                gsap.to(".counter-efficiency", { innerHTML: efficiency, duration: 2.5, snap: { innerHTML: 1 }, ease: "power1.inOut", onUpdate: function() {
-                    document.querySelector('.counter-efficiency').innerHTML += '%';
-                }});
-                // Alerts count can stays hardcoded or we can fetch true criticals
-                gsap.to(".counter-alerts", { innerHTML: 2, duration: 1, snap: { innerHTML: 1 }, ease: "power1.inOut" });
-            }
-        } catch (err) { console.error('Error fetching public stats:', err); }
-    };
+        socket.on('connect', () => console.log('[RealTime] Connected to institutional metrics stream.'));
+        socket.on('disconnect', () => console.warn('[RealTime] Disconnected. Falling back to polling.'));
+    }
 
+    // Initial run on scroll
     ScrollTrigger.create({
         trigger: ".section-dashboard",
         start: "top 70%",
         once: true,
-        onEnter: runCounters
+        onEnter: () => {
+            refreshDashboardStats();
+        }
     });
 }
 

@@ -86,3 +86,11 @@ test_*.sh
 
 # Find-principal test helpers
 find_principal*.js
+
+# Root-level one-off DB/debug utility scripts
+dump_env.js
+db_check.js
+verify_db_schema.js
+safe_schema_migration.js
+*_check.js
+*_verify*.js

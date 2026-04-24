@@ -34,9 +34,10 @@ class ComplaintService {
             `INSERT INTO complaints (
                 tenant_id, user_id, student_id, title, department_id, 
                 category, description, location, priority, local_file_path,
-                workflow_version, current_owner_role, current_owner_department_id, is_v2_compliant
+                workflow_version, current_owner_role, current_owner_department_id, is_v2_compliant,
+                status
              ) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 2, 'admin', 1, TRUE) RETURNING id`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 2, 'admin', 1, TRUE, 'SUBMITTED') RETURNING id`,
             [tenantId, user_id, student_id, title, department_id, category, description, location, priority, local_file_path || null]
         );
         return rows[0].id;
@@ -145,25 +146,34 @@ class ComplaintService {
             await connection.beginTransaction();
 
             // 1. Fetch & Lock State
-            const [complaint] = await connection.execute(
+            const [rows] = await connection.execute(
                 `SELECT * FROM complaints WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
                 [complaintId, tenant_id]
             );
+            const complaint = rows[0];
             if (!complaint) throw new Error('COMPLAINT_NOT_FOUND');
 
             const isV2 = (complaint.workflow_version === 2);
 
             // 2. Strict V2 Validation
             if (isV2) {
-                // A. Ownership Verification
-                const isRoleQueue = !complaint.current_owner_user_id;
-                if (isRoleQueue) {
-                    if (complaint.current_owner_role !== actorRole) throw new Error('OWNERSHIP_VIOLATION');
-                    if (['hod', 'staff'].includes(actorRole) && complaint.current_owner_department_id !== req.user.department_id) {
-                        throw new Error('DEPARTMENT_MISMATCH');
+                // A. Ownership Verification (Admins bypass; Students can reopen their own)
+                const isReopening = (newStatus === 'REOPENED');
+                if (actorRole !== 'admin') {
+                    const isOwner = (complaint.current_owner_user_id === actorId);
+                    const isSubmitterReopening = (isReopening && actorRole === 'student' && complaint.user_id === actorId);
+
+                    if (!isOwner && !isSubmitterReopening) {
+                        const isRoleQueue = !complaint.current_owner_user_id;
+                        if (isRoleQueue) {
+                            if (complaint.current_owner_role !== actorRole) throw new Error('OWNERSHIP_VIOLATION');
+                            if (['hod', 'staff'].includes(actorRole) && complaint.current_owner_department_id !== req.user.department_id) {
+                                throw new Error('DEPARTMENT_MISMATCH');
+                            }
+                        } else {
+                            throw new Error('OWNERSHIP_VIOLATION');
+                        }
                     }
-                } else {
-                    if (complaint.current_owner_user_id !== actorId) throw new Error('OWNERSHIP_VIOLATION');
                 }
 
                 // B. FSM Transition Check
@@ -182,7 +192,7 @@ class ComplaintService {
                 // D. Target Staff Validation
                 if (newStatus === 'HOD_VERIFIED' && targetStaffId) {
                     const [staffCheck] = await connection.execute(
-                        `SELECT 1 FROM department_members WHERE user_id = $1 AND department_id = $2`,
+                        `SELECT 1 FROM staff WHERE user_id = $1 AND department_id = $2`,
                         [targetStaffId, complaint.current_owner_department_id]
                     );
                     if (staffCheck.length === 0) throw new Error('INVALID_TARGET_STAFF');
@@ -269,23 +279,26 @@ class ComplaintService {
             ]);
 
             // 5. Immutable Audit Trail
-            await connection.execute(`
-                INSERT INTO complaint_audit_trail (
-                    complaint_id, from_status, to_status, 
-                    acted_by_user_id, acted_by_role, 
-                    previous_owner_user_id, new_owner_user_id,
-                    previous_owner_role, new_owner_role,
-                    previous_owner_department_id, new_owner_department_id,
-                    reason
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            `, [
-                complaintId, complaint.status, newStatus, 
-                actorId, actorRole, 
-                complaint.current_owner_user_id, nextOwnerId,
-                complaint.current_owner_role, nextOwnerRole,
-                complaint.current_owner_department_id, nextOwnerDeptId,
-                reason || 'System update'
-            ]);
+            const auditService = require('../utils/auditService');
+            await auditService.logAction(connection, {
+                complaint_id: complaintId,
+                actor_user_id: actorId,
+                actor_role: actorRole,
+                action_type: 'STATUS_CHANGE',
+                from_status: complaint.status,
+                to_status: newStatus,
+                note: reason || 'System update',
+                visibility: newStatus === 'CLOSED' || newStatus === 'REJECTED_BY_ADMIN' ? 'PUBLIC' : 'STAFF_ONLY',
+                metadata: {
+                    previous_owner_user_id: complaint.current_owner_user_id,
+                    new_owner_user_id: nextOwnerId,
+                    previous_owner_role: complaint.current_owner_role,
+                    new_owner_role: nextOwnerRole,
+                    previous_owner_department_id: complaint.current_owner_department_id,
+                    new_owner_department_id: nextOwnerDeptId
+                },
+                req: req
+            });
 
             await connection.commit();
             return { success: true, data: { status: newStatus, owner_role: nextOwnerRole } };

@@ -4,13 +4,13 @@
  */
 
 const STATUS = {
-    PENDING: 'Pending',
-    IN_PROGRESS: 'In Progress',
-    RESOLVED: 'Resolved',
-    REJECTED: 'Rejected',
-    ESCALATED: 'Escalated',
-    ON_HOLD: 'On Hold',
-    REOPENED: 'Reopened',
+    PENDING: 'PENDING',
+    IN_PROGRESS: 'IN_PROGRESS',
+    RESOLVED: 'RESOLVED',
+    REJECTED: 'REJECTED',
+    ESCALATED: 'ESCALATED',
+    ON_HOLD: 'ON_HOLD',
+    REOPENED: 'REOPENED',
 
     // V2 STATUSES
     SUBMITTED: 'SUBMITTED',

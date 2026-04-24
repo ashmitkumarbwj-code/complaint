@@ -168,6 +168,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         fetchComplaints();
     });
 
+    // 🚨 Phase 1: Real-Time Signal Sync (Refetch-on-Signal)
+    let lastStatsSync = 0;
+    socket.on('DASHBOARD_STATS_CHANGED', () => {
+        const now = Date.now();
+        if (now - lastStatsSync < 1000) return; // Debounce 1s
+        lastStatsSync = now;
+
+        console.log('[RealTime] Statistics sync signal received.');
+        if (typeof fetchStats === 'function') fetchStats();
+        if (typeof loadDashboardAnalytics === 'function') loadDashboardAnalytics();
+    });
+
     // 4. Initial Fetches
     fetchStats();
     loadDashboardAnalytics(); // New analytics suite
@@ -611,7 +623,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             ` : '';
 
             return `
-            <tr class="${rowClass}">
+            <tr class="${rowClass}" onclick="openComplaintDetail(${JSON.stringify({id:c.id, title:c.title, student:c.student_name, desc:c.description, loc:c.location, cat:c.category, prio:c.priority, status:c.status}).replace(/"/g, '&quot;')})" style="cursor:pointer;">
                 <td>#${c.id}</td>
                 <td style="font-weight: 700; color: var(--gold);">
                     <div style="display:flex; align-items:center; gap:5px;">
@@ -625,7 +637,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td><span class="status-badge status-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span></td>
                 <td style="text-align:center;">
                     ${c.media_url ? `
-                        <button class="action-btn" style="background:rgba(212,175,55,0.1); color:var(--gold); border: 1px solid var(--gold);" onclick="viewComplaintMedia('${c.media_url}', '${c.title || 'Complaint Media'}')">
+                        <button class="action-btn" style="background:rgba(212,175,55,0.1); color:var(--gold); border: 1px solid var(--gold);" onclick="event.stopPropagation(); viewComplaintMedia('${c.media_url}', '${c.title || 'Complaint Media'}')">
                             <i class="fa-solid ${isVideo ? 'fa-video' : 'fa-image'}"></i> View
                         </button>
                     ` : `
@@ -639,11 +651,15 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </td>
                 <td style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                     ${c.status === 'SUBMITTED' ? `
-                        <button class="action-btn" style="background:var(--primary-color); color:white;" onclick="openForwardModal(${c.id})">
+                        <button class="action-btn" style="background:var(--primary-color); color:white;" onclick="event.stopPropagation(); openForwardModal(${c.id})">
                             <i class="fa-solid fa-share-from-square"></i> Forward
                         </button>
-                        <button class="action-btn btn-reject" onclick="handleV2AdminAction(${c.id}, 'REJECTED_BY_ADMIN')">
+                        <button class="action-btn btn-reject" onclick="event.stopPropagation(); handleV2AdminAction(${c.id}, 'REJECTED_BY_ADMIN')">
                             <i class="fa-solid fa-ban"></i> Reject
+                        </button>
+                    ` : c.status === 'HOD_APPROVED' ? `
+                        <button class="action-btn" style="background:var(--green); color:white;" onclick="event.stopPropagation(); handleV2AdminAction(${c.id}, 'CLOSED', 'Final closure by Admin')">
+                            <i class="fa-solid fa-check-double"></i> Close Complaint
                         </button>
                     ` : `
                         <span style="font-size: 0.7rem; opacity: 0.5;">In Workflow Queue</span>
@@ -756,6 +772,113 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         window.showModal('forwardModal');
+    };
+
+    // 🤖 Phase 2: AI Suggestion & Detail View 🤖
+    let currentDetailId = null;
+
+    window.openComplaintDetail = async (complaint) => {
+        currentDetailId = complaint.id;
+        
+        // Populate static fields
+        document.getElementById('det-id').textContent = `#${complaint.id}`;
+        document.getElementById('det-student').textContent = complaint.student || 'Unknown';
+        document.getElementById('det-title').textContent = complaint.title || 'No Subject';
+        document.getElementById('det-desc').textContent = complaint.desc || 'No description provided.';
+        document.getElementById('det-location').textContent = complaint.loc || 'N/A';
+        document.getElementById('det-category').textContent = complaint.cat;
+        document.getElementById('det-prio').textContent = complaint.prio;
+
+        // Reset AI Panel
+        const aiPanel = document.getElementById('ai-suggestion-panel');
+        const loading = document.getElementById('ai-loading-state');
+        const content = document.getElementById('ai-content-state');
+        const none = document.getElementById('ai-none-state');
+        const badge = document.getElementById('ai-conf-badge');
+
+        loading.style.display = 'block';
+        content.style.display = 'none';
+        none.style.display = 'none';
+        badge.className = 'ai-confidence-tag';
+        badge.textContent = 'Analyzing...';
+
+        window.showModal('complaintDetailModal');
+
+        // Fetch AI Analysis
+        try {
+            const res = await fetch(`${API_BASE}/api/admin/complaints/${complaint.id}/ai-analysis`, { credentials: 'include' });
+            const data = await res.json();
+            
+            loading.style.display = 'none';
+            
+            if (data.success && data.analysis) {
+                const a = data.analysis;
+                content.style.display = 'block';
+                
+                document.getElementById('ai-sug-prio').textContent = a.suggested_priority;
+                document.getElementById('ai-sug-cat').textContent = a.suggested_category;
+                document.getElementById('ai-sug-reason').textContent = a.reasoning_summary;
+
+                const score = Math.round(a.evidence_match_score * 100);
+                badge.textContent = `${score}% Confidence`;
+                badge.classList.remove('high', 'medium', 'low');
+                if (score > 75) badge.classList.add('high');
+                else if (score > 50) badge.classList.add('medium');
+                else badge.classList.add('low');
+
+            } else {
+                none.style.display = 'block';
+                badge.textContent = 'No Data';
+            }
+        } catch (err) {
+            loading.style.display = 'none';
+            none.style.display = 'block';
+            badge.textContent = 'Error';
+        }
+    };
+
+    window.applyAiSuggestion = async (type) => {
+        if (!currentDetailId) return;
+        
+        const btn = document.getElementById(`btn-apply-ai-${type}`);
+        const restore = setButtonLoading(btn, 'Applying...');
+
+        try {
+            const res = await fetch(`${API_BASE}/api/complaints/${currentDetailId}/apply-ai`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type }),
+                credentials: 'include'
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                showToast(data.message, 'success');
+                // Refresh local detail UI
+                if (type === 'priority' || type === 'both') document.getElementById('det-prio').textContent = data.applied_values.priority;
+                if (type === 'category' || type === 'both') document.getElementById('det-category').textContent = data.applied_values.category;
+                
+                fetchComplaints(); // Refresh main table
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (err) {
+            showToast('Failed to apply suggestion.', 'error');
+        } finally {
+            restore();
+        }
+    };
+
+    window.openForwardFromDetail = () => {
+        if (!currentDetailId) return;
+        window.closeModal('complaintDetailModal');
+        window.openForwardModal(currentDetailId);
+    };
+
+    window.rejectFromDetail = () => {
+        if (!currentDetailId) return;
+        window.closeModal('complaintDetailModal');
+        handleV2AdminAction(currentDetailId, 'REJECTED_BY_ADMIN');
     };
 
     window.closeForwardModal = () => {
@@ -1189,35 +1312,62 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (err) { console.error(err); }
     }
 
+    window.currentStudentPage = 1;
+    let totalStudentPages = 1;
+
+    window.changeStudentPage = (delta) => {
+        const newPage = window.currentStudentPage + delta;
+        if (newPage >= 1 && newPage <= totalStudentPages) {
+            window.currentStudentPage = newPage;
+            window.fetchStudents();
+        }
+    };
+
     window.fetchStudents = async function() {
         try {
-            const res = await fetch(`${API_BASE}/api/admin/students`, {
+            const res = await fetch(`${API_BASE}/api/admin/students?page=${window.currentStudentPage}&limit=50`, {
                 credentials: 'include'
             });
             const data = await res.json();
             if (data.success) {
                 const tbody = document.getElementById('students-tbody');
                 if(!tbody) return;
-                tbody.innerHTML = data.students.map(s => `
-                    <tr>
-                        <td><span style="font-weight: 600;">${s.roll_number}</span></td>
-                        <td>${s.email}</td>
-                        <td>${s.department} (${s.year} Year)</td>
-                        <td>${s.mobile_number}</td>
-                        <td>
-                            ${s.id_card_image ? 
-                                `<img src="${s.id_card_image}" class="id-card-thumb" onclick="viewID('${s.id_card_image}')">` : 
-                                '<span style="color: var(--text-muted); font-size: 0.8rem;">No Image</span>'}
-                        </td>
-                        <td>
-                            <span class="status-badge ${s.is_account_created ? 'status-resolved' : 'status-pending'}">
-                                ${s.is_account_created ? 'Active' : 'Unregistered'}
-                            </span>
-                        </td>
-                    </tr>
-                `).join('');
+
+                if (data.students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem; opacity:0.6;">No students found in registry.</td></tr>';
+                } else {
+                    tbody.innerHTML = data.students.map(s => `
+                        <tr>
+                            <td><span style="font-weight: 600;">${s.roll_number}</span></td>
+                            <td>
+                                <div style="display:flex; flex-direction:column;">
+                                    <span style="font-size:0.9rem;">${s.name || '<i>Not Activated</i>'}</span>
+                                    <small style="opacity:0.6;">${s.email}</small>
+                                </div>
+                            </td>
+                            <td>${s.department} (${s.year} Year)</td>
+                            <td>${s.mobile_number}</td>
+                            <td>
+                                ${s.id_card_image ? 
+                                    `<img src="${s.id_card_image}" class="id-card-thumb" onclick="viewID('${s.id_card_image}')" style="cursor:zoom-in;">` : 
+                                    '<span style="color: var(--text-muted); font-size: 0.8rem;">No Image</span>'}
+                            </td>
+                            <td>
+                                <span class="status-badge ${s.is_account_created ? 'status-resolved' : 'status-pending'}">
+                                    ${s.is_account_created ? 'Active' : 'Unregistered'}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+                if (data.pagination) {
+                    totalStudentPages = data.pagination.totalPages || 1;
+                    const info = document.getElementById('student-page-info');
+                    if (info) info.textContent = `Page ${window.currentStudentPage} of ${totalStudentPages}`;
+                }
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error('[Admin] fetchStudents error:', err); }
     }
 
     window.loadDepartments = async function() {
@@ -1371,6 +1521,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             e.preventDefault();
             const formData = {
                 roll_number: document.getElementById('stu-roll').value,
+                name: document.getElementById('stu-name').value,
                 department: document.getElementById('stu-dept').value,
                 year: document.getElementById('stu-year').value,
                 mobile_number: document.getElementById('stu-mobile').value,
@@ -1382,8 +1533,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const res = await fetch(`${API_BASE}/api/admin/add-student`, {
                     method: 'POST',
                     credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
                 });
                 const data = await res.json();

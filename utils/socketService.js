@@ -29,8 +29,10 @@ module.exports = {
                 const token = cookies.accessToken;
 
                 if (!token) {
-                    console.warn(`[Socket.io Auth] Connection rejected: No token for socket ${socket.id}`);
-                    return next(new Error('Authentication error: No token provided'));
+                    // Phase 1: Allow anonymous guest connections for public dashboard updates
+                    // We default to tenant_id 1 for anonymous users unless specified
+                    socket.user = { id: 'anonymous', role: 'guest', tenant_id: 1 };
+                    return next();
                 }
 
                 if (!process.env.JWT_SECRET) {
@@ -43,36 +45,36 @@ module.exports = {
                 next();
             } catch (err) {
                 console.error(`[Socket.io Auth] Authentication failed for ${socket.id}:`, err.message);
-                return next(new Error('Authentication error: Invalid token'));
+                // Allow anonymous fallback even on invalid token for public dashboards
+                socket.user = { id: 'anonymous', role: 'guest', tenant_id: 1 };
+                return next();
             }
         });
 
         io.on('connection', (socket) => {
             const user = socket.user;
             const normalizedRole = (user.role || '').toLowerCase().trim();
+            const tenantId = user.tenant_id || 1;
             
-            console.log(`[Socket.io] Authenticated connection: ${socket.id} | User: ${user.id} | Role: ${normalizedRole}`);
+            console.log(`[Socket.io] Connected: ${socket.id} | Role: ${normalizedRole} | Tenant: ${tenantId}`);
 
-            // ─── Server-Assigned Room Joins (Secure) ─────────────────────────
-            // We ignore client-side 'join' requests and assign rooms based on verified identity
-            
-            // 1. All users join their own private identity room
-            socket.join(`user_${user.id}`);
+            // ─── Room-Based Isolation (Phase 1) ─────────────────────────────
+            // Every socket joins a tenant-specific metrics room for stats signals
+            socket.join(`tenant_${tenantId}_metrics`);
 
-            // 2. Role-specific rooms
-            if (normalizedRole === 'student' && user.student_id) {
-                socket.join(`student_${user.student_id}`);
-            } else if (normalizedRole === 'admin' || normalizedRole === 'principal') {
-                socket.join('admin');
-                if (normalizedRole === 'principal') socket.join('principal_room');
-            } else if (user.department_id) {
-                socket.join(`dept_${user.department_id}`);
+            // ─── Server-Assigned Private Room Joins (Secure) ─────────────────
+            if (user.id !== 'anonymous') {
+                socket.join(`user_${user.id}`);
+
+                if (normalizedRole === 'student' && user.student_id) {
+                    socket.join(`student_${user.student_id}`);
+                } else if (normalizedRole === 'admin' || normalizedRole === 'principal') {
+                    socket.join('admin');
+                    if (normalizedRole === 'principal') socket.join('principal_room');
+                } else if (user.department_id) {
+                    socket.join(`dept_${user.department_id}`);
+                }
             }
-
-            // Reject any manual join attempts (Security Hardening)
-            socket.on('join', (room) => {
-                console.warn(`[Socket.io Security] Blocked manual join attempt by ${user.id} to room: ${room}`);
-            });
 
             socket.on('error', (err) => {
                 console.error(`[Socket.io] Transport error on ${socket.id}:`, err.message);
@@ -90,6 +92,16 @@ module.exports = {
             throw new Error("Socket.io not initialized!");
         }
         return io;
+    },
+    /**
+     * Phase 1: Refetch-on-Signal Broadcaster
+     * Signals all clients in a tenant room that statistics have changed.
+     */
+    emitStatsChanged: (tenantId) => {
+        if (io) {
+            io.to(`tenant_${tenantId}_metrics`).emit('DASHBOARD_STATS_CHANGED');
+            console.log(`[Socket.io] Emitted DASHBOARD_STATS_CHANGED for Tenant: ${tenantId}`);
+        }
     },
     emitNewComplaint: (complaint) => {
         if (io) {

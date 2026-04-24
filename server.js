@@ -103,6 +103,8 @@ const healthRoutes = require('./routes/health');
 const slidesRoutes = require('./routes/slides');
 const dynamicSlidesRoutes = require('./routes/dynamicSlides');
 
+const publicRoutes = require('./routes/public');
+
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/dashboards', dashboardRoutes);
@@ -114,6 +116,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/public', publicRoutes);
 
 
 // API 404 — unknown /api/* routes return JSON (static won't serve these)

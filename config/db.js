@@ -17,11 +17,6 @@ const isNeon = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('ne
 
 const poolConfig = {
     connectionString: process.env.DATABASE_URL,
-    host:             process.env.PGHOST || process.env.DB_HOST,
-    user:             process.env.PGUSER || process.env.DB_USER,
-    password:         process.env.PGPASSWORD || process.env.DB_PASSWORD,
-    database:         process.env.PGDATABASE || process.env.DB_NAME,
-    port:             process.env.PGPORT || 5432,
     max:              parseInt(process.env.DB_POOL_SIZE || '25', 10),
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 15000,

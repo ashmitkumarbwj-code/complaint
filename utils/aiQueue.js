@@ -20,6 +20,20 @@ class AIQueue {
      * @param {object} data - { title, description, category, imageUrl, localPath }
      */
     async add(complaintId, data) {
+        // 🛡️ Phase 2: Feature Flag Control
+        if (process.env.AI_PROCESSING_ENABLED !== 'true') {
+            logger.info(`[AI Queue] Skipping analysis for #${complaintId} (AI_PROCESSING_ENABLED is false)`);
+            return;
+        }
+
+        // 🛡️ Phase 2: Content Threshold Check
+        const description = data.description || '';
+        if (description.length < 20) {
+            logger.info(`[AI Queue] Skipping analysis for #${complaintId} (Description too short: ${description.length} chars)`);
+            await db.execute('UPDATE complaints SET ai_status = $1 WHERE id = $2', ['skipped', complaintId]);
+            return;
+        }
+
         // Set queued timestamp
         await db.execute('UPDATE complaints SET ai_status = $1, ai_queued_at = NOW() WHERE id = $2', ['pending', complaintId]);
         
@@ -153,48 +167,14 @@ class AIQueue {
         // 4. Update Complaint metadata with processed timestamp
         await db.execute('UPDATE complaints SET ai_status = $1, ai_processed_at = NOW() WHERE id = $2', ['completed', complaintId]);
 
-        // 5. Routing Logic
-        await this.routeComplaint(complaintId, analysis);
+        // 5. 🚨 Phase 2: Suggestion-Only Enforcement
+        // We no longer call routeComplaint to auto-update DB.
+        logger.info(`[AI Analysis] Completed for #${complaintId}. Result: ${analysis.suggested_priority} (Confidence: ${analysis.evidence_match_score})`);
     }
 
+    // routeComplaint is deprecated in Phase 2 in favor of manual adoption
     async routeComplaint(complaintId, analysis) {
-        let updateFields = [];
-        let params = [];
-        
-        const score = parseFloat(analysis.evidence_match_score || 0);
-        let finalPriority = null;
-
-        // Pro-Level Rule Engine: AI -> Confidence Score -> Rule Engine -> Final Decision
-        if (analysis.is_emergency && score > 0.8) {
-            finalPriority = 'Emergency';
-            logger.warn(`[AI Routing] ESCALATED complaint #${complaintId} to EMERGENCY (High Confidence: ${score})`);
-        } else if (score > 0.6) {
-            finalPriority = 'High';
-            logger.info(`[AI Routing] Recommended HIGH priority for complaint #${complaintId} (Confidence: ${score})`);
-        } else {
-            // Low confidence or mismatched evidence
-            logger.info(`[AI Routing] Complaint #${complaintId} held for MANUAL REVIEW (Low Confidence: ${score})`);
-            // We ensure 'requires_manual_review' is true in the AI analysis table (already done in handleJob)
-        }
-
-        if (finalPriority) {
-            updateFields.push('priority = $' + (params.length + 1));
-            params.push(finalPriority);
-        }
-
-        if (updateFields.length > 0) {
-            params.push(complaintId);
-            await db.execute(`UPDATE complaints SET ${updateFields.join(', ')} WHERE id = $${params.length}`, params);
-            
-            // 🚨 REAL-TIME ALERT: If emergency is confirmed, notify Principal/Admin immediately
-            if (finalPriority === 'Emergency') {
-                const socketService = require('../utils/socketService');
-                const [rows] = await db.execute('SELECT * FROM complaints WHERE id = $1', [complaintId]);
-                if (rows.length > 0) {
-                    socketService.emitEmergencyAlert(rows[0]);
-                }
-            }
-        }
+        logger.warn(`[AI Queue] routeComplaint called but disabled in Phase 2 Suggestion-Only mode.`);
     }
 }
 

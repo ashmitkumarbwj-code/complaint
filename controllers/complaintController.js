@@ -71,7 +71,7 @@ exports.submitComplaint = async (req, res) => {
             actor_role: req.user.role,
             action_type: 'STATUS_CHANGE',
             from_status: null,
-            to_status: 'Pending',
+            to_status: 'SUBMITTED',
             note: auditNote,
             metadata: metadata,
             visibility: 'STUDENT_VISIBLE',
@@ -89,8 +89,8 @@ exports.submitComplaint = async (req, res) => {
                 
                 // Update status to processing
                 await db.execute(
-                    'UPDATE complaints SET processing_status = $1 WHERE id = $2',
-                    ['processing', complaintId]
+                    'UPDATE complaints SET processing_status = $1 WHERE id = $2 AND tenant_id = $3',
+                    ['processing', complaintId, tenantId]
                 );
                 
                 logger.info(`[UploadQueue] Enqueued image for complaint ${complaintId} (Tenant:${tenantId})`);
@@ -106,6 +106,9 @@ exports.submitComplaint = async (req, res) => {
 
         // 6. Socket & Notifications
         socketService.emitNewComplaint({ id: complaintId, student_id, department_id: initialDeptId, category, location, status: 'Pending', created_at: new Date() });
+
+        // 🚨 Phase 1: Signal Real-Time Dashboard Update
+        socketService.emitStatsChanged(tenantId);
 
         res.json({ success: true, message: 'Complaint submitted successfully', complaint_id: complaintId, assigned_department: initialDeptId });
     } catch (error) {
@@ -143,6 +146,8 @@ exports.updateStatus = async (req, res) => {
 
         if (!result.noOp) {
             socketService.emitStatusUpdate(complaint_id, status, result.data.student_id, result.data.department_id);
+            // 🚨 Phase 1: Signal Real-Time Dashboard Update
+            socketService.emitStatsChanged(req.user.tenant_id);
         }
 
 
@@ -164,6 +169,10 @@ exports.updateStatus = async (req, res) => {
             'REASON_REQUIRED': { status: 422, code: 'VALIDATION_ERROR', msg: 'A detailed reason/note is required for this action.' },
             'MAX_REOPEN_EXCEEDED': { status: 403, code: 'LIMIT_EXCEEDED', msg: 'Complaint has already been reopened once.' },
             'REOPEN_WINDOW_EXPIRED': { status: 403, code: 'WINDOW_EXPIRED', msg: 'Reopening window has passed (7 days max).' },
+            'INVALID_TARGET_STAFF': { status: 422, code: 'VALIDATION_ERROR', msg: 'The selected staff member does not belong to your department.' },
+            'INVALID_TARGET_DEPARTMENT': { status: 422, code: 'VALIDATION_ERROR', msg: 'Invalid target department selected.' },
+            'OWNERSHIP_VIOLATION': { status: 403, code: 'FORBIDDEN', msg: 'You do not have ownership of this task.' },
+            'DEPARTMENT_MISMATCH': { status: 403, code: 'FORBIDDEN', msg: 'This complaint belongs to a different department.' },
             'DPT_MEMBERSHIP_REQUIRED': { status: 403, code: 'FORBIDDEN', msg: 'You are not assigned to this department.' }
         };
 
@@ -245,6 +254,108 @@ exports.cleanupOldMedia = async () => {
 };
 
 /**
+ * Phase 2: Apply AI Suggestion (Human-in-the-Loop)
+ * Endpoint: POST /api/complaints/:id/apply-ai
+ */
+exports.applyAiSuggestion = async (req, res) => {
+    const { id } = req.params;
+    const { type } = req.body; // 'priority' or 'category' or 'both'
+    const tenantId = req.user.tenant_id;
+
+    // 🛡️ Phase 2: Feature Flag Control
+    if (process.env.AI_APPLY_ENABLED !== 'true') {
+        return res.status(403).json({ success: false, message: "AI Suggestion Adoption is currently disabled." });
+    }
+
+    try {
+        // 1. Fetch the AI Suggestion
+        const [suggestions] = await db.execute(
+            'SELECT * FROM complaint_ai_analysis WHERE complaint_id = $1',
+            [id]
+        );
+
+        if (suggestions.length === 0) {
+            return res.status(404).json({ success: false, message: "No AI suggestions found for this complaint." });
+        }
+
+        const suggestion = suggestions[0];
+        const [complaints] = await db.execute(
+            'SELECT priority, category FROM complaints WHERE id = $1 AND tenant_id = $2',
+            [id, tenantId]
+        );
+
+        if (complaints.length === 0) {
+            return res.status(404).json({ success: false, message: "Complaint not found." });
+        }
+
+        const original = complaints[0];
+        let updates = [];
+        let params = [];
+        let noteParts = [];
+
+        if (type === 'priority' || type === 'both') {
+            updates.push('priority = $' + (params.length + 1));
+            params.push(suggestion.suggested_priority);
+            noteParts.push(`Priority changed to ${suggestion.suggested_priority}`);
+        }
+
+        if (type === 'category' || type === 'both') {
+            updates.push('category = $' + (params.length + 1));
+            params.push(suggestion.suggested_category);
+            noteParts.push(`Category changed to ${suggestion.suggested_category}`);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, message: "Invalid suggestion type requested." });
+        }
+
+        // 2. Execute Update
+        params.push(id, tenantId);
+        await db.execute(
+            `UPDATE complaints SET ${updates.join(', ')} WHERE id = $${params.length - 1} AND tenant_id = $${params.length}`,
+            params
+        );
+
+        // 3. Log Structured Audit
+        const audit = require('../utils/auditService');
+        await audit.logAction(null, {
+            complaint_id: id,
+            actor_user_id: req.user.id,
+            actor_role: req.user.role,
+            action_type: 'AI_SUGGESTION_APPLIED',
+            note: `AI Suggestion applied: ${noteParts.join(', ')}. Reason: ${suggestion.reasoning_summary}`,
+            metadata: {
+                ai_confidence: suggestion.evidence_match_score,
+                ai_reason: suggestion.reasoning_summary,
+                previous_values: original,
+                new_values: {
+                    priority: type === 'priority' || type === 'both' ? suggestion.suggested_priority : original.priority,
+                    category: type === 'category' || type === 'both' ? suggestion.suggested_category : original.category
+                }
+            },
+            req
+        });
+
+        // 4. Signal Real-Time Sync
+        socketService.emitStatsChanged(tenantId);
+        socketService.emitStatusUpdate(id, 'UPDATED_VIA_AI', null, null);
+
+        res.json({ 
+            success: true, 
+            message: "AI suggestion applied successfully.",
+            applied_values: {
+                priority: suggestion.suggested_priority,
+                category: suggestion.suggested_category
+            }
+        });
+
+    } catch (err) {
+        logger.error(`[AI Apply] Error applying suggestion for #${id}:`, err);
+        res.status(500).json({ success: false, message: "Internal server error while applying AI suggestion." });
+    }
+};
+
+/**
  * GET /api/complaints/:id/history
  * Returns the audit trail of department assignments for a complaint
  */
@@ -269,17 +380,16 @@ exports.getComplaintHistory = async (req, res) => {
 
         const [rows] = await db.tenantExecute(req, `
             SELECT 
-                cd.assigned_at,
-                cd.notes,
-                cd.is_current,
-                d.name as department_name,
-                u.username as assigned_by_name
-            FROM complaint_departments cd
-            JOIN departments d ON cd.department_id = d.id
-            LEFT JOIN users u ON cd.assigned_by = u.id
-            WHERE cd.complaint_id = $1
-            ORDER BY cd.assigned_at DESC
-        `, [id], 'cd');
+                h.created_at as assigned_at,
+                h.note as notes,
+                h.to_status,
+                u.username as assigned_by_name,
+                h.action_type
+            FROM complaint_status_history h
+            LEFT JOIN users u ON h.actor_user_id = u.id
+            WHERE h.complaint_id = $1
+            ORDER BY h.created_at DESC
+        `, [id], 'h');
 
         res.json({ success: true, history: rows });
     } catch (error) {

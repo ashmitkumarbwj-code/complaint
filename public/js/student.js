@@ -163,13 +163,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                     </div>
                 ` : ''}
                 
-                ${c.status === 'HOD_APPROVED' ? `
+                ${c.status === 'CLOSED' ? `
                     <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-                        <button onclick="handleComplaintAction(${c.id}, 'CLOSED')" class="btn-primary" style="flex: 1; font-weight: 800; background: var(--success); color: white;">
-                            <i class="fa-solid fa-check-double"></i> Confirm & Close
-                        </button>
                         <button onclick="promptReopen(${c.id})" class="btn-secondary" style="flex: 1; font-weight: 800; border-color: var(--red); color: var(--red);">
-                            <i class="fa-solid fa-rotate-left"></i> Reopen
+                            <i class="fa-solid fa-rotate-left"></i> Reopen (within 7 days)
                         </button>
                     </div>
                 ` : ''}

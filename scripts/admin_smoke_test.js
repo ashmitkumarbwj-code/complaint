@@ -4,7 +4,7 @@
  */
 
 const axios = require('axios');
-const API_BASE = 'https://gcd-smart-complaint-and-response-system.co.in';
+const API_BASE = 'http://localhost:3000';
 
 async function runSmokeTest() {
     console.log("--- Starting Admin Portal Smoke Test ---");
@@ -33,9 +33,6 @@ async function runSmokeTest() {
             password: 'Admin@1234',
             role: 'admin' 
         });
-        // Axios handles cookies automatically if configured, but let's be explicit if needed
-        // Actually on Node, we need to handle the cookie jar if axios doesn't.
-        // But for a simple test, the server usually sets a session cookie.
         adminSession.defaults.headers.Cookie = res.headers['set-cookie'] ? res.headers['set-cookie'].join('; ') : '';
         return `Role: ${res.data.user.role}`;
     });
@@ -70,7 +67,7 @@ async function runSmokeTest() {
         // Login as student
         const loginRes = await studentSession.post('/api/auth/login', { 
             identifier: 'test_student_3', 
-            password: 'Admin@1234', // Updated pw
+            password: 'Admin@1234', 
             role: 'student'
         });
         studentSession.defaults.headers.Cookie = loginRes.headers['set-cookie'] ? loginRes.headers['set-cookie'].join('; ') : '';
@@ -90,10 +87,10 @@ async function runSmokeTest() {
     results.forEach(r => console.log(`${r.status.padEnd(5)} | ${r.name.padEnd(25)} | ${r.details}`));
     
     if (results.some(r => r.status === 'FAIL')) {
-        console.log("\nVERDICT: FAIL - Issues detected in production.");
+        console.log("\nVERDICT: FAIL - Issues detected in development.");
         process.exit(1);
     } else {
-        console.log("\nVERDICT: PASS - Admin Portal is Production-Ready.");
+        console.log("\nVERDICT: PASS - Admin Portal is stable.");
     }
 }
 

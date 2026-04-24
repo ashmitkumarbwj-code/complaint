@@ -84,4 +84,11 @@ router.get('/:id/history',
     complaintController.getComplaintHistory
 );
 
+// 🚨 Phase 2: Apply AI Suggestion (Human-in-the-Loop)
+router.post('/:id/apply-ai',
+    auth,
+    checkRole(['Admin', 'Principal']),
+    complaintController.applyAiSuggestion
+);
+
 module.exports = router;

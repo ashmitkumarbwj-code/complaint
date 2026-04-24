@@ -81,9 +81,29 @@ exports.getDepartments = async (req, res) => {
  * Get All Verified Students (Master Registry)
  */
 exports.getAllStudents = async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
     try {
-        const [rows] = await db.tenantExecute(req, 'SELECT * FROM verified_students ORDER BY created_at DESC');
-        res.json({ success: true, students: rows });
+        const [countResult] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM verified_students');
+        const total = parseInt(countResult[0].count);
+
+        const [rows] = await db.tenantExecute(req, 
+            'SELECT * FROM verified_students ORDER BY roll_number ASC LIMIT $1 OFFSET $2',
+            [limit, offset]
+        );
+
+        res.json({ 
+            success: true, 
+            students: rows,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
     } catch (error) {
         logger.error('[Admin] getAllStudents error:', error);
         res.status(500).json({ success: false, message: 'Error fetching students registry' });
@@ -94,7 +114,7 @@ exports.getAllStudents = async (req, res) => {
  * Admin Adds Student to Master Registry
  */
 exports.addStudent = async (req, res) => {
-    const { roll_number, department, year, mobile_number, email, id_card_image } = req.body;
+    const { roll_number, name, department, year, mobile_number, email, id_card_image } = req.body;
     const tenantId = req.user?.tenant_id || 1;
 
     try {
@@ -104,8 +124,8 @@ exports.addStudent = async (req, res) => {
         }
 
         await db.tenantExecute(req,
-            'INSERT INTO verified_students (tenant_id, roll_number, department, year, mobile_number, email, id_card_image) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-            [req.user.tenant_id, roll_number, department, year, mobile_number, email, id_card_image || null]
+            'INSERT INTO verified_students (tenant_id, roll_number, name, department, year, mobile_number, email, id_card_image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+            [req.user.tenant_id, roll_number, name, department, year, mobile_number, email, id_card_image || null]
         );
 
         res.json({ success: true, message: 'Student added to verification registry successfully' });
@@ -117,145 +137,53 @@ exports.addStudent = async (req, res) => {
 
 /**
  * Admin Updates Complaint Status
+ * DEPRECATED: Redirects to unified complaintService.updateStatus
  */
 exports.updateComplaintStatus = async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-    const tenantId = req.user?.tenant_id || 1;
-
-    try {
-        // 1. Update database
-        const query = 'UPDATE complaints SET status = $1, resolved_at = $2 WHERE id = $3';
-        const resolvedAt = (status.toLowerCase() === 'resolved') ? new Date() : null;
-        
-        const [dbRows, result] = await db.tenantExecute(req, query, [status, resolvedAt, id]);
-        
-        if (result.rowCount === 0) {
-            return res.status(404).json({ success: false, message: 'Complaint not found' });
-        }
-
-        // 2. Fetch student_id, department_id and category for notifications
-        const [compRows] = await db.tenantExecute(req, 'SELECT student_id, department_id, category FROM complaints WHERE id = $1', [id]);
-        if (compRows.length > 0) {
-            const { student_id, department_id, category } = compRows[0];
-            
-            // Real-time update via Socket.io
-            socketService.emitStatusUpdate(id, status, student_id, department_id);
-
-
-            // Notify Student via email
-            try {
-                const [userRows] = await db.tenantExecute(req, `
-                    SELECT u.email FROM users u 
-                    JOIN students s ON u.id = s.user_id 
-                    WHERE s.id = $1
-                `, [student_id], 'u');
-                
-                if (userRows.length > 0) {
-                    notifier.notifyStudent(userRows[0].email, id, status);
-                }
-            } catch (notifierErr) {
-                logger.warn('[Admin] Status notification failed:', notifierErr);
-            }
-        }
-
-        res.json({ 
-            success: true, 
-            message: `Complaint ${status} successfully` 
-        });
-    } catch (error) {
-        logger.error('[Admin] updateComplaintStatus error:', error);
-        res.status(500).json({ success: false, message: 'Server error while updating complaint status' });
-    }
+    const complaintController = require('./complaintController');
+    // Map params to match complaintController's expectation
+    req.body.action_type = 'LEGACY_ADMIN_UPDATE';
+    return complaintController.updateStatus(req, res);
 };
 
 /**
  * Admin Manually Forwards (Reassigns) a Complaint to a Different Department
- * Used as a fallback when smart auto-routing picks the wrong department.
  */
 exports.forwardComplaint = async (req, res) => {
     const { id } = req.params;
     const { department_id, admin_notes } = req.body;
-    const tenantId = req.user?.tenant_id || 1;
-
-    const conn = await db.getTransaction();
+    
     try {
-        await conn.beginTransaction();
-
-        // 1. Verify department exists
-        const [deptRows] = await conn.execute('SELECT id, name FROM departments WHERE id = $1 AND tenant_id = $2', [department_id, tenantId]);
-        if (deptRows.length === 0) {
-            await conn.rollback();
-            return res.status(404).json({ success: false, message: 'Department not found' });
-        }
-
-        // 2. Verify complaint exists and get current state
-        const [compRows] = await conn.execute(
-            'SELECT id, student_id, category, department_id, status FROM complaints WHERE id = $1 AND tenant_id = $2', [id, tenantId]
-        );
-        if (compRows.length === 0) {
-            await conn.rollback();
-            return res.status(404).json({ success: false, message: 'Complaint not found' });
-        }
-
-        const complaint = compRows[0];
-
-        // 3. Reassign department, reset status, save notes
-        await conn.execute(
-            `UPDATE complaints 
-             SET department_id = $1, status = 'Pending', admin_notes = $2, resolved_at = NULL, lock_version = lock_version + 1
-             WHERE id = $3 AND tenant_id = $4`,
-            [department_id, admin_notes || null, id, tenantId]
-        );
-
-        // 4. Audit Trail Logic
-        const audit = require('../utils/auditService');
-        await audit.logAction(conn, {
-            complaint_id: id,
-            actor_user_id: req.user.id,
-            actor_role: req.user.role,
-            action_type: 'FORWARDED',
-            from_status: complaint.status,
-            to_status: 'Pending',
-            note: admin_notes || `Manual reassignment to Department ${department_id}`,
-            visibility: 'STUDENT_VISIBLE',
-            req
+        const complaintService = require('../services/complaintService');
+        const result = await complaintService.updateStatus(req, {
+            complaintId: id,
+            newStatus: 'FORWARDED',
+            reason: admin_notes || `Manual reassignment to Department ${department_id}`,
+            targetDeptId: department_id
         });
 
-        await conn.commit();
-
-        // 5. Emit real-time socket update
-        socketService.emitStatusUpdate(id, 'Pending', complaint.student_id);
-
-        // 6. Notify student
-        try {
-            const [userRows] = await db.execute(
-                `SELECT u.email FROM users u
-                 JOIN students s ON u.id = s.user_id
-                 WHERE s.id = $1`,
-                [complaint.student_id]
-            );
-            if (userRows.length > 0) {
-                notifier.sendEmail(
-                    userRows[0].email,
-                    `Complaint #${id} Forwarded to New Department`,
-                    `Your complaint (#${id}) regarding "${complaint.category}" has been manually reviewed and forwarded to the ${deptRows[0].name} department for resolution. We apologise for any inconvenience.`
-                );
-            }
-        } catch (notifierErr) {
-            logger.warn('[Admin] Forward notification failed:', notifierErr);
+        if (!result.noOp) {
+            const socketService = require('../utils/socketService');
+            socketService.emitStatusUpdate(id, 'FORWARDED', null, department_id); // student_id will be handled correctly by clients reading status
         }
 
         res.json({
             success: true,
-            message: `Complaint #${id} forwarded to ${deptRows[0].name} successfully`
+            message: `Complaint #${id} forwarded successfully`
         });
     } catch (error) {
-        if (conn) await conn.rollback();
         logger.error('[Admin] forwardComplaint error:', error);
+        
+        const errorMap = {
+            'COMPLAINT_NOT_FOUND': { status: 404, msg: 'Complaint not found.' },
+            'INVALID_TRANSITION': { status: 400, msg: 'Invalid status transition.' }
+        };
+
+        const canned = errorMap[error.message];
+        if (canned) {
+            return res.status(canned.status).json({ success: false, message: canned.msg });
+        }
         res.status(500).json({ success: false, message: 'Server error while forwarding complaint' });
-    } finally {
-        if (conn) conn.release();
     }
 };
 

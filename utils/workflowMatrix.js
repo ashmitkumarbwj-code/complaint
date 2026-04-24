@@ -57,7 +57,9 @@ const WORKFLOW_V2 = {
         [STATUS.IN_PROGRESS]: [ROLE.STAFF]
     },
     [STATUS.HOD_APPROVED]: {
-        [STATUS.CLOSED]: [ROLE.STUDENT],
+        [STATUS.CLOSED]: [ROLE.ADMIN, ROLE.HOD]
+    },
+    [STATUS.CLOSED]: {
         [STATUS.REOPENED]: [ROLE.STUDENT]
     },
     [STATUS.REOPENED]: {

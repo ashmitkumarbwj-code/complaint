@@ -42,7 +42,7 @@ const processUpload = async (job) => {
             
             // Mark for resync in DB
             await db.execute(
-                `UPDATE complaints SET processing_status = 'pending_resync' WHERE id = ? AND tenant_id = ?`,
+                `UPDATE complaints SET processing_status = 'pending_resync' WHERE id = $1 AND tenant_id = $2`,
                 [complaintId, tenantId]
             );
 

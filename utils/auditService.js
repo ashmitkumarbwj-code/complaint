@@ -46,7 +46,9 @@ class AuditService {
             user_agent
         ];
 
-        return await connection.execute(query, params);
+        const db = require('../config/db');
+        const executor = connection || db;
+        return await executor.execute(query, params);
     }
 }
 

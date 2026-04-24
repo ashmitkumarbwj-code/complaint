@@ -177,6 +177,10 @@ function viewDetails(c) {
                     <button class="btn btn-success" onclick="executeV2Action(${c.id}, 'HOD_APPROVED')">Approve Solution</button>
                     <button class="btn btn-warning" onclick="executeV2Action(${c.id}, 'HOD_REWORK_REQUIRED')">Request Rework</button>
                 `;
+            } else if (c.status === 'HOD_APPROVED') {
+                btnGrid.innerHTML = `
+                    <button class="btn btn-danger" onclick="executeV2Action(${c.id}, 'CLOSED')">Final Close Complaint</button>
+                `;
             }
         } else if (user.role === 'staff') {
             if (c.status === 'HOD_VERIFIED' || c.status === 'HOD_REWORK_REQUIRED') {

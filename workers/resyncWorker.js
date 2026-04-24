@@ -36,7 +36,7 @@ exports.processPendingResyncs = async () => {
             } catch (e) {
                 logger.error(`[RESILIENCE] File not found on disk for complaint #${id}: ${local_file_path}`);
                 await db.execute(
-                    "UPDATE complaints SET processing_status = 'failed' WHERE id = ?",
+                    "UPDATE complaints SET processing_status = 'failed' WHERE id = $1",
                     [id]
                 );
                 continue;
@@ -54,8 +54,8 @@ exports.processPendingResyncs = async () => {
                 // 3. Update DB
                 await db.execute(
                     `UPDATE complaints 
-                     SET media_url = ?, processing_status = 'completed' 
-                     WHERE id = ?`,
+                     SET media_url = $1, processing_status = 'completed' 
+                     WHERE id = $2`,
                     [result.secure_url, id]
                 );
 
