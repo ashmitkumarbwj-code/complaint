@@ -80,9 +80,40 @@ async function tenantExecute(req, sql, params = [], alias = null) {
     }
 
     if (isSelect || isUpdate || isDelete) {
-        const suffixRegex = /\b(GROUP BY|ORDER BY|LIMIT|OFFSET|RETURNING)\b/i;
-        const match = suffixRegex.exec(modifiedSql);
-        const splitIndex = match ? match.index : modifiedSql.length;
+        const keywords = ['GROUP BY', 'ORDER BY', 'LIMIT', 'OFFSET', 'RETURNING'];
+        let splitIndex = modifiedSql.length;
+        let parenDepth = 0;
+        let inString = false;
+        let quoteChar = null;
+
+        for (let i = 0; i < modifiedSql.length; i++) {
+            const char = modifiedSql[i];
+            
+            // Handle strings
+            if ((char === "'" || char === '"') && (i === 0 || modifiedSql[i-1] !== '\\')) {
+                if (!inString) {
+                    inString = true;
+                    quoteChar = char;
+                } else if (char === quoteChar) {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (!inString) {
+                if (char === '(') parenDepth++;
+                else if (char === ')') parenDepth--;
+                
+                if (parenDepth === 0) {
+                    const sub = modifiedSql.substring(i);
+                    const match = sub.match(/^\b(GROUP BY|ORDER BY|LIMIT|OFFSET|RETURNING)\b/i);
+                    if (match) {
+                        splitIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
         
         let head = modifiedSql.slice(0, splitIndex).trim();
         const tail = modifiedSql.slice(splitIndex).trim();

@@ -14,13 +14,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 1.1 Populate SaaS Sidebar Profile
     if (user) {
-        document.getElementById('user-display-name').textContent = user.name || 'Admin';
-        document.getElementById('user-display-role').textContent = user.role;
-        document.getElementById('user-avatar-initial').textContent = (user.name || 'A')[0].toUpperCase();
-        document.getElementById('welcome-user-name').textContent = user.name || 'Admin';
+        document.getElementById('user-display-name').textContent = user.full_name || user.name || user.username || 'Admin';
+        document.getElementById('user-display-role').textContent = user.role || 'Admin';
+        document.getElementById('user-avatar-initial').textContent = (user.full_name || user.name || user.username || 'A')[0].toUpperCase();
+        const welcomeEl = document.getElementById('welcome-user-name'); // Not present in all layouts
+        if (welcomeEl) welcomeEl.textContent = user.full_name || user.name || user.username || 'Admin';
 
         // Role-based Navigation Guard
-        if (String(user.role).toLowerCase() !== 'principal') {
+        const userRole = String(user.role).toLowerCase();
+        if (userRole !== 'principal' && userRole !== 'admin') {
             const principalOnlyTabs = ['tab-staff', 'tab-students'];
             document.querySelectorAll('.nav-item').forEach(item => {
                 if (principalOnlyTabs.includes(item.dataset.tab)) {
@@ -194,6 +196,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     function switchTab(tabId) {
+        console.log(`[Admin] Switching to tab: ${tabId}`);
         // Update Sidebar UI
         navItems.forEach(item => {
             item.classList.toggle('active', item.dataset.tab === tabId);
@@ -211,12 +214,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         // Trigger fetches on tab switch for live data
-        if (tabId === 'tab-dashboard') loadDashboardAnalytics();
-        if (tabId === 'tab-departments') fetchDeptManagement();
-        if (tabId === 'tab-complaints') fetchComplaints();
-        if (tabId === 'tab-gallery') loadGallery();
-        if (tabId === 'tab-slides') loadSlides();
-        if (tabId === 'tab-dynamic-slides') window.loadDynamicSlides();
+        if (tabId === 'tab-dashboard') {
+            console.log("[Admin] Loading Dashboard Analytics");
+            loadDashboardAnalytics();
+        }
+        if (tabId === 'tab-departments') {
+            console.log("[Admin] Fetching Dept Management");
+            fetchDeptManagement();
+        }
+        if (tabId === 'tab-complaints') {
+            console.log("[Admin] Fetching Complaints");
+            fetchComplaints();
+        }
+        if (tabId === 'tab-gallery') {
+            console.log("[Admin] Loading Gallery");
+            loadGallery();
+        }
+        if (tabId === 'tab-slides') {
+            console.log("[Admin] Loading Slides");
+            loadSlides();
+        }
+        if (tabId === 'tab-dynamic-slides') {
+            console.log("[Admin] Loading Dynamic Slides");
+            window.loadDynamicSlides();
+        }
     }
 
     navItems.forEach(item => {
@@ -498,6 +519,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function animateNumber(id, endValue) {
         const el = document.getElementById(id);
+        if (!el) {
+            console.warn(`[Admin] Element with ID '${id}' not found for animation.`);
+            return;
+        }
         const startValue = parseInt(el.textContent) || 0;
         const duration = 1000;
         let startTime = null;
