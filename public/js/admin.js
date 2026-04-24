@@ -195,8 +195,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         'tab-dynamic-slides': { title: 'Dynamic Slider Manager', sub: 'Image & video slide management' }
     };
 
-    function switchTab(tabId) {
+    window.switchTab = function(tabId) {
         console.log(`[Admin] Switching to tab: ${tabId}`);
+        
         // Update Sidebar UI
         navItems.forEach(item => {
             item.classList.toggle('active', item.dataset.tab === tabId);
@@ -213,43 +214,22 @@ document.addEventListener("DOMContentLoaded", async () => {
             sectionSubtitle.textContent = meta[tabId].sub;
         }
 
-        // Trigger fetches on tab switch for live data
-        if (tabId === 'tab-dashboard') {
-            console.log("[Admin] Loading Dashboard Analytics");
-            window.loadDashboardAnalytics();
-        }
-        if (tabId === 'tab-departments') {
-            console.log("[Admin] Fetching Dept Management");
-            window.fetchDeptManagement();
-        }
-        if (tabId === 'tab-complaints') {
-            console.log("[Admin] Fetching Complaints");
-            window.fetchComplaints();
-        }
-        if (tabId === 'tab-staff') {
-            console.log("[Admin] Fetching Staff Registry");
-            window.fetchStaff();
-        }
-        if (tabId === 'tab-students') {
-            console.log("[Admin] Fetching Student Registry");
-            window.fetchStudents();
-        }
-        if (tabId === 'tab-gallery') {
-            console.log("[Admin] Loading Gallery");
-            window.loadGallery();
-        }
-        if (tabId === 'tab-slides') {
-            console.log("[Admin] Loading Slides");
-            window.loadSlides();
-        }
-        if (tabId === 'tab-dynamic-slides') {
-            console.log("[Admin] Loading Dynamic Slides");
-            window.loadDynamicSlides();
-        }
+        // Trigger fetches
+        if (tabId === 'tab-dashboard') window.loadDashboardAnalytics();
+        if (tabId === 'tab-departments') window.fetchDeptManagement();
+        if (tabId === 'tab-complaints') window.fetchComplaints();
+        if (tabId === 'tab-staff') window.fetchStaff();
+        if (tabId === 'tab-students') window.fetchStudents();
+        if (tabId === 'tab-gallery') window.loadGallery();
+        if (tabId === 'tab-slides') window.loadSlides();
+        if (tabId === 'tab-dynamic-slides') window.loadDynamicSlides();
     }
 
-    navItems.forEach(item => {
-        item.addEventListener('click', () => switchTab(item.dataset.tab));
+    // Bind events to all data-tab elements
+    document.querySelectorAll('[data-tab]').forEach(item => {
+        item.addEventListener('click', () => {
+            window.switchTab(item.dataset.tab);
+        });
     });
 
     // 5. Global Functions
