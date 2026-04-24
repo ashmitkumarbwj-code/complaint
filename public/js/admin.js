@@ -216,27 +216,37 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Trigger fetches on tab switch for live data
         if (tabId === 'tab-dashboard') {
             console.log("[Admin] Loading Dashboard Analytics");
-            if (typeof loadDashboardAnalytics === 'function') loadDashboardAnalytics();
+            if (typeof window.loadDashboardAnalytics === 'function') window.loadDashboardAnalytics();
             else console.warn("[Admin] loadDashboardAnalytics function is missing");
         }
         if (tabId === 'tab-departments') {
             console.log("[Admin] Fetching Dept Management");
-            if (typeof fetchDeptManagement === 'function') fetchDeptManagement();
+            if (typeof window.fetchDeptManagement === 'function') window.fetchDeptManagement();
             else console.warn("[Admin] fetchDeptManagement function is missing");
         }
         if (tabId === 'tab-complaints') {
             console.log("[Admin] Fetching Complaints");
-            if (typeof fetchComplaints === 'function') fetchComplaints();
+            if (typeof window.fetchComplaints === 'function') window.fetchComplaints();
             else console.warn("[Admin] fetchComplaints function is missing");
+        }
+        if (tabId === 'tab-staff') {
+            console.log("[Admin] Fetching Staff Registry");
+            if (typeof window.fetchStaff === 'function') window.fetchStaff();
+            else console.warn("[Admin] fetchStaff function is missing");
+        }
+        if (tabId === 'tab-students') {
+            console.log("[Admin] Fetching Student Registry");
+            if (typeof window.fetchStudents === 'function') window.fetchStudents();
+            else console.warn("[Admin] fetchStudents function is missing");
         }
         if (tabId === 'tab-gallery') {
             console.log("[Admin] Loading Gallery");
-            if (typeof loadGallery === 'function') loadGallery();
+            if (typeof window.loadGallery === 'function') window.loadGallery();
             else console.warn("[Admin] loadGallery function is missing");
         }
         if (tabId === 'tab-slides') {
             console.log("[Admin] Loading Slides");
-            if (typeof loadSlides === 'function') loadSlides();
+            if (typeof window.loadSlides === 'function') window.loadSlides();
             else console.warn("[Admin] loadSlides function is missing");
         }
         if (tabId === 'tab-dynamic-slides') {
@@ -555,7 +565,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
 
-    async function fetchComplaints() {
+    window.fetchComplaints = async function() {
         try {
             const statusEl = document.getElementById('filter-status');
             const status = statusEl ? statusEl.value : '';
@@ -809,7 +819,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const ALL_CATEGORIES = ['Noise','Electricity','Mess','Harassment','Infrastructure','Security','Cleanliness','Technical','Faculty','Other'];
     let currentDeptId = null;
 
-    async function fetchDeptManagement() {
+    window.fetchDeptManagement = async function() {
         try {
             const res = await fetch(`${API_BASE}/api/departments`, {
                 credentials: 'include'
@@ -1181,7 +1191,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // Reuse existing fetch functions from admin.html script section
-    async function fetchStaff() {
+    window.fetchStaff = async function() {
         try {
             const res = await fetch(`${API_BASE}/api/admin/staff`, {
                 credentials: 'include'
@@ -1207,7 +1217,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (err) { console.error(err); }
     }
 
-    async function fetchStudents() {
+    window.fetchStudents = async function() {
         try {
             const res = await fetch(`${API_BASE}/api/admin/students`, {
                 credentials: 'include'
@@ -1238,7 +1248,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (err) { console.error(err); }
     }
 
-    async function loadDepartments() {
+    window.loadDepartments = async function() {
         try {
             const res = await fetch(`${API_BASE}/api/admin/departments`, {
                 credentials: 'include'
@@ -1260,7 +1270,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (err) { console.error(err); }
     }
 
-    async function loadGallery() {
+    window.loadGallery = async function() {
         try {
             const user = JSON.parse(localStorage.getItem('scrs_user'));
             const res = await fetch(`${API_BASE}/api/gallery`, {
@@ -1870,7 +1880,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // ── Hero Slider Management ──────────────────────────────────────────────
     
-    window.loadSlides = async () => {
+    window.loadSlides = async function() {
         try {
             const res = await fetch(`${API_BASE}/api/admin/slides`, { credentials: 'include' });
             const data = await res.json();
