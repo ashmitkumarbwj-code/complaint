@@ -216,43 +216,35 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Trigger fetches on tab switch for live data
         if (tabId === 'tab-dashboard') {
             console.log("[Admin] Loading Dashboard Analytics");
-            if (typeof window.loadDashboardAnalytics === 'function') window.loadDashboardAnalytics();
-            else console.warn("[Admin] loadDashboardAnalytics function is missing");
+            window.loadDashboardAnalytics();
         }
         if (tabId === 'tab-departments') {
             console.log("[Admin] Fetching Dept Management");
-            if (typeof window.fetchDeptManagement === 'function') window.fetchDeptManagement();
-            else console.warn("[Admin] fetchDeptManagement function is missing");
+            window.fetchDeptManagement();
         }
         if (tabId === 'tab-complaints') {
             console.log("[Admin] Fetching Complaints");
-            if (typeof window.fetchComplaints === 'function') window.fetchComplaints();
-            else console.warn("[Admin] fetchComplaints function is missing");
+            window.fetchComplaints();
         }
         if (tabId === 'tab-staff') {
             console.log("[Admin] Fetching Staff Registry");
-            if (typeof window.fetchStaff === 'function') window.fetchStaff();
-            else console.warn("[Admin] fetchStaff function is missing");
+            window.fetchStaff();
         }
         if (tabId === 'tab-students') {
             console.log("[Admin] Fetching Student Registry");
-            if (typeof window.fetchStudents === 'function') window.fetchStudents();
-            else console.warn("[Admin] fetchStudents function is missing");
+            window.fetchStudents();
         }
         if (tabId === 'tab-gallery') {
             console.log("[Admin] Loading Gallery");
-            if (typeof window.loadGallery === 'function') window.loadGallery();
-            else console.warn("[Admin] loadGallery function is missing");
+            window.loadGallery();
         }
         if (tabId === 'tab-slides') {
             console.log("[Admin] Loading Slides");
-            if (typeof window.loadSlides === 'function') window.loadSlides();
-            else console.warn("[Admin] loadSlides function is missing");
+            window.loadSlides();
         }
         if (tabId === 'tab-dynamic-slides') {
             console.log("[Admin] Loading Dynamic Slides");
-            if (typeof window.loadDynamicSlides === 'function') window.loadDynamicSlides();
-            else console.warn("[Admin] window.loadDynamicSlides function is missing");
+            window.loadDynamicSlides();
         }
     }
 

@@ -1,9 +1,7 @@
 const db = require('./config/db');
 async function run() {
-    const [rows] = await db.execute(
-        "SELECT id, username, email, role, status, is_verified FROM users WHERE role = 'admin' ORDER BY id"
-    );
-    console.table(rows);
+    const [users] = await db.execute("SELECT username, email, role, is_verified FROM users WHERE role IN ('admin', 'Principal')");
+    console.log('Admin Users:', JSON.stringify(users, null, 2));
     process.exit(0);
 }
 run();
