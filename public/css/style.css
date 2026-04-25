@@ -2573,6 +2573,16 @@ canvas {
     font-size: 1.05rem;
 }
 
+.bio-content-block {
+    padding-right: 180px; /* Prevent overlap with profile image */
+}
+
+@media (max-width: 768px) {
+    .bio-content-block {
+        padding-right: 0;
+    }
+}
+
 .bio-modal-content p {
     margin-bottom: 1.5rem;
     color: rgba(255, 255, 255, 0.85);
