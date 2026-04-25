@@ -16,4 +16,16 @@ router.get('/stats', dashboardController.getPublicStats);
  */
 router.get('/weekly-stats', dashboardController.getPublicWeeklyStats);
 
+// Public system configuration
+router.get('/config', (req, res) => {
+    const { FEATURES } = require('../utils/constants');
+    res.json({
+        success: true,
+        features: {
+            ai_ui_enabled: FEATURES.AI_UI_ENABLED,
+            ai_apply_enabled: FEATURES.AI_APPLY_ENABLED
+        }
+    });
+});
+
 module.exports = router;

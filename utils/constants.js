@@ -40,7 +40,8 @@ const ACTION_TYPE = {
     REJECTED: 'REJECTED',
     ESCALATED: 'ESCALATED',
     FORWARDED: 'FORWARDED',
-    PRIORITY_CHANGED: 'PRIORITY_CHANGED'
+    PRIORITY_CHANGED: 'PRIORITY_CHANGED',
+    AI_SUGGESTION_APPLIED: 'AI_SUGGESTION_APPLIED'
 };
 
 const VISIBILITY = {
@@ -48,10 +49,17 @@ const VISIBILITY = {
     STAFF_ONLY: 'STAFF_ONLY'
 };
 
+const FEATURES = {
+    AI_PROCESSING_ENABLED: process.env.AI_PROCESSING_ENABLED === 'true', // Master switch for background AI processing
+    AI_UI_ENABLED:         process.env.AI_UI_ENABLED === 'true',         // Controls if the frontend shows the AI suggestion panel
+    AI_APPLY_ENABLED:      process.env.AI_APPLY_ENABLED === 'true'       // Controls if the backend allows applying AI suggestions
+};
+
 module.exports = {
     STATUS,
     ROLE,
     ACTION_TYPE,
     VISIBILITY,
+    FEATURES,
     ADMIN_DEPT_ID: 1 // Centralized Admin Queue ID
 };

@@ -85,9 +85,10 @@ router.get('/:id/history',
 );
 
 // 🚨 Phase 2: Apply AI Suggestion (Human-in-the-Loop)
+// Restricted to Admin/HOD only as per Phase 2 requirements.
 router.post('/:id/apply-ai',
     auth,
-    checkRole(['Admin', 'Principal']),
+    checkRole(['admin', 'hod']),
     complaintController.applyAiSuggestion
 );
 

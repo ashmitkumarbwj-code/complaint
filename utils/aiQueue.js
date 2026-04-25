@@ -21,7 +21,8 @@ class AIQueue {
      */
     async add(complaintId, data) {
         // 🛡️ Phase 2: Feature Flag Control
-        if (process.env.AI_PROCESSING_ENABLED !== 'true') {
+        const { FEATURES } = require('../utils/constants');
+        if (!FEATURES.AI_PROCESSING_ENABLED) {
             logger.info(`[AI Queue] Skipping analysis for #${complaintId} (AI_PROCESSING_ENABLED is false)`);
             return;
         }

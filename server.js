@@ -50,7 +50,7 @@ app.use(morgan(
 
 const http = require('http').createServer(app);
 const socketService = require('./utils/socketService');
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // Initialize Socket.io
 socketService.init(http);
@@ -70,7 +70,11 @@ app.use(cors({
     // allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (
+      allowedOrigins.indexOf(origin) !== -1 ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.onrender.com')
+    ) {
       callback(null, true);
     } else {
       logger.warn(`❌ CORS BLOCKED: ${origin}`);

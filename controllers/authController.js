@@ -56,7 +56,7 @@ exports.requestActivation = async (req, res) => {
             }
             const query = method === 'email' 
                 ? 'SELECT * FROM verified_students WHERE roll_number = $1 AND email = $2 AND tenant_id = $3' 
-                : 'SELECT * FROM verified_students WHERE roll_number = $1 AND mobile_number = $2 AND tenant_id = $3';
+                : 'SELECT * FROM verified_students WHERE roll_number = $1 AND mobile = $2 AND tenant_id = $3';
             const [rows] = await db.execute(query, [roll_number.trim(), identifier, tenantId]);
             entry = rows[0];
         } else {
@@ -158,24 +158,31 @@ exports.completeActivation = async (req, res) => {
             const { roll_number } = req.body;
             const query = method === 'email' 
                 ? 'SELECT * FROM verified_students WHERE roll_number = $1 AND email = $2 AND tenant_id = $3 FOR UPDATE' 
-                : 'SELECT * FROM verified_students WHERE roll_number = $1 AND mobile_number = $2 AND tenant_id = $3 FOR UPDATE';
+                : 'SELECT * FROM verified_students WHERE roll_number = $1 AND mobile = $2 AND tenant_id = $3 FOR UPDATE';
             const [vRows] = await conn.execute(query, [roll_number?.trim(), identifier, tenantId]);
             if (vRows.length === 0) throw new Error('NOT_IN_REGISTRY');
             vData = vRows[0];
 
             if (vData.is_account_created) throw new Error('ALREADY_ACTIVATED');
 
+            // 1.5 Map Department Name to ID
+            let deptId = 1; // Default to Admin/General
+            if (vData.department) {
+                const [deptRows] = await conn.execute('SELECT id FROM departments WHERE name = $1 LIMIT 1', [vData.department]);
+                if (deptRows.length > 0) deptId = deptRows[0].id;
+            }
+
             // Insert into Users
             const [uRows] = await conn.execute(
                 'INSERT INTO users (tenant_id, username, full_name, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-                [tenantId, vData.roll_number, vData.name || vData.roll_number, vData.email, vData.mobile_number, hashedPassword, 'student', true]
+                [tenantId, vData.roll_number, vData.full_name || vData.roll_number, vData.email, vData.mobile, hashedPassword, 'Student', true]
             );
             const userId = uRows[0].id;
 
             // Insert into Students
             await conn.execute(
-                'INSERT INTO students (tenant_id, user_id, roll_number, department_id, mobile_number, id_card_image, course, semester, admission_year) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-                [tenantId, userId, vData.roll_number, vData.department_id || 1, vData.mobile_number, vData.id_card_image, vData.department, vData.year, new Date().getFullYear()]
+                'INSERT INTO students (tenant_id, user_id, roll_number, department_id, mobile_number, id_card_image, course, semester) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+                [tenantId, userId, vData.roll_number, deptId, vData.mobile, vData.id_card_image, vData.department, vData.year]
             );
 
             // Update Registry
@@ -193,10 +200,13 @@ exports.completeActivation = async (req, res) => {
 
             if (vData.is_account_created) throw new Error('ALREADY_ACTIVATED');
 
+            // 1.5 Map Department Name to ID
+            let deptId = vData.department_id || 1;
+
             // Insert into Users
             const [uRows] = await conn.execute(
                 'INSERT INTO users (tenant_id, username, full_name, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-                [tenantId, vData.name, vData.name, vData.email, vData.mobile, hashedPassword, normalizedRole, true]
+                [tenantId, vData.email, vData.name, vData.email, vData.mobile, hashedPassword, normalizedRole, true]
             );
             const userId = uRows[0].id;
 
