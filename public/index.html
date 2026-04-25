@@ -95,6 +95,7 @@
                 <a href="login.html?role=staff" class="btn btn-glass btn-glow"><i class="fa-solid fa-chalkboard-user"></i> Staff Portal</a>
                 <a href="login.html?role=admin" class="btn btn-glass btn-glow"><i class="fa-solid fa-user-shield"></i> Admin Panel</a>
                 <a href="login.html?role=principal" class="btn btn-glass btn-gold"><i class="fa-solid fa-chart-pie"></i> Principal Dashboard</a>
+                <a href="#section-bibliography" class="btn btn-glass"><i class="fa-solid fa-book"></i> Bibliography</a>
                 <a href="terms-conditions/terms.html" class="btn btn-glass"><i class="fa-solid fa-circle-question"></i> Help</a>
             </div>
 
@@ -250,6 +251,21 @@
             </div>
 
             <div class="leadership-grid">
+                <!-- Lead Developer Card -->
+                <div class="leader-card leader-card--ashmit glass-panel stagger-item">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/ashmit.jpg" alt="Mr. Ashmit Kumar" class="leader-image" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Ashmit+Kumar&background=d4af37&color=0b132b&size=512';">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-ashmit')">Read Full Profile</button>
+                        </div>
+                    </div>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Mr. Ashmit Kumar</h3>
+                        <p class="leader-title text-gold"><i class="fa-solid fa-code-branch"></i> Lead Developer & Concept</p>
+                        <p class="leader-snippet">2nd semester B.Tech (C.S.E) student and the primary architect behind the Smart Complaint System's digital transformation.</p>
+                    </div>
+                </div>
+
                 <!-- Concept & Data Contributor Card -->
                 <div class="leader-card leader-card--kanika glass-panel stagger-item">
                     <div class="leader-image-wrapper">
@@ -317,6 +333,16 @@
                         <p style="margin-bottom: 1rem;">Dr. Pawan Thakur provides dedicated technical assistance and ensuring the seamless operation of the system across all departments at Govt. College Dharamshala.</p>
                         <p>With a focus on strategic implementation and institutional efficiency, he plays a vital role in maintaining the technological integrity of the campus complaint management infrastructure.</p>
                         <p style="margin-top: 1rem; font-style: italic; color: var(--gold); font-size: 0.9rem;">(Note: Full biography to be updated)</p>
+                    </div>
+                </div>
+
+                <div id="bio-ashmit" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Mr. Ashmit Kumar</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Lead Developer | B.Tech C.S.E (2nd Sem)</h4>
+                    <div class="bio-text-body">
+                        <p style="margin-bottom: 1rem;">Ashmit Kumar is the primary developer and architect of the <strong>Smart Campus Complaint & Response System</strong>. A 2nd-semester B.Tech Computer Science student at Government College Dharamshala, he envisioned this project as a way to solve real-world administrative challenges through technology.</p>
+                        <p style="margin-bottom: 1rem;">He was responsible for the full-stack development of the platform, including the design of the user interface, backend logic, and the integration of automated routing systems. His focus was on creating a transparent, accountable, and efficient digital ecosystem for campus governance.</p>
+                        <p>Driven by a passion for innovation and software engineering, Ashmit aimed to replace outdated manual processes with a high-performance system that ensures every student's voice is heard and addressed promptly.</p>
                     </div>
                 </div>
 
@@ -587,6 +613,34 @@
         </div>
     </section>
 
+
+    <!-- Section: Bibliography -->
+    <section id="section-bibliography" class="fullscreen-section section-bibliography premium-reveal" style="padding: 100px 0; background: rgba(10, 15, 30, 0.4); position: relative; z-index: 5;">
+        <div class="content-wrapper" style="max-width: 900px; margin: 0 auto;">
+            <div class="text-center gsap-fade-up" style="margin-bottom: 4rem;">
+                <h2 class="section-title" style="color: var(--gold); font-size: 2.8rem;">Bibliography</h2>
+                <div style="width: 80px; height: 3px; background: var(--gold); margin: 1.5rem auto;"></div>
+            </div>
+            
+            <div class="bibliography-content glass-panel gsap-fade-up" style="padding: 3.5rem; border-radius: 24px; border: 1px solid rgba(212, 175, 55, 0.15); background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px);">
+                <div class="bib-text-body" style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 1.15rem; text-align: justify;">
+                    <p style="margin-bottom: 1.5rem;">The Smart Campus Complaint & Response System is a student-driven initiative aimed at transforming the traditional complaint handling process into a faster, more transparent, and efficient digital system. This project was conceptualized and developed by <strong>Mr. Ashmit Kumar</strong>, a 2nd semester B.Tech (C.S.E) student, in collaboration with <strong>Kanika Devi</strong>. The system was specifically designed for Government College Dharamshala, with the aim of improving communication between students and the college administration.</p>
+                    
+                    <p style="margin-bottom: 1.5rem;">The idea for this project originated from observing inefficiencies in the existing complaint system. Traditional methods relied on written applications or verbal communication, which often caused delays, miscommunication, and lack of transparency. Complaints could take days or weeks to be addressed, and students had no clear way to track progress.</p>
+                    
+                    <p style="margin-bottom: 1.5rem;">To solve this, the system was designed as a centralized digital platform where students can submit complaints easily. Once submitted, complaints are automatically routed to the appropriate department, reducing delays and ensuring faster resolution.</p>
+                    
+                    <p style="margin-bottom: 1.5rem;">A key feature of the system is transparency. Students can track complaint status in real time, ensuring accountability and trust. Every stage—from submission to resolution—is clearly visible.</p>
+                    
+                    <p style="margin-bottom: 1.5rem;">The development involved both technical and practical contributions. Ashmit Kumar led the website development and system design, focusing on a clean and user-friendly interface. Kanika Devi contributed to the conceptual design and ensured the system addressed real student needs.</p>
+                    
+                    <p style="margin-bottom: 1.5rem;">Despite challenges like limited resources and time constraints, the system was successfully built through continuous testing and improvement. This project reflects the integration of technology into institutional processes and demonstrates how innovation can solve real-world problems.</p>
+                    
+                    <p>In conclusion, the Smart Campus Complaint & Response System is a practical and impactful solution that enhances campus management and student experience.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Footer -->
     <footer style="padding: 3rem 0 2rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); color: var(--text-muted); font-size: 0.9rem; position: relative; z-index: 10;">
