@@ -175,7 +175,7 @@
                     <div class="leader-image-wrapper">
                         <img src="images/leadership/rakesh_final.jpg" alt="Prof. Rakesh Pathania" class="leader-image">
                         <div class="leader-overlay">
-                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-principal')">Read Full Profile</button>
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-principal', this)">Read Full Profile</button>
                         </div>
                     </div>
                     <div class="leader-info">
@@ -190,7 +190,7 @@
                     <div class="leader-image-wrapper">
                         <img src="images/leadership/naresh_final.jpg" alt="Dr. Naresh Sharma" class="leader-image">
                         <div class="leader-overlay">
-                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-naresh')">Read Full Profile</button>
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-naresh', this)">Read Full Profile</button>
                         </div>
                     </div>
                     <div class="leader-info">
@@ -205,7 +205,7 @@
                     <div class="leader-image-wrapper">
                         <img src="images/leadership/harsh_final.jpg" alt="Mr. Harsh Guleria" class="leader-image">
                         <div class="leader-overlay">
-                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-harsh')">Read Full Profile</button>
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-harsh', this)">Read Full Profile</button>
                         </div>
                     </div>
                     <div class="leader-info">
@@ -220,7 +220,7 @@
                     <div class="leader-image-wrapper">
                         <img src="images/leadership/pawan_final.jpg" alt="Dr. Pawan Thakur" class="leader-image leader-image--pawan">
                         <div class="leader-overlay">
-                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-pawan')">Read Full Profile</button>
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-pawan', this)">Read Full Profile</button>
                         </div>
                     </div>
                     <div class="leader-info">
@@ -235,7 +235,7 @@
                     <div class="leader-image-wrapper">
                         <img src="images/leadership/lucky.jpg" alt="Mr. Lucky Sharma" class="leader-image">
                         <div class="leader-overlay">
-                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-lucky')">Read Full Profile</button>
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-lucky', this)">Read Full Profile</button>
                         </div>
                     </div>
                     <div class="leader-info">
@@ -256,7 +256,7 @@
                     <div class="leader-image-wrapper">
                         <img src="images/leadership/ashmit.jpg" alt="Mr. Ashmit Kumar" class="leader-image" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Ashmit+Kumar&background=d4af37&color=0b132b&size=512';">
                         <div class="leader-overlay">
-                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-ashmit')">Read Full Profile</button>
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-ashmit', this)">Read Full Profile</button>
                         </div>
                     </div>
                     <div class="leader-info">
@@ -271,7 +271,7 @@
                     <div class="leader-image-wrapper">
                         <img src="images/leadership/kanika.jpg" alt="Kanika Devi" class="leader-image" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Kanika+Devi&background=d4af37&color=0b132b&size=512';">
                         <div class="leader-overlay">
-                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-kanika')">Read Full Profile</button>
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-kanika', this)">Read Full Profile</button>
                         </div>
                     </div>
                     <div class="leader-info">
@@ -287,6 +287,7 @@
         <div id="bio-modal" class="bio-modal-overlay" style="display: none;">
             <div class="bio-modal-content glass-panel">
                 <button class="bio-modal-close" onclick="closeBioModal()"><i class="fa-solid fa-times"></i></button>
+                <img id="modal-profile-img" class="modal-profile-image" src="" alt="Profile Image">
                 <div id="bio-principal" class="bio-content-block" style="display: none;">
                     <h2 class="text-gold" style="margin-bottom: 0.5rem;">Prof. Rakesh Pathania</h2>
                     <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Principal, Govt. College Dharamshala</h4>
@@ -381,7 +382,19 @@
         </div>
         
         <script>
-            function openBioModal(id) {
+            function openBioModal(id, btn) {
+                // Get image info from clicked card
+                if (btn) {
+                    const card = btn.closest('.leader-card');
+                    const img = card.querySelector('.leader-image').src;
+                    const name = card.querySelector('.leader-name').innerText;
+                    const modalImg = document.getElementById('modal-profile-img');
+                    if (modalImg) {
+                        modalImg.src = img;
+                        modalImg.alt = name;
+                    }
+                }
+                
                 document.getElementById('bio-modal').style.display = 'flex';
                 document.querySelectorAll('.bio-content-block').forEach(b => b.style.display = 'none');
                 document.getElementById(id).style.display = 'block';
