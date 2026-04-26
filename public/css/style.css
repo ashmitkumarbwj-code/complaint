@@ -2878,5 +2878,124 @@ canvas {
     text-transform: uppercase;
 }
 
-.ai-tag.emergency { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+.ai-tag.emergency { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }/* =========================================================================
+   USER MANAGEMENT & AUDIT LOGS STYLES
+   ========================================================================= */
+
+.filter-bar {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.filter-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--gold);
+    margin-bottom: 5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.elegant-input, .elegant-select {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.elegant-input:focus, .elegant-select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+    outline: none;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.dot-active {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+}
+
+.dot-inactive {
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+}
+
+.row-inactive {
+    opacity: 0.6;
+    background: rgba(239, 68, 68, 0.02) !important;
+}
+
+.action-tag {
+    background: rgba(212, 175, 55, 0.1);
+    color: var(--gold);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.btn-icon-small {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-icon-small:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.btn-icon-small.text-red { color: #ef4444; }
+.btn-icon-small.text-red:hover { background: rgba(239, 68, 68, 0.2); }
+
+.btn-icon-small.text-green { color: #10b981; }
+.btn-icon-small.text-green:hover { background: rgba(16, 185, 129, 0.2); }
+
+.status-badge.status-admin { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.status-badge.status-hod { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.status-badge.status-staff { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.status-badge.status-student { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+
+/* Modal Row Layout */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
+}
+
+.col-md-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+    padding: 0 15px;
+}
+
+@media (max-width: 768px) {
+    .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
 .ai-tag.review { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }

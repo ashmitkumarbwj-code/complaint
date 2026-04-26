@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const adminController = require('../controllers/adminController');
+const adminManagementController = require('../controllers/adminManagementController');
 const slidesController = require('../controllers/slidesController');
 const auth = require('../middleware/authMiddleware');
 const checkRole = require('../middleware/roleMiddleware');
@@ -121,5 +122,24 @@ router.delete('/dynamic-slides/:id', auth, checkRole(['Admin']), dynamicSlidesCo
 // @desc    Safe Read-Only Database Audit
 // @access  Private (Admin only)
 router.get('/db-audit', auth, checkRole(['Admin']), adminController.dbAudit);
+
+// ==========================================
+// ADMIN USER MANAGEMENT (UNIFIED)
+// ==========================================
+
+// @route   GET /api/admin/users
+router.get('/users', auth, checkRole(['Admin']), adminManagementController.listUsers);
+
+// @route   POST /api/admin/users
+router.post('/users', auth, checkRole(['Admin']), adminManagementController.addUser);
+
+// @route   PUT /api/admin/users/:type/:id
+router.put('/users/:type/:id', auth, checkRole(['Admin']), adminManagementController.updateUser);
+
+// @route   DELETE /api/admin/users/:type/:id
+router.delete('/users/:type/:id', auth, checkRole(['Admin']), adminManagementController.deleteUser);
+
+// @route   GET /api/admin/audit-logs
+router.get('/audit-logs', auth, checkRole(['Admin']), adminManagementController.getAuditLogs);
 
 module.exports = router;

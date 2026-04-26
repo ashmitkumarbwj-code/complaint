@@ -1,28 +1,42 @@
-# Smart Campus Production Hardening - Status Report
+# Live Database Registry Import — Status
 
-## Phase 1: DB Layer & Schema Hardening
-- [x] Implement `db.tenantExecute` automated wrapper in `config/db.js`.
-- [x] Standardize all `mobile` fields to `mobile_number` in `database_final.sql`.
-- [x] Add composite `UNIQUE` constraints to prevent cross-tenant collisions.
-- [x] Add missing tables (`gallery_images`, `department_categories`, `department_members`, `complaint_departments`) to schema.
+## Registry Population
 
-## Phase 2: Global Controller Refactor (Multi-Tenant Lockdown)
-- [x] **`authController.js`**: Enforced tenant search in verified registries.
-- [x] **`complaintController.js`**: Implemented Triple-Lock RBAC (Tenant + Role + Membership).
-- [x] **`departmentController.js`**: Fixed ReferenceErrors and switched to Zero-Trust queries.
-- [x] **`dashboardController.js`**: Isolated Principal/Authority stats per tenant.
-- [x] **`userController.js` & `adminController.js`**: Hardened registry and profile security.
-- [x] **`galleryController.js`**: Tenant-scoped asset management.
+### verified_students
+- [x] Confirmed: **6,415 records** already in DB
+- [x] Student activation lookups confirmed working
 
-## Phase 3: System Deep-Hardening (Workers & Services)
-- [x] **`uploadWorker.js`**: Mandatory `tenantId` extraction and enforcement.
-- [x] **`notificationWorker.js`**: Tenant-aware logging for production auditability.
-- [x] **`complaintService.js`**: Service-level membership and ownership enforcement.
+### verified_staff
+- [x] Confirmed: Seeded with Principal, 39 Admins, and 9 HOD records.
+- [x] B-Tech Staff Import: **76 records** inserted from B-Tech Staff List.
+- [x] **HOD FINALIZATION**: 3 out of 9 HODs updated with real faculty data.
+    - [x] Create Unified Admin User Management Controller
+    - [x] Implement User Management Routes in `admin.js`
+    - [x] Design and Build Admin User Management UI (Frontend)
+    - [x] Implement Search, Filtering, and Sorting for Users
+    - [x] Implement Audit Logging for Admin Actions
+    - [x] Implement Soft-Delete (is_active) logic
+- [x] **Total verified_staff: 109 records**
 
-## Phase 4: Production Documentation
-- [x] **`SYSTEM_LOGIC_PLAYBOOK.md`**: Explains security boundaries and Triple-Lock.
-- [x] **`PRODUCTION_LAUNCH_GUIDE.md`**: Infrastructure setup (AWS/Nginx/PM2).
-- [x] **`FINAL_VERIFICATION_CHECKLIST.md`**: Manual QA protocol.
+## Scripts Created
+- [x] `scripts/seed_verified_staff_pg.js` — Base seeder
+- [x] `scratch/import_btech_staff.js` — B-Tech specific import
+- [x] `scripts/execute_hod_update.js` — HOD registry updater
+- [x] `scratch/analyze_hod_csv.js` — Form response analyzer
+
+## Remaining / Pending
+
+### Remaining HODs (6 Placeholders)
+- [ ] Needs real data for:
+    - Commerce (id 26)
+    - Non-Medical Science (id 29)
+    - BCA (id 30)
+    - MBA (id 31)
+    - MCA (id 32)
+    - BBA (id 33)
+
+### Full Faculty / Teaching Staff
+- [ ] Remaining subjects beyond B-Tech list (requires text-based Faculty List).
 
 ---
-**Status: SYSTEM HARDENING 100% COMPLETE. READY FOR AWS DEPLOYMENT.**
+**Status: HOD ACTIVATION STARTED. 3 DEPARTMENTS LIVE.**
