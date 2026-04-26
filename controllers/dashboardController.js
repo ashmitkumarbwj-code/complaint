@@ -215,6 +215,31 @@ exports.getAuthorityComplaints = async (req, res) => {
     }
 };
 
+exports.getDepartmentStaff = async (req, res) => {
+    const { department_id } = req.params;
+    try {
+        if (req.user.role === 'Staff' || req.user.role === 'HOD') {
+            const [membership] = await db.tenantExecute(req,
+                'SELECT 1 FROM department_members WHERE department_id = $1 AND user_id = $2',
+                [department_id, req.user.id]
+            );
+            if (membership.length === 0) return res.status(403).json({ success: false, message: 'Access Denied' });
+        }
+
+        const [rows] = await db.tenantExecute(req, `
+            SELECT u.id, u.username, u.email, u.role, dm.role_in_dept
+            FROM department_members dm
+            JOIN users u ON dm.user_id = u.id
+            WHERE dm.department_id = $1 AND u.role IN ('Staff', 'HOD')
+            ORDER BY u.username ASC
+        `, [department_id]);
+        res.json({ success: true, staff: rows });
+    } catch (error) {
+        logger.error('[Dashboard] getDepartmentStaff error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching staff members' });
+    }
+};
+
 exports.getAdminStats = async (req, res) => {
     try {
         const [total] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints');

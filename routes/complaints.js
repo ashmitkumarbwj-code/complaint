@@ -78,6 +78,14 @@ router.patch('/status/:complaint_id',
     complaintController.updateStatus
 );
 
+// [BACKWARD COMPATIBILITY ALIAS] Supports frontend calls to /api/complaints/:id/status
+router.patch('/:complaint_id/status',
+    auth,
+    statusUpdateLimiter,
+    v.validateUpdateStatus,
+    complaintController.updateStatus
+);
+
 // Get complaint history (Audit Trail)
 router.get('/:id/history', 
     auth, 

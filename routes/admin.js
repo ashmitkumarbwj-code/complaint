@@ -79,6 +79,9 @@ router.get('/departments', auth, checkRole(['Admin', 'Principal', 'HOD']), admin
 // @access  Private (Admin, Principal)
 router.put('/complaints/:id/status', auth, checkRole(['Admin', 'Principal']), adminController.updateComplaintStatus);
 
+// [BACKWARD COMPATIBILITY ALIAS] Supports frontend PATCH calls
+router.patch('/complaints/:id/status', auth, checkRole(['Admin', 'Principal']), adminController.updateComplaintStatus);
+
 // @route   PATCH /api/admin/complaints/:id/forward
 // @desc    Manually forward (reassign) a complaint to a different department
 // @access  Private (Admin, Principal)

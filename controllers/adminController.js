@@ -142,6 +142,7 @@ exports.addStudent = async (req, res) => {
 exports.updateComplaintStatus = async (req, res) => {
     const complaintController = require('./complaintController');
     // Map params to match complaintController's expectation
+    req.params.complaint_id = req.params.id; 
     req.body.action_type = 'LEGACY_ADMIN_UPDATE';
     return complaintController.updateStatus(req, res);
 };
