@@ -17,6 +17,9 @@ const processUpload = async (job) => {
         }
 
         try {
+            // 0. Verify file exists before proceeding
+            await fs.access(filePath);
+            
             // 1. Upload the file from disk to Cloudinary
             const result = await cloudinary.uploader.upload(filePath, {
                 folder: `smart_campus/complaints/tenant_${tenantId}`,
@@ -38,6 +41,14 @@ const processUpload = async (job) => {
             return mediaUrl;
 
         } catch (error) {
+            if (error.code === 'ENOENT') {
+                logger.warn(`[Job:${job.id}] File missing on disk: ${filePath}. Marking as failed to prevent infinite retry.`);
+                await db.execute(
+                    `UPDATE complaints SET processing_status = 'failed' WHERE id = $1 AND tenant_id = $2`,
+                    [complaintId, tenantId]
+                );
+                return;
+            }
             logger.error(`[RESILIENCE] [Job:${job.id}] Cloudinary upload failed. Marking #${complaintId} for resync.`, error);
             
             // Mark for resync in DB

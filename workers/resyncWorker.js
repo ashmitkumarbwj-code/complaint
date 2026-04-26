@@ -56,8 +56,8 @@ exports.processPendingResyncs = async () => {
                 await db.execute(
                     `UPDATE complaints 
                      SET media_url = $1, processing_status = 'completed' 
-                     WHERE id = $2`,
-                    [result.secure_url, id]
+                     WHERE id = $2 AND tenant_id = $3`,
+                    [result.secure_url, id, tenant_id]
                 );
 
                 logger.info(`[RESILIENCE] Re-sync successful for complaint #${id}`);
@@ -101,4 +101,21 @@ exports.deleteOldOrphans = async () => {
     } catch (err) {
         logger.error('[Disk Safety] Cleanup failed:', err.message);
     }
+};
+
+/**
+ * Start Background Maintenance
+ * Periodically runs resync and cleanup logic.
+ */
+exports.startMaintenanceInterval = (intervalMs = 300000) => { // Default 5 mins
+    logger.info(`[Maintenance] Starting periodic maintenance every ${intervalMs / 1000}s`);
+    
+    // Initial run
+    this.processPendingResyncs();
+    this.deleteOldOrphans();
+
+    return setInterval(() => {
+        this.processPendingResyncs();
+        this.deleteOldOrphans();
+    }, intervalMs);
 };

@@ -181,14 +181,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // 4. Initial Fetches
-    fetchStats();
-    loadDashboardAnalytics(); // New analytics suite
-    fetchComplaints();
-    fetchStaff();
-    fetchStudents();
-    loadDepartments();
-    fetchDeptManagement();
-    loadGallery();
+    // [Moved to the end of DOMContentLoaded to prevent hoisting ReferenceErrors]
 
     // 4.1 SaaS Navigation Logic
     const navItems = document.querySelectorAll('.nav-item');
@@ -2464,5 +2457,34 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         });
     };
+    // --- SAFE INITIALIZATION OF DASHBOARD MODULES ---
+    // Executed at the very end after all functions and event listeners are registered.
+    const safeInit = async () => {
+        const initTasks = [
+            { name: 'fetchStats', fn: typeof fetchStats === 'function' ? fetchStats : window.fetchStats },
+            { name: 'loadDashboardAnalytics', fn: typeof loadDashboardAnalytics === 'function' ? loadDashboardAnalytics : window.loadDashboardAnalytics },
+            { name: 'fetchComplaints', fn: typeof fetchComplaints === 'function' ? fetchComplaints : window.fetchComplaints },
+            { name: 'fetchStaff', fn: typeof fetchStaff === 'function' ? fetchStaff : window.fetchStaff },
+            { name: 'fetchStudents', fn: typeof fetchStudents === 'function' ? fetchStudents : window.fetchStudents },
+            { name: 'loadDepartments', fn: typeof loadDepartments === 'function' ? loadDepartments : window.loadDepartments },
+            { name: 'fetchDeptManagement', fn: typeof fetchDeptManagement === 'function' ? fetchDeptManagement : window.fetchDeptManagement },
+            { name: 'loadGallery', fn: typeof loadGallery === 'function' ? loadGallery : window.loadGallery }
+        ];
+
+        for (const task of initTasks) {
+            if (typeof task.fn === 'function') {
+                try {
+                    const res = task.fn();
+                    if (res && typeof res.then === 'function') await res;
+                } catch (err) {
+                    console.error(`[Admin Dashboard] SafeInit error in module ${task.name}:`, err);
+                }
+            } else {
+                console.warn(`[Admin Dashboard] SafeInit warning: ${task.name} is not a valid function.`);
+            }
+        }
+    };
+
+    safeInit();
 
 });
