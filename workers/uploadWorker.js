@@ -28,7 +28,7 @@ const processUpload = async (job) => {
 
             // 2. Update the database row (Zero-Trust Lock)
             await db.execute(
-                `UPDATE complaints SET media_url = ?, processing_status = 'completed' WHERE id = ? AND tenant_id = ?`,
+                `UPDATE complaints SET media_url = $1, processing_status = 'completed' WHERE id = $2 AND tenant_id = $3`,
                 [mediaUrl, complaintId, tenantId]
             );
             logger.info(`[Job:${job.id}] [Tenant:${tenantId}] Complaint #${complaintId} media_url updated`);

@@ -29,12 +29,13 @@ exports.processPendingResyncs = async () => {
 
         for (const complaint of rows) {
             const { id, tenant_id, local_file_path } = complaint;
+            const fullPath = path.join(__dirname, '../uploads', local_file_path);
 
             // Check if file still exists on disk
             try {
-                await fs.access(local_file_path);
+                await fs.access(fullPath);
             } catch (e) {
-                logger.error(`[RESILIENCE] File not found on disk for complaint #${id}: ${local_file_path}`);
+                logger.error(`[RESILIENCE] File not found on disk for complaint #${id}: ${fullPath}`);
                 await db.execute(
                     "UPDATE complaints SET processing_status = 'failed' WHERE id = $1",
                     [id]
@@ -46,7 +47,7 @@ exports.processPendingResyncs = async () => {
                 logger.debug(`[RESILIENCE] Attempting re-sync for #${id}...`);
                 
                 // 2. Upload to Cloudinary
-                const result = await cloudinary.uploader.upload(local_file_path, {
+                const result = await cloudinary.uploader.upload(fullPath, {
                     folder: `smart_campus/complaints/tenant_${tenant_id}`,
                     resource_type: 'auto'
                 });
@@ -62,7 +63,7 @@ exports.processPendingResyncs = async () => {
                 logger.info(`[RESILIENCE] Re-sync successful for complaint #${id}`);
 
                 // 4. Clean up disk
-                await fs.unlink(local_file_path);
+                await fs.unlink(fullPath);
 
             } catch (uploadErr) {
                 logger.warn(`[RESILIENCE] Re-sync failed again for complaint #${id}: ${uploadErr.message}`);
