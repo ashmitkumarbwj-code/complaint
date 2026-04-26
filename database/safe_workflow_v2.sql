@@ -4,28 +4,64 @@
 
 BEGIN;
 
--- 1. Explicit Backfill for Legacy rows
--- First add the column without default
+-- 1. Update Enum to include V2 Statuses
+-- PostgreSQL doesn't support IF NOT EXISTS for ADD VALUE, so we use a DO block
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'complaint_status' AND pg_enum.enumlabel = 'SUBMITTED') THEN
+        ALTER TYPE complaint_status ADD VALUE 'SUBMITTED';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'complaint_status' AND pg_enum.enumlabel = 'FORWARDED') THEN
+        ALTER TYPE complaint_status ADD VALUE 'FORWARDED';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'complaint_status' AND pg_enum.enumlabel = 'HOD_VERIFIED') THEN
+        ALTER TYPE complaint_status ADD VALUE 'HOD_VERIFIED';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'complaint_status' AND pg_enum.enumlabel = 'STAFF_RESOLVED') THEN
+        ALTER TYPE complaint_status ADD VALUE 'STAFF_RESOLVED';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'complaint_status' AND pg_enum.enumlabel = 'HOD_APPROVED') THEN
+        ALTER TYPE complaint_status ADD VALUE 'HOD_APPROVED';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'complaint_status' AND pg_enum.enumlabel = 'CLOSED') THEN
+        ALTER TYPE complaint_status ADD VALUE 'CLOSED';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'complaint_status' AND pg_enum.enumlabel = 'REJECTED_BY_ADMIN') THEN
+        ALTER TYPE complaint_status ADD VALUE 'REJECTED_BY_ADMIN';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'complaint_status' AND pg_enum.enumlabel = 'RETURNED_TO_ADMIN') THEN
+        ALTER TYPE complaint_status ADD VALUE 'RETURNED_TO_ADMIN';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'complaint_status' AND pg_enum.enumlabel = 'HOD_REWORK_REQUIRED') THEN
+        ALTER TYPE complaint_status ADD VALUE 'HOD_REWORK_REQUIRED';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'complaint_status' AND pg_enum.enumlabel = 'IN_PROGRESS') THEN
+        ALTER TYPE complaint_status ADD VALUE 'IN_PROGRESS';
+    END IF;
+END $$;
+
+-- 2. Explicit Backfill for Legacy rows
 ALTER TABLE complaints ADD COLUMN IF NOT EXISTS workflow_version INT;
--- Backfill existing rows to version 1
 UPDATE complaints SET workflow_version = 1 WHERE workflow_version IS NULL;
--- Now set the default for future rows to 2 (Strict)
 ALTER TABLE complaints ALTER COLUMN workflow_version SET DEFAULT 2;
 
--- 2. Ownership Columns with Referential Integrity
+-- 3. Ownership Columns with Referential Integrity
 ALTER TABLE complaints ADD COLUMN IF NOT EXISTS current_owner_user_id INT REFERENCES users(id);
 ALTER TABLE complaints ADD COLUMN IF NOT EXISTS current_owner_role VARCHAR(50);
 ALTER TABLE complaints ADD COLUMN IF NOT EXISTS current_owner_department_id INT REFERENCES departments(id);
-ALTER TABLE complaints ADD COLUMN IF NOT EXISTS is_v2_compliant BOOLEAN DEFAULT FALSE;
+ALTER TABLE complaints ADD COLUMN IF NOT EXISTS is_v2_compliant BOOLEAN DEFAULT TRUE;
 ALTER TABLE complaints ADD COLUMN IF NOT EXISTS last_transition_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
--- 3. Historical Tracking Columns
+-- 4. Historical Tracking Columns
 ALTER TABLE complaints ADD COLUMN IF NOT EXISTS last_hod_id INT REFERENCES users(id);
 ALTER TABLE complaints ADD COLUMN IF NOT EXISTS last_staff_id INT REFERENCES users(id);
 ALTER TABLE complaints ADD COLUMN IF NOT EXISTS reopened_count INT DEFAULT 0;
 
--- 4. Create Immutable Audit Trail with Full Context
-CREATE TABLE IF NOT EXISTS complaint_audit_trail (
+-- 5. Ensure lock_version exists
+ALTER TABLE complaints ADD COLUMN IF NOT EXISTS lock_version INT DEFAULT 0;
+
+-- 6. Create Immutable Audit Trail
+CREATE TABLE IF NOT EXISTS complaint_audit_trail_v2 (
     id SERIAL PRIMARY KEY,
     complaint_id INT NOT NULL REFERENCES complaints(id) ON DELETE CASCADE,
     from_status VARCHAR(50),
@@ -43,8 +79,8 @@ CREATE TABLE IF NOT EXISTS complaint_audit_trail (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Optimization Indexes
+-- 7. Optimization Indexes
 CREATE INDEX IF NOT EXISTS idx_complaints_v2_owner ON complaints(workflow_version, current_owner_user_id, current_owner_role);
-CREATE INDEX IF NOT EXISTS idx_audit_complaint_id ON complaint_audit_trail(complaint_id);
+CREATE INDEX IF NOT EXISTS idx_audit_v2_complaint_id ON complaint_audit_trail_v2(complaint_id);
 
 COMMIT;

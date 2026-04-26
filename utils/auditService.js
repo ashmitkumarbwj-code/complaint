@@ -4,6 +4,23 @@
  */
 const { VISIBILITY, ACTION_TYPE } = require('./constants');
 
+/**
+ * Maps a normalized lowercase role string to the DB user_role enum value.
+ * The user_role enum stores: Admin, HOD, Staff, Student, Principal, StudentHead
+ */
+function toDbRoleEnum(role) {
+    const map = {
+        admin: 'Admin',
+        hod: 'HOD',
+        staff: 'Staff',
+        student: 'Student',
+        principal: 'Principal',
+        studenthead: 'StudentHead',
+    };
+    const normalized = String(role || '').toLowerCase().trim();
+    return map[normalized] || role; // Fallback: pass as-is (handles already-Title-Case input)
+}
+
 class AuditService {
     /**
      * Logs an action to the complaint_status_history table.
@@ -35,7 +52,7 @@ class AuditService {
         const params = [
             complaint_id,
             actor_user_id,
-            actor_role,
+            toDbRoleEnum(actor_role),  // Normalize to DB enum casing (Admin, HOD, Staff…)
             action_type,
             from_status,
             to_status,

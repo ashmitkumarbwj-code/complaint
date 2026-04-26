@@ -86,11 +86,48 @@ function renderComplaints(complaints) {
     const tbody = document.getElementById('complaints-tbody');
     const urgentSection = document.getElementById('urgent-section');
     const urgentList = document.getElementById('urgent-list');
+    
+    // Level Up: Find urgent complaints for the elite strip
+    const urgentComplaints = complaints.filter(c => String(c.priority).toLowerCase() === 'high' || String(c.priority).toLowerCase() === 'urgent');
 
     if (complaints.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-secondary">No complaints found.</td></tr>';
         urgentSection.style.display = 'none';
         return;
+    }
+
+    // Level Up: Render Elite Pulsing Urgent Strip
+    if (urgentComplaints.length > 0) {
+        const stripId = 'urgent-pulse-strip';
+        let existingStrip = document.getElementById(stripId);
+        if (!existingStrip) {
+            existingStrip = document.createElement('div');
+            existingStrip.id = stripId;
+            existingStrip.className = 'urgent-strip';
+            urgentSection.parentNode.insertBefore(existingStrip, urgentSection);
+        }
+        existingStrip.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="background: #ff4444; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(255,68,68,0.5);">
+                    <i class="fas fa-exclamation-triangle" style="color: white; font-size: 1.2rem;"></i>
+                </div>
+                <div>
+                    <div style="font-weight: 800; color: #ff4444; font-size: 1.1rem; letter-spacing: 0.5px;">CRITICAL INTERVENTION REQUIRED</div>
+                    <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7); font-weight: 500;">There are ${urgentComplaints.length} high-priority complaints requiring immediate attention.</div>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-danger" style="border-radius: 20px; padding: 5px 15px; font-weight: 700; background: #ff4444; border:none; box-shadow: 0 4px 10px rgba(255,68,68,0.3);">
+                TAKE ACTION <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+        `;
+        existingStrip.onclick = () => {
+            document.getElementById('complaint-search').value = 'High';
+            document.getElementById('complaint-search').dispatchEvent(new Event('input'));
+            window.scrollTo({ top: tbody.offsetTop - 100, behavior: 'smooth' });
+        };
+    } else {
+        const strip = document.getElementById('urgent-pulse-strip');
+        if (strip) strip.remove();
     }
 
     // Handle Complaints Table
@@ -143,64 +180,162 @@ function viewDetails(c) {
             </div>
         ` : ''}
 
-        <div class="mb-3"><strong>Submitted:</strong> ${new Date(c.created_at).toLocaleString()}</div>
-        <div><strong>Current Status:</strong> <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span></div>
+    const timelineHtml = renderWorkflowTimeline(c.status);
+    
+    details.innerHTML = `
+        ${timelineHtml}
+        <div class="complaint-info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 20px;">
+            <div><strong>Category:</strong> ${c.category}</div>
+            <div><strong>Location:</strong> ${c.location}</div>
+            <div style="grid-column: span 2"><strong>Description:</strong><br><p class="mt-1">${c.description}</p></div>
+        </div>
+        ${c.media_url ? `
+            <div class="mb-3">
+                <strong>Attachment:</strong><br>
+                ${MediaUtils.render(c.media_url)}
+            </div>
+        ` : ''}
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px 15px; border-radius: 8px;">
+            <div style="font-size: 0.8rem; opacity: 0.7;">Submitted ${new Date(c.created_at).toLocaleString()}</div>
+            <div><span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span></div>
+        </div>
     `;
 
     const user = JSON.parse(localStorage.getItem('scrs_user'));
     actions.innerHTML = `
-        <div id="v2-action-container" style="width:100%">
-            <textarea id="admin-notes" placeholder="Reason/Notes (Required for rework/rejection)..." class="form-control mb-3" style="width: 100%; min-height: 80px;"></textarea>
-            <div id="action-buttons-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+        <div class="modal-action-footer">
+            <div class="decision-moment-title">
+                <i class="fas fa-gavel"></i> Take Formal Action
+            </div>
+            <div class="mb-3">
+                <label style="font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.5); display: block; margin-bottom: 8px;">Action Remark / Internal Notes</label>
+                <textarea id="admin-notes" placeholder="Describe the action taken or reason for assignment..." class="form-control" style="width: 100%; min-height: 100px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;"></textarea>
+            </div>
+            <div id="action-buttons-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                 <!-- Buttons injected dynamically -->
             </div>
         </div>
     `;
 
+    renderWorkflowActions(c, user);
+    window.showModal('detailsModal');
+}
+
+/**
+ * Visual Timeline Renderer
+ */
+function renderWorkflowTimeline(currentStatus) {
+    const statuses = [
+        { key: 'SUBMITTED', label: 'Submitted' },
+        { key: 'FORWARDED', label: 'Forwarded' },
+        { key: 'HOD_VERIFIED', label: 'Verified' },
+        { key: 'IN_PROGRESS', label: 'Working' },
+        { key: 'STAFF_RESOLVED', label: 'Resolved' },
+        { key: 'HOD_APPROVED', label: 'Approved' },
+        { key: 'CLOSED', label: 'Closed' }
+    ];
+
+    const s = String(currentStatus).toUpperCase();
+    let currentIndex = statuses.findIndex(st => st.key === s);
+    if (currentIndex === -1) currentIndex = 0;
+
+    return `
+        <div class="workflow-timeline">
+            ${statuses.map((st, i) => {
+                let stateClass = '';
+                if (i < currentIndex) stateClass = 'completed';
+                else if (i === currentIndex) stateClass = 'active';
+                
+                let icon = i + 1;
+                if (stateClass === 'completed') icon = '<i class="fas fa-check"></i>';
+                if (st.key === 'CLOSED' && stateClass === 'active') icon = '<i class="fas fa-lock"></i>';
+
+                return `
+                    <div class="timeline-step ${stateClass}">
+                        <div class="step-icon">${icon}</div>
+                        <div class="step-label">${st.label}</div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Phase 2: Action Button Renderer
+ */
+function renderWorkflowActions(c, user) {
     const btnGrid = document.getElementById('action-buttons-grid');
-    const isV2 = c.workflow_version === 2;
+    const role = String(user.role).toLowerCase().trim();
+    const status = String(c.status).toUpperCase().trim();
+    const isV2 = c.workflow_version === 2 || c.is_v2_compliant;
+
+    btnGrid.innerHTML = ''; 
+
+    if (status === 'CLOSED') {
+        btnGrid.innerHTML = `<div class="alert alert-success w-100 text-center" style="grid-column: span 2; background: rgba(68, 255, 68, 0.1); border-color: rgba(68, 255, 68, 0.2); color: #44ff44;"><i class="fas fa-check-circle"></i> This complaint has been officially closed.</div>`;
+        return;
+    }
 
     if (isV2) {
-        if (user.role === 'hod') {
-            if (c.status === 'FORWARDED' || c.status === 'REOPENED') {
+        if (role === 'hod') {
+            if (status === 'FORWARDED' || status === 'REOPENED') {
                 btnGrid.innerHTML = `
-                    <div style="grid-column: span 2; margin-bottom: 0.5rem;">
-                        <label style="font-size: 0.8rem; opacity: 0.7;">Assign Staff Member:</label>
-                        <select id="target-staff-id" class="form-control" style="width:100%; margin-top: 4px;"></select>
+                    <div style="grid-column: span 2; margin-bottom: 0.5rem; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">
+                        <label style="font-size: 0.75rem; color: var(--gold); font-weight: 700; display:block; margin-bottom:6px; text-transform: uppercase;">Assign to Specialist:</label>
+                        <select id="target-staff-id" class="form-control" style="width:100%; background: #000; color: white; border-color: rgba(255,255,255,0.1); border-radius: 6px;"></select>
                     </div>
-                    <button class="btn btn-primary" onclick="executeV2Action(${c.id}, 'HOD_VERIFIED')">Verify & Assign</button>
-                    <button class="btn btn-danger" onclick="executeV2Action(${c.id}, 'RETURNED_TO_ADMIN')">Return to Admin</button>
+                    <button class="btn btn-primary btn-lg" style="font-weight: 700; letter-spacing: 1px;" onclick="executeV2Action(${c.id}, 'HOD_VERIFIED')">
+                        <i class="fas fa-check-circle"></i> VERIFY & ASSIGN
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="executeV2Action(${c.id}, 'RETURNED_TO_ADMIN')">
+                        <i class="fas fa-arrow-left"></i> RETURN TO ADMIN
+                    </button>
                 `;
                 loadStaffList(c.department_id);
-            } else if (c.status === 'STAFF_RESOLVED') {
+            } else if (status === 'STAFF_RESOLVED') {
                 btnGrid.innerHTML = `
-                    <button class="btn btn-success" onclick="executeV2Action(${c.id}, 'HOD_APPROVED')">Approve Solution</button>
-                    <button class="btn btn-warning" onclick="executeV2Action(${c.id}, 'HOD_REWORK_REQUIRED')">Request Rework</button>
+                    <button class="btn btn-success btn-lg" style="font-weight: 700; letter-spacing: 1px;" onclick="executeV2Action(${c.id}, 'HOD_APPROVED')">
+                        <i class="fas fa-thumbs-up"></i> APPROVE SOLUTION
+                    </button>
+                    <button class="btn btn-warning" onclick="executeV2Action(${c.id}, 'HOD_REWORK_REQUIRED')">
+                        <i class="fas fa-redo"></i> REJECT & REWORK
+                    </button>
                 `;
-            } else if (c.status === 'HOD_APPROVED') {
+            } else if (status === 'HOD_APPROVED') {
                 btnGrid.innerHTML = `
-                    <button class="btn btn-danger" onclick="executeV2Action(${c.id}, 'CLOSED')">Final Close Complaint</button>
+                    <button class="btn btn-danger btn-lg" style="grid-column: span 2; font-weight: 700; letter-spacing: 1px;" onclick="executeV2Action(${c.id}, 'CLOSED')">
+                        <i class="fas fa-lock"></i> FINAL RESOLUTION & CLOSE
+                    </button>
                 `;
             }
-        } else if (user.role === 'staff') {
-            if (c.status === 'HOD_VERIFIED' || c.status === 'HOD_REWORK_REQUIRED') {
-                btnGrid.innerHTML = `<button class="btn btn-primary" style="grid-column: span 2" onclick="executeV2Action(${c.id}, 'IN_PROGRESS')">Accept & Start Work</button>`;
-            } else if (c.status === 'IN_PROGRESS') {
-                btnGrid.innerHTML = `<button class="btn btn-success" style="grid-column: span 2" onclick="executeV2Action(${c.id}, 'STAFF_RESOLVED')">Mark as Resolved</button>`;
+        } else if (role === 'staff') {
+            if (status === 'HOD_VERIFIED' || status === 'HOD_REWORK_REQUIRED') {
+                btnGrid.innerHTML = `
+                    <button class="btn btn-primary btn-lg" style="grid-column: span 2; font-weight: 700; letter-spacing: 1px;" onclick="executeV2Action(${c.id}, 'IN_PROGRESS')">
+                        <i class="fas fa-play"></i> START WORKING
+                    </button>
+                `;
+            } else if (status === 'IN_PROGRESS') {
+                btnGrid.innerHTML = `
+                    <button class="btn btn-success btn-lg" style="grid-column: span 2; font-weight: 700; letter-spacing: 1px;" onclick="executeV2Action(${c.id}, 'STAFF_RESOLVED')">
+                        <i class="fas fa-check-double"></i> MARK AS RESOLVED
+                    </button>
+                `;
             }
         }
     } else {
         // V1 Compatibility
-        btnGrid.innerHTML = `
-            ${c.status === 'Pending' ? `<button class="btn btn-primary" onclick="updateComplaintStatus(${c.id}, 'In Progress')">Start Investigation</button>` : ''}
-            ${(c.status === 'Pending' || c.status === 'In Progress') ? `
-                <button class="btn btn-success" onclick="updateComplaintStatus(${c.id}, 'Resolved')">Resolve</button>
-                <button class="btn btn-danger" onclick="updateComplaintStatus(${c.id}, 'Rejected')">Reject</button>
-            ` : ''}
-        `;
+        if (status === 'PENDING') {
+            btnGrid.innerHTML = `<button class="btn btn-primary btn-lg" onclick="updateComplaintStatus(${c.id}, 'In Progress')">INVESTIGATE</button>`;
+        }
+        if (status === 'PENDING' || status === 'IN_PROGRESS') {
+            btnGrid.innerHTML += `
+                <button class="btn btn-success" onclick="updateComplaintStatus(${c.id}, 'Resolved')">RESOLVE</button>
+                <button class="btn btn-danger" onclick="updateComplaintStatus(${c.id}, 'Rejected')">REJECT</button>
+            `;
+        }
     }
-
-    window.showModal('detailsModal');
 }
 
 async function loadStaffList(deptId) {

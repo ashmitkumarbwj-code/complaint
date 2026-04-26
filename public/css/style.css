@@ -3023,3 +3023,128 @@ canvas {
     top: 0;
     left: 0;
 }
+
+/* --- Elite Dashboard Level-Up --- */
+
+.urgent-strip {
+    background: linear-gradient(90deg, rgba(255, 68, 68, 0.1), rgba(255, 68, 68, 0.2));
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 15px rgba(255, 68, 68, 0.1);
+    animation: pulse-red 2s infinite;
+}
+
+.urgent-strip:hover {
+    background: rgba(255, 68, 68, 0.25);
+    box-shadow: 0 0 20px rgba(255, 68, 68, 0.2);
+    transform: translateY(-2px);
+}
+
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 10px rgba(255, 68, 68, 0.2); }
+    50% { box-shadow: 0 0 20px rgba(255, 68, 68, 0.4); }
+    100% { box-shadow: 0 0 10px rgba(255, 68, 68, 0.2); }
+}
+
+/* Workflow Timeline */
+.workflow-timeline {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin: 30px 0 40px 0;
+    padding: 0 10px;
+}
+
+.workflow-timeline::before {
+    content: "";
+    position: absolute;
+    top: 15px;
+    left: 40px;
+    right: 40px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 1;
+}
+
+.timeline-step {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 60px;
+}
+
+.step-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #222;
+    border: 2px solid #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: #666;
+    transition: all 0.4s ease;
+    margin-bottom: 8px;
+}
+
+.timeline-step.active .step-icon {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #000;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+}
+
+.timeline-step.completed .step-icon {
+    background: #44ff44;
+    border-color: #44ff44;
+    color: #000;
+}
+
+.step-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.timeline-step.active .step-label {
+    color: var(--gold);
+}
+
+/* Structured Modal Action Area */
+.modal-action-footer {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.decision-moment-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.decision-moment-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.3), transparent);
+}

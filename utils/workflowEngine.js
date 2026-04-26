@@ -26,7 +26,8 @@ class WorkflowEngine {
         const allowedRoles = matrix[current][target];
         if (!allowedRoles) return false;
 
-        return allowedRoles.includes(userRole);
+        const normalizedRole = String(userRole).toLowerCase().trim();
+        return allowedRoles.some(role => String(role).toLowerCase().trim() === normalizedRole);
     }
 
     /**

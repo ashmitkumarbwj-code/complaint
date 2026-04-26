@@ -139,7 +139,8 @@ class ComplaintService {
      * Hardened Transactional updateStatus Engine (STRICT V2)
      */
     async updateStatus(req, { complaintId, newStatus, reason, targetStaffId = null, targetDeptId = null }) {
-        const { id: actorId, role: actorRole, tenant_id } = req.user;
+        const { id: actorId, role: actorRoleRaw, tenant_id } = req.user;
+        const actorRole = String(actorRoleRaw).toLowerCase().trim();
         const connection = await db.getTransaction();
 
         try {
@@ -157,16 +158,18 @@ class ComplaintService {
 
             // 2. Strict V2 Validation
             if (isV2) {
-                // A. Ownership Verification (Admins bypass; Students can reopen their own)
+                // A. Ownership Verification (Admins bypass; Students can reopen their own; HOD/Admin can always close)
                 const isReopening = (newStatus === 'REOPENED');
-                if (actorRole !== 'admin') {
+                const isClosing = (newStatus === 'CLOSED');
+                const isAdminOrHodClosing = isClosing && ['admin', 'hod'].includes(actorRole);
+                if (actorRole !== 'admin' && !isAdminOrHodClosing) {
                     const isOwner = (complaint.current_owner_user_id === actorId);
                     const isSubmitterReopening = (isReopening && actorRole === 'student' && complaint.user_id === actorId);
 
                     if (!isOwner && !isSubmitterReopening) {
                         const isRoleQueue = !complaint.current_owner_user_id;
                         if (isRoleQueue) {
-                            if (complaint.current_owner_role !== actorRole) throw new Error('OWNERSHIP_VIOLATION');
+                            if (String(complaint.current_owner_role).toLowerCase().trim() !== actorRole) throw new Error('OWNERSHIP_VIOLATION');
                             if (['hod', 'staff'].includes(actorRole) && complaint.current_owner_department_id !== req.user.department_id) {
                                 throw new Error('DEPARTMENT_MISMATCH');
                             }
