@@ -1288,19 +1288,24 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (data.success) {
                 const tbody = document.getElementById('staff-tbody');
                 if(!tbody) return;
-                tbody.innerHTML = data.staff.map(s => `
-                    <tr>
-                        <td>${s.name}</td>
-                        <td>${s.email}</td>
-                        <td>${s.department_name}</td>
-                        <td>${s.role}</td>
-                        <td>
-                            <span class="status-badge ${s.is_account_created ? 'status-resolved' : 'status-pending'}">
-                                ${s.is_account_created ? 'Active' : 'Pending Activation'}
-                            </span>
-                        </td>
-                    </tr>
-                `).join('');
+                
+                if (data.staff.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem; opacity:0.6;">No staff records found.</td></tr>';
+                } else {
+                    tbody.innerHTML = data.staff.map(s => `
+                        <tr>
+                            <td>${s.name}</td>
+                            <td>${s.email}</td>
+                            <td>${s.department_name}</td>
+                            <td>${s.role}</td>
+                            <td>
+                                <span class="status-badge ${s.is_account_created ? 'status-resolved' : 'status-pending'}">
+                                    ${s.is_account_created ? 'Active' : 'Pending Activation'}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
             }
         } catch (err) { console.error(err); }
     }
@@ -2482,6 +2487,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             } else {
                 console.warn(`[Admin Dashboard] SafeInit warning: ${task.name} is not a valid function.`);
             }
+        }
+        
+        // 🚨 Fallback: Ensure Dashboard tab is active by default after init
+        if (typeof window.switchTab === 'function') {
+            window.switchTab('tab-dashboard');
         }
     };
 
