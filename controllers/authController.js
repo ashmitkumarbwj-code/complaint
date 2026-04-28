@@ -19,6 +19,9 @@ async function logLoginAttempt(req, { tenantId, userId, identifier, success, rea
             'INSERT INTO login_audit (tenant_id, user_id, identifier, success, reason, ip_address, user_agent) VALUES ($1, $2, $3, $4, $5, $6, $7)',
             [finalTenantId, userId || null, identifier, success ? 1 : 0, reason || null, ip, ua]
         );
+        const logMsg = `[Auth] Login ${success ? 'SUCCESS' : 'FAILURE'} for ${identifier} (Reason: ${reason || 'N/A'}, IP: ${ip})`;
+        if (success) logger.info(logMsg);
+        else logger.warn(logMsg);
     } catch (e) {
         console.error('Login audit log failed:', e.message);
     }
@@ -85,10 +88,17 @@ exports.requestActivation = async (req, res) => {
         await otpService.saveOTP(identifier, otp, null, ip);
 
         if (method === 'email') {
-            await notifier.sendOTPEmail(identifier, otp);
+            const emailResult = await notifier.sendOTPEmail(identifier, otp);
+            if (!emailResult.success && process.env.OTP_MODE !== 'mock') {
+                console.error(`[AUTH-FAILURE] Email delivery failed for ${identifier} in requestActivation: ${emailResult.error}`);
+                return res.status(500).json({ success: false, message: 'Failed to send activation email.' });
+            }
         } else {
             const msg = `Your Smart Campus activation code: ${otp}. Valid for 5 mins.`;
-            await notifier.sendSMS(identifier, msg);
+            const smsSent = await notifier.sendSMS(identifier, msg);
+            if (!smsSent && process.env.OTP_MODE !== 'mock') {
+                return res.status(500).json({ success: false, message: 'Failed to send activation SMS.' });
+            }
         }
 
         // Include mock OTP if in development mode
@@ -201,7 +211,10 @@ exports.completeActivation = async (req, res) => {
             if (vData.is_account_created) throw new Error('ALREADY_ACTIVATED');
 
             // 1.5 Map Department Name to ID
-            let deptId = vData.department_id || 1;
+            let deptId = vData.department_id;
+            if (!deptId) {
+                throw new Error('DEPARTMENT_REQUIRED_BEFORE_ACTIVATION');
+            }
 
             // Insert into Users
             const [uRows] = await conn.execute(
@@ -233,7 +246,9 @@ exports.completeActivation = async (req, res) => {
         let msg = 'An error occurred during activation.';
         if (error.message === 'NOT_IN_REGISTRY') msg = 'Your details were not found in our records.';
         if (error.message === 'ALREADY_ACTIVATED') msg = 'This account is already active.';
+        if (error.message === 'DEPARTMENT_REQUIRED_BEFORE_ACTIVATION') msg = 'Assign department before activation';
         
+        logger.warn(`[Auth] Activation failure for ${identifier}: ${error.message}`);
         res.status(500).json({ success: false, message: msg });
     } finally {
         conn.release();
@@ -312,7 +327,17 @@ exports.requestPasswordReset = async (req, res) => {
         const otp = otpService.generateOTP();
         await otpService.saveOTP(identifier, otp, user.id, ip);
 
-        await notifier.sendOTPEmail(identifier, otp);
+        const requestId = req.requestId || req.headers['x-request-id'] || null;
+        const emailResult = await notifier.sendOTPEmail(identifier, otp, { requestId, role: userRole });
+
+        if (!emailResult.success && process.env.OTP_MODE !== 'mock') {
+            console.error(`[AUTH-FAILURE] Email delivery failed for ${identifier} in requestPasswordReset: ${emailResult.error}`);
+            await otpService.clearOTPs(identifier);
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Failed to send reset email. Please try again or contact support.' 
+            });
+        }
 
         // Include mock OTP if in development mode
         if (process.env.OTP_MODE === 'mock') {
@@ -784,12 +809,17 @@ exports.requestOTP = async (req, res) => {
         await otpService.saveOTP(identifier, otp, userId);
 
         if (method === 'email') {
-            const emailSent = await notifier.sendOTPEmail(identifier, otp);
-            if (!emailSent) return res.status(500).json({ success: false, message: 'Failed to send OTP email.' });
+            const emailResult = await notifier.sendOTPEmail(identifier, otp);
+            if (!emailResult.success && process.env.OTP_MODE !== 'mock') {
+                console.error(`[AUTH-FAILURE] Email delivery failed for ${identifier} in requestOTP: ${emailResult.error}`);
+                return res.status(500).json({ success: false, message: 'Failed to send OTP email.' });
+            }
             res.json({ success: true, message: 'OTP sent to email successfully' });
         } else {
             const smsSent = await notifier.sendSMS(identifier, `Your Smart Campus OTP is: ${otp}. Valid for 5 minutes.`);
-            if (!smsSent) return res.status(500).json({ success: false, message: 'Failed to send OTP SMS.' });
+            if (!smsSent && process.env.OTP_MODE !== 'mock') {
+                return res.status(500).json({ success: false, message: 'Failed to send OTP SMS.' });
+            }
             res.json({ success: true, message: 'OTP sent to mobile successfully' });
         }
     } catch (error) {
@@ -1162,12 +1192,23 @@ async function handleRoleActivationRequest(req, res, targetRole) {
         const otp = otpService.generateOTP();
         await otpService.saveOTP(identifier, otp, null, ip);
 
-        // Send OTP Directly (No Redis)
-        await notifier.sendOTPEmail(identifier, otp);
+        // Send OTP — Check actual delivery result
+        const requestId = req.requestId || req.headers['x-request-id'] || null;
+        const emailResult = await notifier.sendOTPEmail(identifier, otp, { requestId, role: targetRole });
+
+        if (!emailResult.success && process.env.OTP_MODE !== 'mock') {
+            console.error(`[AUTH-FAILURE] Email delivery failed for ${identifier} in handleRoleActivationRequest (${targetRole}): ${emailResult.error}`);
+            // OTP was stored — invalidate it so it can't be used without email delivery
+            await otpService.clearOTPs(identifier);
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Failed to send verification email. Please try again or contact support.' 
+            });
+        }
 
         return res.json({ 
             success: true, 
-            message: 'OTP sent successfully',
+            message: 'OTP sent successfully. Check your email inbox.',
             demoOtp: process.env.OTP_MODE === 'mock' ? otp : undefined
         });
 

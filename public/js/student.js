@@ -8,6 +8,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.getElementById('welcome-text').textContent = `Hello, ${user.username}!`;
 
+    // Populate profile photo
+    const profileImgContainer = document.getElementById('student-profile-img');
+    if (profileImgContainer) {
+        profileImgContainer.innerHTML = MediaUtils.renderProfilePhoto(user.profile_image, user.username, 'md');
+    }
+
     const complaintForm = document.getElementById('complaint-form');
     const complaintList = document.getElementById('complaint-list');
 

@@ -58,7 +58,7 @@ function validateRow(row, validDepts) {
 
     if (!resolvedDept) {
         return {
-            error: `Unknown department: "${row.department}".`,
+            error: `Assign department before activation. Unknown: "${row.department}".`,
             resolvedDept: null
         };
     }

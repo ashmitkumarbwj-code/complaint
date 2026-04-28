@@ -14,6 +14,10 @@ exports.addStaff = async (req, res) => {
     const tenantId = req.user?.tenant_id || 1;
 
     try {
+        if (!department_id) {
+            return res.status(400).json({ success: false, message: 'Assign department before activation' });
+        }
+
         // 1. Check if staff already exists in master or users (Tenant-Scoped)
         const [existingStaff] = await db.tenantExecute(req, 'SELECT * FROM verified_staff WHERE email = $1', [email]);
         if (existingStaff.length > 0) {

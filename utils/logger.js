@@ -72,7 +72,17 @@ const anomalyHandlers = [];
 if (!isServerless) {
     transportsList.push(
         makeRotatingTransport('access', 'info'),
-        makeRotatingTransport('error', 'error')
+        makeRotatingTransport('error', 'error'),
+        new transports.File({ 
+            filename: path.join(logsDir, 'access.log'), 
+            level: 'info',
+            format: jsonFormat
+        }),
+        new transports.File({ 
+            filename: path.join(logsDir, 'error.log'), 
+            level: 'error',
+            format: jsonFormat
+        })
     );
     anomalyHandlers.push(
         new DailyRotateFile({
@@ -80,6 +90,10 @@ if (!isServerless) {
             datePattern: 'YYYY-MM-DD',
             maxFiles:    '14d',
             format:      jsonFormat
+        }),
+        new transports.File({ 
+            filename: path.join(logsDir, 'error.log'),
+            format: jsonFormat
         })
     );
 }

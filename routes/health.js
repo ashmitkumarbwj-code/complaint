@@ -3,6 +3,7 @@ const router  = express.Router();
 const db      = require('../config/db');
 const { getIsAvailable } = require('../config/redis');
 const logger  = require('../utils/logger');
+const cloudinary = require('../config/cloudinary');
 
 /**
  * GET /api/health
@@ -23,6 +24,7 @@ router.get('/', async (req, res) => {
     const checks = {
         db: 'ok',
         redis: redisAvailable ? 'ok' : (isRedisRequired ? 'CRITICAL_MISSING' : 'unavailable'),
+        cloudinary: 'ok'
     };
 
     // Lightweight DB ping
@@ -33,9 +35,17 @@ router.get('/', async (req, res) => {
         logger.error('[Health] DB ping failed:', err.message);
     }
 
+    // Cloudinary ping
+    try {
+        await cloudinary.api.ping();
+    } catch (err) {
+        checks.cloudinary = 'error';
+        logger.error('[Health] Cloudinary ping failed:', err.message);
+    }
+
     const mem = process.memoryUsage();
-    // Overall status is degraded if DB is down OR if Redis is required but down
-    const overallStatus = (checks.db === 'error' || (isRedisRequired && !redisAvailable)) ? 'degraded' : 'ok';
+    // Overall status is degraded if DB is down OR if Redis is required but down OR if Cloudinary is down
+    const overallStatus = (checks.db === 'error' || checks.cloudinary === 'error' || (isRedisRequired && !redisAvailable)) ? 'degraded' : 'ok';
     const httpStatus    = (overallStatus === 'ok') ? 200 : 503;
 
     return res.status(httpStatus).json({
@@ -45,6 +55,7 @@ router.get('/', async (req, res) => {
         timestamp: new Date().toISOString(),
         db:        checks.db,
         redis:     checks.redis,
+        cloudinary: checks.cloudinary,
         redisRequired: isRedisRequired,
         memory: {
             heapUsedMB:  (mem.heapUsed  / 1024 / 1024).toFixed(2) + ' MB',

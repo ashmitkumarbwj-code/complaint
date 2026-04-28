@@ -16,17 +16,20 @@ let transporter = null;
 function getTransporter() {
     if (transporter) return transporter;
 
-    if (!process.env.MAIL_USER || !process.env.MAIL_PASS) {
-        logger.warn('[MailService] MAIL_USER or MAIL_PASS not set. Email sending disabled.');
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        logger.warn('[MailService] SMTP_USER or SMTP_PASS not set. Email sending disabled.');
         return null;
     }
 
     transporter = nodemailer.createTransport({
-        service: process.env.MAIL_SERVICE || 'gmail',
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: process.env.SMTP_SECURE === 'true',
         auth: {
-            user: process.env.MAIL_USER,
-            pass: process.env.MAIL_PASS, // Use App Password for Gmail
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,  // Use App Password for Gmail
         },
+        tls: { rejectUnauthorized: false }
     });
 
     return transporter;
@@ -48,7 +51,7 @@ async function sendMail(to, subject, html) {
 
     try {
         await t.sendMail({
-            from: `"Smart Campus" <${process.env.MAIL_USER}>`,
+            from: process.env.EMAIL_FROM || `"Smart Campus" <${process.env.SMTP_USER}>`,
             to,
             subject,
             html,

@@ -81,17 +81,18 @@ exports.submitComplaint = async (req, res) => {
         // 5. Queue File Upload (Zero-Trust Job) with Resilience Fallback
         if (req.file) {
             try {
+                // 1. Update status to processing BEFORE adding to queue to prevent race conditions in sync mode
+                await db.execute(
+                    'UPDATE complaints SET processing_status = $1 WHERE id = $2 AND tenant_id = $3',
+                    ['processing', complaintId, tenantId]
+                );
+
+                // 2. Queue File Upload
                 await uploadQueue.add('process_image', { 
                     filePath: req.file.path, 
                     complaintId,
                     tenantId: req.user.tenant_id 
                 });
-                
-                // Update status to processing
-                await db.execute(
-                    'UPDATE complaints SET processing_status = $1 WHERE id = $2 AND tenant_id = $3',
-                    ['processing', complaintId, tenantId]
-                );
                 
                 logger.info(`[UploadQueue] Enqueued image for complaint ${complaintId} (Tenant:${tenantId})`);
             } catch (err) {

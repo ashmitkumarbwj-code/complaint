@@ -11,7 +11,7 @@ let uploadQueue;
 
 if (process.env.VERCEL === '1' || !useRedis) {
     const { processNotification } = require('../workers/notificationWorker');
-    const { processUpload } = require('../workers/uploadWorker');
+    const { handleUpload } = require('../workers/uploadWorker');
 
     notificationQueue = {
         add: async (name, data) => {
@@ -24,7 +24,7 @@ if (process.env.VERCEL === '1' || !useRedis) {
     uploadQueue = {
         add: async (name, data) => {
             logger.info(`[Vercel Sync] Executing natively: ${name}`);
-            await processUpload({ name, data, id: 'sync-stub' });
+            await handleUpload(data, 'sync-stub');
         },
         on: () => {} // stub
     };

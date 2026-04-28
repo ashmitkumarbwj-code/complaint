@@ -862,14 +862,13 @@ async function loadPrincipalProfile() {
 function updateProfileUI(user) {
     const topBarImg = document.getElementById('top-bar-profile-img');
     const settingsImg = document.getElementById('settings-profile-img');
-    const initial = (user.username || 'P').charAt(0).toUpperCase();
-
-    if (user.profile_image) {
-        if (topBarImg) topBarImg.innerHTML = `<img src="${user.profile_image}" style="width:100%; height:100%; object-fit:cover;">`;
-        if (settingsImg) settingsImg.innerHTML = `<img src="${user.profile_image}" style="width:100%; height:100%; object-fit:cover;">`;
-    } else {
-        if (topBarImg) topBarImg.innerHTML = `<span id="profile-initials">${initial}</span>`;
-        if (settingsImg) settingsImg.innerHTML = `<span id="settings-initials">${initial}</span>`;
+    
+    if (topBarImg) {
+        topBarImg.innerHTML = MediaUtils.renderProfilePhoto(user.profile_image, user.username, 'sm');
+    }
+    
+    if (settingsImg) {
+        settingsImg.innerHTML = MediaUtils.renderProfilePhoto(user.profile_image, user.username, 'lg');
     }
 }
 
@@ -930,12 +929,19 @@ if (profileForm) {
             const data = await res.json();
             if (data.success) {
                 // Update LocalStorage user info if needed
-                const localUser = JSON.parse(localStorage.getItem('scrs_user'));
+                const localUser = JSON.parse(localStorage.getItem('scrs_user')) || {};
                 localUser.username = data.user.username;
+                localUser.profile_image = data.user.profile_image;
                 localStorage.setItem('scrs_user', JSON.stringify(localUser));
 
+                // Apply cache busting for the immediate UI update
+                const updatedUser = { ...data.user };
+                if (updatedUser.profile_image) {
+                    updatedUser.profile_image += `?t=${Date.now()}`;
+                }
+
                 // Update UI
-                updateProfileUI(data.user);
+                updateProfileUI(updatedUser);
                 const welcomeName = document.getElementById('welcome-name');
                 if (welcomeName) welcomeName.textContent = `Welcome, ${data.user.username}`;
                 document.getElementById('display-name').textContent = data.user.username;

@@ -101,6 +101,9 @@ exports.addUser = async (req, res) => {
             await logAction(adminId, 'ADD_USER', 'verified_students', newId, req.body);
             return res.json({ success: true, message: 'Student added to registry', id: newId });
         } else {
+            if (!department_id) {
+                return res.status(400).json({ success: false, message: 'Assign department before activation' });
+            }
             const [resRows] = await db.execute(
                 'INSERT INTO verified_staff (tenant_id, name, email, mobile, role, department_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
                 [tenantId, name, email, mobile, role, department_id]

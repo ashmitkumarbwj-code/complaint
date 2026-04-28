@@ -130,5 +130,63 @@ window.MediaUtils = {
         } else if (video.msRequestFullscreen) {
             video.msRequestFullscreen();
         }
+    },
+
+    /**
+     * Renders a premium profile photo with deterministic fallback.
+     * @param {string} url - The profile image URL.
+     * @param {string} name - The user's name/username for initials and color hash.
+     * @param {string} size - 'sm', 'md', 'lg'.
+     */
+    renderProfilePhoto: function(url, name, size = 'md') {
+        const initials = (name || '?').charAt(0).toUpperCase();
+        const sizes = {
+            sm: '32px',
+            md: '48px',
+            lg: '100px'
+        };
+        const fontSize = {
+            sm: '0.8rem',
+            md: '1.2rem',
+            lg: '2.5rem'
+        };
+        const dim = sizes[size] || sizes.md;
+        const fSize = fontSize[size] || fontSize.md;
+
+        if (url) {
+            // Apply high-res transformation for profile photos
+            let finalUrl = url;
+            if (url.includes('cloudinary.com')) {
+                const parts = url.split('/upload/');
+                if (parts.length === 2) {
+                    finalUrl = `${parts[0]}/upload/c_fill,g_face,w_400,h_400,q_auto,f_auto/${parts[1]}`;
+                }
+            }
+            return `
+                <div class="profile-photo-wrapper profile-${size}" style="width:${dim}; height:${dim}; border-radius:50%; overflow:hidden; border:2px solid var(--gold-color); background:rgba(255,255,255,0.05);">
+                    <img src="${finalUrl}" alt="${name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='<span>${initials}</span>'; this.parentElement.style.background=window.MediaUtils.getDeterministicColor('${name}')">
+                </div>
+            `;
+        }
+
+        const bgColor = this.getDeterministicColor(name || 'User');
+        return `
+            <div class="profile-photo-wrapper profile-${size}" style="width:${dim}; height:${dim}; border-radius:50%; display:flex; align-items:center; justify-content:center; background:${bgColor}; color:white; font-weight:bold; font-size:${fSize}; border:2px solid rgba(255,255,255,0.1);">
+                ${initials}
+            </div>
+        `;
+    },
+
+    /**
+     * Generates a deterministic HSL color based on a string.
+     */
+    getDeterministicColor: function(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const h = Math.abs(hash % 360);
+        // We want slightly dark, saturated colors for better contrast with white text
+        return `hsl(${h}, 60%, 40%)`;
     }
 };

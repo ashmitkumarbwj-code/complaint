@@ -280,6 +280,9 @@ class ComplaintService {
                 nextOwnerId, nextOwnerRole, nextOwnerDeptId,
                 lastHodId, lastStaffId, reopenedCount, complaintId
             ]);
+            
+            logger.info(`[Workflow] Complaint #${complaintId} transition: ${complaint.status} -> ${newStatus} (Actor: ${actorRole}:${actorId})`);
+
 
             // 5. Immutable Audit Trail
             const auditService = require('../utils/auditService');

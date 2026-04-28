@@ -16,6 +16,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById('header-dept').textContent = `${user.department_name || 'Department'} Dashboard`;
     document.getElementById('header-welcome').textContent = `Welcome, ${user.username} (${user.role})`;
 
+    // Populate profile photo
+    const profileImgContainer = document.getElementById('dept-profile-img');
+    if (profileImgContainer) {
+        profileImgContainer.innerHTML = MediaUtils.renderProfilePhoto(user.profile_image, user.username, 'md');
+    }
+
     // Initialize Socket
     const socket = io(API_BASE);
     socket.emit('join', `dept_${user.department_id}`);
@@ -168,21 +174,10 @@ function viewDetails(c) {
     title.textContent = `#${c.id} ${c.title || c.category}`;
     const isVideo = c.media_url && (c.media_url.endsWith('.mp4') || c.media_url.endsWith('.mov') || c.media_url.includes('/video/upload/'));
 
-    body.innerHTML = `
-        <div class="mb-3"><strong>Student:</strong> ${c.student_name} (${c.roll_number || 'N/A'})</div>
-        <div class="mb-3"><strong>Location:</strong> ${c.location}</div>
-        <div class="mb-3"><strong>Category:</strong> ${c.category}</div>
-        <div class="mb-3"><strong>Description:</strong><br>${c.description}</div>
-        ${c.media_url ? `
-            <div class="mb-3">
-                <strong>Attachment:</strong><br>
-                ${MediaUtils.render(c.media_url)}
-            </div>
-        ` : ''}
-
     const timelineHtml = renderWorkflowTimeline(c.status);
     
-    details.innerHTML = `
+    body.innerHTML = `
+        <div class="mb-3"><strong>Student:</strong> ${c.student_name} (${c.roll_number || 'N/A'})</div>
         ${timelineHtml}
         <div class="complaint-info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 20px;">
             <div><strong>Category:</strong> ${c.category}</div>

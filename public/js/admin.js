@@ -16,7 +16,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (user) {
         document.getElementById('user-display-name').textContent = user.full_name || user.name || user.username || 'Admin';
         document.getElementById('user-display-role').textContent = user.role || 'Admin';
-        document.getElementById('user-avatar-initial').textContent = (user.full_name || user.name || user.username || 'A')[0].toUpperCase();
+        
+        const avatarEl = document.getElementById('user-avatar-initial');
+        if (avatarEl) {
+            avatarEl.innerHTML = MediaUtils.renderProfilePhoto(user.profile_image, user.full_name || user.username, 'sm');
+            avatarEl.style.background = 'none'; // Remove default background since renderer handles it
+            avatarEl.style.border = 'none';
+        }
+
         const welcomeEl = document.getElementById('welcome-user-name'); // Not present in all layouts
         if (welcomeEl) welcomeEl.textContent = user.full_name || user.name || user.username || 'Admin';
 
