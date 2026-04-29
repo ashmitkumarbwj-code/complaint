@@ -3236,3 +3236,145 @@ body.dashboard-page.admin-dashboard .dashboard-grid {
         width: 100% !important;
     }
 }
+
+/* --- 🚀 FORWARD COMPLAINT MODAL UPGRADE 🚀 --- */
+#forwardModal .forward-modal-panel {
+    max-width: 480px;
+    width: 95%;
+    padding: 2.5rem;
+    border-radius: 22px;
+    background: linear-gradient(145deg, rgba(11, 19, 43, 0.98), rgba(2, 6, 23, 0.95));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8), 0 0 15px rgba(84, 160, 255, 0.15);
+    text-align: left;
+    transform: scale(0.9);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#forwardModal.active .forward-modal-panel {
+    transform: scale(1);
+}
+
+#forwardModal .forward-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+#forwardModal .forward-modal-icon {
+    width: 54px;
+    height: 54px;
+    background: rgba(84, 160, 255, 0.1);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #54a0ff;
+    font-size: 1.5rem;
+    box-shadow: 0 0 15px rgba(84, 160, 255, 0.2);
+}
+
+#forwardModal .forward-modal-title-area h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+#forwardModal .forward-modal-title-area p {
+    margin: 4px 0 0 0;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+#forwardModal .form-group {
+    margin-bottom: 1.5rem;
+}
+
+#forwardModal .form-label {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #adb5bd;
+    letter-spacing: 0.5px;
+}
+
+#forwardModal .forward-modal-control {
+    background: rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    padding: 14px 18px !important;
+    color: #fff !important;
+    font-size: 0.95rem !important;
+    transition: all 0.3s ease;
+}
+
+#forwardModal .forward-modal-control:focus {
+    border-color: #54a0ff !important;
+    background: rgba(84, 160, 255, 0.05) !important;
+    box-shadow: 0 0 15px rgba(84, 160, 255, 0.2) !important;
+    outline: none;
+}
+
+#forwardModal .forward-modal-control option {
+    background-color: #1a1a1a;
+    color: #fff;
+}
+
+#forwardModal .forward-modal-textarea {
+    min-height: 110px;
+    resize: none;
+    line-height: 1.6;
+}
+
+#forwardModal .forward-modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+#forwardModal .forward-modal-cancel {
+    padding: 0.8rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    opacity: 0.7;
+}
+
+#forwardModal .forward-modal-cancel:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#forwardModal .forward-modal-confirm {
+    padding: 0.8rem 2rem;
+    border-radius: 12px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #3b82f6 0%, #d4af37 100%);
+    border: none;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#forwardModal .forward-modal-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    filter: brightness(1.1);
+}
+
+#forwardModal .forward-modal-confirm:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
