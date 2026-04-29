@@ -3148,3 +3148,91 @@ canvas {
     height: 1px;
     background: linear-gradient(90deg, rgba(212, 175, 55, 0.3), transparent);
 }
+/* --- SURGICAL UI LAYERING FIX (Dashboard Scoped) --- */
+
+body.dashboard-page {
+    position: relative !important;
+    isolation: isolate !important;
+}
+
+body.dashboard-page #admin-bg-container,
+body.dashboard-page .student-dashboard-bg,
+body.dashboard-page .student-overlay,
+body.dashboard-page #storyboard-bg,
+body.dashboard-page .bg-layers,
+body.dashboard-page .particles-bg,
+body.dashboard-page .fog-layer {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+}
+
+.dashboard-root .main-content,
+.admin-dashboard .main-content,
+.student-dashboard .dashboard-container,
+.principal-dashboard .main-content,
+.dept-dashboard .container.py-4 {
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+.admin-dashboard .stat-card,
+.admin-dashboard .card,
+.student-dashboard .student-card,
+.student-dashboard .complaint-card,
+.principal-dashboard .stat-card,
+.principal-dashboard .card,
+.dept-dashboard .stat-card,
+.dept-dashboard .table-container,
+.table-card,
+.welcome-card,
+.glass-panel {
+    position: relative !important;
+    z-index: 20 !important;
+}
+
+.admin-dashboard .main-header,
+.principal-dashboard .top-bar,
+.dept-dashboard header.d-flex,
+.top-bar {
+    position: sticky !important;
+    top: 0;
+    z-index: 50 !important;
+}
+
+.admin-dashboard .sidebar,
+.principal-dashboard .sidebar {
+    position: fixed !important;
+    z-index: 100 !important;
+}
+
+body.dashboard-page .modal,
+body.dashboard-page #toast-container {
+    z-index: 9999 !important;
+}
+
+/* --- SURGICAL DASHBOARD LAYOUT FIX (Sidebar Offset) --- */
+
+body.dashboard-page.admin-dashboard .main-content,
+body.dashboard-page.admin-dashboard .main-header {
+    margin-left: 260px !important;
+    width: calc(100% - 260px) !important;
+}
+
+body.dashboard-page.admin-dashboard .stats-grid,
+body.dashboard-page.admin-dashboard .dashboard-grid {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+}
+
+@media (max-width: 768px) {
+    body.dashboard-page.admin-dashboard .main-content,
+    body.dashboard-page.admin-dashboard .main-header {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
