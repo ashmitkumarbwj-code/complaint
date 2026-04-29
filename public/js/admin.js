@@ -671,6 +671,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 🔥 V2 ADMIN ACTION HANDLER
     window.handleV2AdminAction = async (id, status, reason = '', targetDeptId = null) => {
+        if (status === 'REJECTED_BY_ADMIN' && !reason) {
+            const promptReason = prompt("Please provide a mandatory reason/feedback for rejecting this complaint:");
+            if (promptReason === null) return; // User cancelled
+            if (promptReason.trim() === '') {
+                showToast("A detailed reason is required for rejection.", "error");
+                return;
+            }
+            reason = promptReason;
+        }
+
         try {
             const res = await fetch(`${API_BASE}/api/complaints/${id}/status`, {
                 method: 'PATCH',
@@ -1574,8 +1584,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const res = await fetch(`${API_BASE}/api/admin/add-staff`, {
                     method: 'POST',
                     credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(staffData)
                 });
                 const data = await res.json();

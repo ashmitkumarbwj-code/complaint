@@ -108,7 +108,7 @@ window.validateSession = async (requiredRole) => {
         // Final sanity check: Role must match one of the allowed roles
         if (data.success && data.user && allowedRoles.map(r => r.toLowerCase()).includes(String(data.user.role).toLowerCase())) {
             // Success: Reveal the UI
-            document.body.style.display = 'block';
+            document.body.style.display = '';
             return data.user;
         } else {
             console.error('[Security] Role mismatch detected!', { 
@@ -127,4 +127,78 @@ window.validateSession = async (requiredRole) => {
         return null;
     }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SILENT TOKEN REFRESH INTERCEPTOR
+// ─────────────────────────────────────────────────────────────────────────────
+// The accessToken cookie expires every 15 minutes. This interceptor wraps the
+// native fetch to transparently call /api/auth/refresh on a 401, then retry
+// the original request once. If refresh also fails → redirect to login.
+// ─────────────────────────────────────────────────────────────────────────────
+(function () {
+    const _nativeFetch = window.fetch.bind(window);
+    let _isRefreshing = false;
+    let _refreshQueue = []; // pending requests while refresh is in-flight
+
+    async function _doRefresh() {
+        const res = await _nativeFetch(`${window.API_BASE}/api/auth/refresh`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        if (!res.ok) throw new Error('Refresh failed');
+    }
+
+    window.fetch = async function (input, init = {}) {
+        // Always forward credentials for same-origin API calls
+        if (typeof input === 'string' && input.includes('/api/')) {
+            init = { ...init, credentials: init.credentials || 'include' };
+        }
+
+        const response = await _nativeFetch(input, init);
+
+        // Only intercept 401s on protected API calls; skip auth endpoints themselves
+        const url = (typeof input === 'string') ? input : (input.url || '');
+        const isAuthCall = url.includes('/api/auth/login') ||
+                           url.includes('/api/auth/refresh') ||
+                           url.includes('/api/auth/logout');
+
+        if (response.status === 401 && !isAuthCall) {
+            // If a refresh is already happening, queue this retry
+            if (_isRefreshing) {
+                return new Promise((resolve, reject) => {
+                    _refreshQueue.push({ resolve, reject, input, init });
+                });
+            }
+
+            _isRefreshing = true;
+
+            try {
+                await _doRefresh();
+                _isRefreshing = false;
+
+                // Flush queued requests
+                _refreshQueue.forEach(({ resolve, input: i, init: o }) =>
+                    resolve(_nativeFetch(i, o))
+                );
+                _refreshQueue = [];
+
+                // Retry the original request
+                return _nativeFetch(input, init);
+
+            } catch (err) {
+                _isRefreshing = false;
+                _refreshQueue.forEach(({ reject }) => reject(err));
+                _refreshQueue = [];
+
+                console.warn('[Session] Token refresh failed — redirecting to login.');
+                localStorage.removeItem('scrs_user');
+                window.location.href = 'login.html?error=session_expired';
+                return response; // return original 401 so caller doesn't hang
+            }
+        }
+
+        return response;
+    };
+})();
+
 

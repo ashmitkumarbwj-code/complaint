@@ -886,7 +886,7 @@ exports.refreshToken = async (req, res) => {
         const cookieOptions = {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? 'None' : 'Lax',
+            sameSite: 'Lax', // Must match login cookie — 'Lax' works for same-site HTTPS
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         };
 
@@ -919,8 +919,8 @@ exports.logout = async (req, res) => {
     }
 
     const isProd = process.env.NODE_ENV === 'production';
-    res.clearCookie('accessToken', { httpOnly: true, secure: isProd, sameSite: isProd ? 'None' : 'Lax' });
-    res.clearCookie('refreshToken', { httpOnly: true, secure: isProd, sameSite: isProd ? 'None' : 'Lax' });
+    res.clearCookie('accessToken',  { httpOnly: true, secure: isProd, sameSite: 'Lax' }); // Must match login sameSite
+    res.clearCookie('refreshToken', { httpOnly: true, secure: isProd, sameSite: 'Lax' }); // Must match login sameSite
 
     res.json({ success: true, message: 'Logged out successfully' });
 };

@@ -24,8 +24,16 @@
             // Reveal the section header & container
             const header = document.getElementById('dynamic-slider-header');
             const container = document.getElementById('dynamic-slider-container');
-            if (header) header.style.display = 'block';
-            if (container) container.style.display = 'block';
+            if (header) {
+                header.style.display = 'block';
+                header.style.opacity = '1';
+                header.style.transform = 'none';
+            }
+            if (container) {
+                container.style.display = 'block';
+                container.style.opacity = '1';
+                container.style.transform = 'none';
+            }
 
             // Show nav arrows if more than one slide
             if (dynSlides.length > 1) {

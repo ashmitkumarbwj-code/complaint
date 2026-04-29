@@ -47,7 +47,7 @@ async function initUserMgmt() {
  */
 async function fetchMgmtDepts() {
     try {
-        const res = await fetch('/api/admin/departments');
+        const res = await fetch('/api/admin/departments', { credentials: 'include' });
         const data = await res.json();
         if (data.success) {
             const filterDept = document.getElementById('mgmt-filter-dept');
@@ -87,7 +87,7 @@ async function fetchMgmtUsers() {
     });
 
     try {
-        const res = await fetch(`/api/admin/users?${params.toString()}`);
+        const res = await fetch(`/api/admin/users?${params.toString()}`, { credentials: 'include' });
         const data = await res.json();
         if (data.success) {
             mgmtUsers = data.users;
@@ -142,7 +142,7 @@ function renderMgmtUsers(statusFilter) {
  */
 async function fetchMgmtAuditLogs() {
     try {
-        const res = await fetch('/api/admin/audit-logs');
+        const res = await fetch('/api/admin/audit-logs', { credentials: 'include' });
         const data = await res.json();
         if (data.success) {
             const tbody = document.getElementById('mgmt-audit-tbody');
@@ -247,6 +247,7 @@ async function handleUserSubmit(e) {
     try {
         const res = await fetch(url, {
             method,
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -273,6 +274,7 @@ async function deactivateUser(type, id) {
     try {
         const res = await fetch(`/api/admin/users/${type}/${id}`, {
             method: 'PUT',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ is_active: false })
         });
@@ -287,6 +289,7 @@ async function activateUser(type, id) {
     try {
         const res = await fetch(`/api/admin/users/${type}/${id}`, {
             method: 'PUT',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ is_active: true })
         });
