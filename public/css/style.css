@@ -13,6 +13,7 @@
     --white: #ffffff;
     --off-white: #f8f9fa;
     --text-muted: #adb5bd;
+    --text-secondary: rgba(226, 232, 240, 0.72);
 
     /* Status Colors */
     --green: #2ea043;
@@ -3376,5 +3377,218 @@ body.dashboard-page.admin-dashboard .dashboard-grid {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+/* =========================================================================
+   PHASE 2: PREMIUM UI POLISH
+   ========================================================================= */
+
+/* 1. Dynamic Slider Upgrade */
+body.dashboard-page.admin-dashboard #tab-dynamic-slides .table-card {
+    padding: 2rem;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(11, 19, 43, 0.8), rgba(2, 6, 23, 0.9));
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+}
+
+body.dashboard-page.admin-dashboard #tab-dynamic-slides .table-header h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: -0.5px;
+    margin: 0;
+}
+
+body.dashboard-page.admin-dashboard #tab-dynamic-slides tbody td[colspan="6"] {
+    text-align: center;
+    padding: 3rem !important;
+    opacity: 0.7;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+body.dashboard-page.admin-dashboard #tab-dynamic-slides tbody td[colspan="6"]::before {
+    content: "\f03e";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    display: block;
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--gold);
+    opacity: 0.5;
+}
+
+/* 2. Premium Table Styling Upgrade */
+body.dashboard-page.admin-dashboard table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: rgba(11, 19, 43, 0.4);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+body.dashboard-page.admin-dashboard table thead th {
+    background: rgba(2, 6, 23, 0.8);
+    color: var(--gold);
+    padding: 1.25rem 1.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.2);
+    text-align: left;
+}
+
+body.dashboard-page.admin-dashboard table tbody td {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--white);
+    font-size: 0.95rem;
+    vertical-align: middle;
+}
+
+body.dashboard-page.admin-dashboard table tbody tr {
+    transition: all 0.3s ease;
+}
+
+body.dashboard-page.admin-dashboard table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    transform: scale(1.002);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+body.dashboard-page.admin-dashboard table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Align Actions column */
+body.dashboard-page.admin-dashboard table th:last-child,
+body.dashboard-page.admin-dashboard table td:last-child {
+    text-align: right;
+}
+body.dashboard-page.admin-dashboard table td:last-child .action-btn {
+    margin-left: 0.5rem;
+}
+
+/* 3. Gallery Layout Fix */
+body.dashboard-page.admin-dashboard .gallery-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    padding: 1rem 0;
+}
+
+body.dashboard-page.admin-dashboard .gallery-item {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* 4. Button System Polish */
+body.dashboard-page.admin-dashboard .btn-primary {
+    background: linear-gradient(135deg, var(--gold) 0%, #b5952f 100%);
+    color: var(--deep-blue);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 15px var(--gold-glow);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+body.dashboard-page.admin-dashboard .btn-primary:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(212, 175, 55, 0.5);
+    filter: brightness(1.1);
+}
+
+body.dashboard-page.admin-dashboard .btn-primary:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+}
+
+body.dashboard-page.admin-dashboard .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #555;
+    color: #999;
+    box-shadow: none;
+}
+
+body.dashboard-page.admin-dashboard .action-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+body.dashboard-page.admin-dashboard .action-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+body.dashboard-page.admin-dashboard .action-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+body.dashboard-page.admin-dashboard .action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+body.dashboard-page.admin-dashboard .btn-reject {
+    background: rgba(248, 81, 73, 0.1);
+    border: 1px solid rgba(248, 81, 73, 0.3);
+    color: var(--red);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+body.dashboard-page.admin-dashboard .btn-reject:hover:not(:disabled) {
+    background: rgba(248, 81, 73, 0.25);
+    border-color: rgba(248, 81, 73, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(248, 81, 73, 0.3);
+}
+
+body.dashboard-page.admin-dashboard .btn-reject:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+body.dashboard-page.admin-dashboard .btn-reject:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* 5. Disable hover lift for table/card containers */
+body.dashboard-page.admin-dashboard .table-card:hover,
+body.dashboard-page.admin-dashboard .table-container:hover {
+    transform: none !important;
 }
 
