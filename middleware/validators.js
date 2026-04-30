@@ -317,3 +317,36 @@ exports.validateFileUpload = (req, res, next) => {
     next();
 };
 
+// ─────────────────────────────────────────────────────────────────
+// General System Validators (Departments, Admin, Profile, AI)
+// ─────────────────────────────────────────────────────────────────
+
+exports.validateDepartment = [
+    body('name').trim().notEmpty().withMessage('Department name is required.').escape(),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Valid email is required.').normalizeEmail(),
+    validate
+];
+
+exports.validateAddMember = [
+    body('user_id').isInt({ min: 1 }).withMessage('User ID must be a positive integer.'),
+    body('role_in_dept').trim().notEmpty().withMessage('Role in department is required.').escape(),
+    validate
+];
+
+exports.validateAddUser = [
+    body('name').trim().notEmpty().withMessage('Name is required.').escape(),
+    body('role').trim().notEmpty().withMessage('Role is required.').isIn(['Admin', 'Staff', 'HOD', 'Student', 'Principal']).withMessage('Invalid role.'),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Valid email required.').normalizeEmail(),
+    validate
+];
+
+exports.validateProfile = [
+    body('name').optional({ checkFalsy: true }).trim().notEmpty().withMessage('Name cannot be empty.').escape(),
+    validate
+];
+
+exports.validateApplyAi = [
+    body('action_type').trim().notEmpty().withMessage('Action type is required.').escape(),
+    validate
+];
+

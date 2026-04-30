@@ -9,6 +9,7 @@ const router     = express.Router();
 const deptCtrl   = require('../controllers/departmentController');
 const auth       = require('../middleware/authMiddleware');
 const checkRole  = require('../middleware/roleMiddleware');
+const v          = require('../middleware/validators');
 
 // ── Read-only routes (Admin + Principal + HOD) ────────────────────────────────
 router.get('/',
@@ -35,16 +36,19 @@ router.get('/:id',
 // ── Admin-only write routes ───────────────────────────────────────────────────
 router.post('/',
     auth, checkRole(['Admin']),
+    v.validateDepartment,
     deptCtrl.createDepartment
 );
 
 router.put('/:id',
     auth, checkRole(['Admin']),
+    v.validateDepartment,
     deptCtrl.updateDepartment
 );
 
 router.post('/:id/members',
     auth, checkRole(['Admin']),
+    v.validateAddMember,
     deptCtrl.addMember
 );
 

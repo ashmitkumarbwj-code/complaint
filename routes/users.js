@@ -4,6 +4,7 @@ const db = require('../config/db');
 const userController = require('../controllers/userController');
 const auth = require('../middleware/authMiddleware');
 const checkRole = require('../middleware/roleMiddleware');
+const v = require('../middleware/validators');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
@@ -35,6 +36,6 @@ router.get('/profile', auth, userController.getProfile);
 // @route   PUT /api/users/profile
 // @desc    Update current user profile
 // @access  Private
-router.put('/profile', auth, upload.single('profile_image'), userController.updateProfile);
+router.put('/profile', auth, upload.single('profile_image'), v.validateProfile, userController.updateProfile);
 
 module.exports = router;

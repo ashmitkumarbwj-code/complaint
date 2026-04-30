@@ -97,6 +97,7 @@ router.get('/:id/history',
 router.post('/:id/apply-ai',
     auth,
     checkRole(['admin', 'hod']),
+    v.validateApplyAi,
     complaintController.applyAiSuggestion
 );
 

@@ -4,6 +4,7 @@ const multer = require('multer');
 const adminController = require('../controllers/adminController');
 const adminManagementController = require('../controllers/adminManagementController');
 const slidesController = require('../controllers/slidesController');
+const v = require('../middleware/validators');
 const auth = require('../middleware/authMiddleware');
 const checkRole = require('../middleware/roleMiddleware');
 
@@ -134,10 +135,10 @@ router.get('/db-audit', auth, checkRole(['Admin']), adminController.dbAudit);
 router.get('/users', auth, checkRole(['Admin']), adminManagementController.listUsers);
 
 // @route   POST /api/admin/users
-router.post('/users', auth, checkRole(['Admin']), adminManagementController.addUser);
+router.post('/users', auth, checkRole(['Admin']), v.validateAddUser, adminManagementController.addUser);
 
 // @route   PUT /api/admin/users/:type/:id
-router.put('/users/:type/:id', auth, checkRole(['Admin']), adminManagementController.updateUser);
+router.put('/users/:type/:id', auth, checkRole(['Admin']), v.validateAddUser, adminManagementController.updateUser);
 
 // @route   DELETE /api/admin/users/:type/:id
 router.delete('/users/:type/:id', auth, checkRole(['Admin']), adminManagementController.deleteUser);
