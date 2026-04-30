@@ -138,7 +138,7 @@ router.get('/users', auth, checkRole(['Admin']), adminManagementController.listU
 router.post('/users', auth, checkRole(['Admin']), v.validateAddUser, adminManagementController.addUser);
 
 // @route   PUT /api/admin/users/:type/:id
-router.put('/users/:type/:id', auth, checkRole(['Admin']), v.validateAddUser, adminManagementController.updateUser);
+router.put('/users/:type/:id', auth, checkRole(['Admin']), v.validateUpdateUser, adminManagementController.updateUser);
 
 // @route   DELETE /api/admin/users/:type/:id
 router.delete('/users/:type/:id', auth, checkRole(['Admin']), adminManagementController.deleteUser);

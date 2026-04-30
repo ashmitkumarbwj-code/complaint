@@ -333,10 +333,21 @@ exports.validateAddMember = [
     validate
 ];
 
+// POST /api/admin/users — strict: name + role required
 exports.validateAddUser = [
     body('name').trim().notEmpty().withMessage('Name is required.').escape(),
     body('role').trim().notEmpty().withMessage('Role is required.').isIn(['Admin', 'Staff', 'HOD', 'Student', 'Principal']).withMessage('Invalid role.'),
     body('email').optional({ checkFalsy: true }).isEmail().withMessage('Valid email required.').normalizeEmail(),
+    validate
+];
+
+// PUT /api/admin/users/:type/:id — lenient: allows partial updates (e.g. is_active toggle)
+exports.validateUpdateUser = [
+    body('name').optional({ checkFalsy: true }).trim().notEmpty().withMessage('Name cannot be blank if provided.').escape(),
+    body('role').optional({ checkFalsy: true }).trim()
+        .isIn(['Admin', 'Staff', 'HOD', 'Student', 'Principal']).withMessage('Invalid role.'),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Valid email required.').normalizeEmail(),
+    body('is_active').optional().isBoolean().withMessage('is_active must be a boolean.'),
     validate
 ];
 
