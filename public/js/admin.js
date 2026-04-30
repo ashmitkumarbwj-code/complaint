@@ -623,19 +623,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             ` : '';
 
             return `
-            <tr class="${rowClass}" onclick="openComplaintDetail(${JSON.stringify({id:c.id, title:c.title, student:c.student_name, desc:c.description, loc:c.location, cat:c.category, prio:c.priority, status:c.status}).replace(/"/g, '&quot;')})" style="cursor:pointer;">
+            <tr class="${rowClass} complaint-row" onclick="openComplaintDetail(${JSON.stringify({id:c.id, title:c.title, student:c.student_name, desc:c.description, loc:c.location, cat:c.category, prio:c.priority, status:c.status}).replace(/"/g, '&quot;')})">
                 <td>#${c.id}</td>
-                <td style="font-weight: 700; color: var(--gold);">
-                    <div style="display:flex; align-items:center; gap:5px;">
+                <td class="complaint-cell-title">
+                    <div class="complaint-title-wrap">
                         ${aiStatusDot} ${c.title || 'Untitled'} ${aiBadge}
                     </div>
-                    <div style="margin-top: 4px;"><span class="smart-priority-indicator ${prioClass}">${c.priority || 'Medium'}</span></div>
+                    <div class="complaint-priority-wrap"><span class="smart-priority-indicator ${prioClass}">${c.priority || 'Medium'}</span></div>
                     ${aiInsightBox}
                 </td>
                 <td>${c.student_name || 'Student #' + c.student_id}</td>
-                <td><span style="font-size:0.8rem; opacity:0.8;">${c.category} @ ${c.location}</span></td>
+                <td><span class="complaint-meta">${c.category} @ ${c.location}</span></td>
                 <td><span class="status-badge status-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span></td>
-                <td style="text-align:center;">
+                <td class="complaint-media-cell">
                     ${c.media_url ? `
                         <button class="action-btn" style="background:rgba(212,175,55,0.1); color:var(--gold); border: 1px solid var(--gold);" onclick="event.stopPropagation(); viewComplaintMedia('${c.media_url}', '${c.title || 'Complaint Media'}')">
                             <i class="fa-solid ${isVideo ? 'fa-video' : 'fa-image'}"></i> View
@@ -649,7 +649,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         </div>
                     `}
                 </td>
-                <td style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                <td class="complaint-action-cell">
                     ${c.status === 'SUBMITTED' ? `
                         <button class="action-btn" style="background:var(--primary-color); color:white;" onclick="event.stopPropagation(); openForwardModal(${c.id})">
                             <i class="fa-solid fa-share-from-square"></i> Forward
