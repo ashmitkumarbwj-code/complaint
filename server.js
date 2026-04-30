@@ -61,29 +61,30 @@ app.use(helmet({
   crossOriginResourcePolicy: false // disable strict CORP to allow CDN assets
 }));
 
-const allowedOrigins = process.env.FRONTEND_URLS
-  ? process.env.FRONTEND_URLS.split(',')
-  : [];
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(u => u.trim())
+  : (process.env.NODE_ENV !== 'production' ? ['http://localhost:3000', 'http://localhost:5000'] : []);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl)
+    // Allow server-to-server requests (no origin header)
     if (!origin) return callback(null, true);
 
-    if (
-      allowedOrigins.indexOf(origin) !== -1 ||
-      origin.endsWith('.vercel.app') ||
-      origin.endsWith('.onrender.com')
-    ) {
+    // In development, allow all localhost ports automatically
+    if (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost')) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      logger.warn(`❌ CORS BLOCKED: ${origin}`);
+      logger.warn(`CORS BLOCKED: ${origin}`);
       callback(new Error('CORS error / blocked by production policy'));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true 
+  credentials: true
 }));
 
 // Body parser
