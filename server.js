@@ -61,8 +61,8 @@ app.use(helmet({
   crossOriginResourcePolicy: false // disable strict CORP to allow CDN assets
 }));
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(u => u.trim())
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URLS)
+  ? (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URLS).split(',').map(u => u.trim())
   : (process.env.NODE_ENV !== 'production' ? ['http://localhost:3000', 'http://localhost:5000'] : []);
 
 app.use(cors({

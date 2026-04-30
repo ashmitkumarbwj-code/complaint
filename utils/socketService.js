@@ -5,8 +5,8 @@ module.exports = {
         const { Server } = require('socket.io');
 
         // ─── Restrict CORS to the configured origin(s) ────────────────────────
-        const frontendUrls = process.env.ALLOWED_ORIGINS
-            ? process.env.ALLOWED_ORIGINS.split(',').map(u => u.trim())
+        const frontendUrls = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URLS)
+            ? (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URLS).split(',').map(u => u.trim())
             : (process.env.NODE_ENV !== 'production' ? ['http://localhost:3000', 'http://localhost:5000'] : []);
 
         const jwt = require('jsonwebtoken');
