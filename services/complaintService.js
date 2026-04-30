@@ -1,4 +1,6 @@
 const db = require('../config/db');
+const logger = require('../utils/logger');
+
 
 class ComplaintService {
     /**
@@ -153,6 +155,21 @@ class ComplaintService {
             );
             const complaint = rows[0];
             if (!complaint) throw new Error('COMPLAINT_NOT_FOUND');
+
+            // 1.1 Idempotency Check: Prevent duplicate transitions/audit logs
+            if (complaint.status === newStatus) {
+                logger.info(`[Workflow] Idempotent ignore: Complaint #${complaintId} already has status ${newStatus}.`);
+                return { 
+                    success: true, 
+                    noOp: true, 
+                    message: 'Status is already up-to-date.', 
+                    data: { 
+                        status: complaint.status, 
+                        student_id: complaint.student_id, 
+                        department_id: complaint.department_id 
+                    } 
+                };
+            }
 
             const isV2 = (complaint.workflow_version === 2);
 
