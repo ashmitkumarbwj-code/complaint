@@ -588,6 +588,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function renderTable(complaints) {
         const tbody = document.getElementById('complaints-tbody');
+        if (complaints.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="padding: 3rem; text-align: center; color: var(--text-secondary);">
+                <i class="fa-solid fa-folder-open" style="font-size: 3rem; opacity: 0.2; display: block; margin-bottom: 1rem;"></i>
+                <p>No complaints found for the selected filters.</p>
+            </td></tr>`;
+            return;
+        }
+
         tbody.innerHTML = complaints.map(c => {
             const isVideo = c.media_url && (c.media_url.endsWith('.mp4') || c.media_url.endsWith('.mov') || c.media_url.includes('/video/upload/'));
             
@@ -908,14 +916,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Forwarding...';
-
-        await handleV2AdminAction(forwardTargetId, 'FORWARDED', notes, deptId);
+        const resetBtn = window.setButtonLoading(btn, 'Forwarding...');
         
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-share-from-square"></i> Confirm Forward';
-        closeForwardModal();
+        try {
+            await handleV2AdminAction(forwardTargetId, 'FORWARDED', notes, deptId);
+            closeForwardModal();
+        } finally {
+            resetBtn();
+        }
     };
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1613,6 +1621,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             const image = document.getElementById('imageToCrop');
             image.src = e.target.result;
             document.getElementById('gallery-title-input').value = '';
+            document.getElementById('crop-gallery-fields').style.display = 'block';
+            document.getElementById('crop-btn-text').innerText = 'Crop & Upload to Gallery';
             window.showModal('cropModal');
             
             if (cropper) cropper.destroy();
@@ -1630,8 +1640,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         btnCropUpload.addEventListener('click', () => {
             if (!cropper) return;
             
-            btnCropUpload.disabled = true;
-            btnCropUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            const resetBtn = window.setButtonLoading(btnCropUpload, 'Processing...');
             
             cropper.getCroppedCanvas({
                 width: 1200,
@@ -1649,17 +1658,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                     });
                     const data = await res.json();
                     if (data.success) {
-                        showToast('Storytelling image uploaded!', 'success');
-                        closeCropModal();
-                        loadGallery();
+                        showToast('Gallery image uploaded successfully!', 'success');
+                        window.closeCropModal();
+                        window.loadGallery();
                     } else {
                         showToast(data.error || 'Upload failed', 'error');
                     }
                 } catch (err) {
-                    showToast('Upload error', 'error');
+                    console.error('Gallery upload error:', err);
+                    showToast('Upload failed. Check console for details.', 'error');
                 } finally {
-                    btnCropUpload.disabled = false;
-                    btnCropUpload.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Crop & Upload';
+                    resetBtn();
                 }
             }, 'image/jpeg', 0.9);
         });
@@ -2132,8 +2141,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.saveSlide = async (e) => {
         e.preventDefault();
         const btn = document.getElementById('saveSlideBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        const resetBtn = window.setButtonLoading(btn, 'Saving Slide...');
 
         const id = document.getElementById('slide-id').value;
         const form = document.getElementById('slide-form');
@@ -2171,17 +2179,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
             const data = await res.json();
             if (data.success) {
-                showToast(data.message, 'success');
-                closeSlideModal();
-                loadSlides();
+                showToast(data.message || 'Slide saved successfully!', 'success');
+                window.closeSlideModal();
+                window.loadSlides();
             } else {
                 showToast(data.message || 'Failed to save slide', 'error');
             }
         } catch (err) {
+            console.error('[Slides] Save error:', err);
             showToast('Network error while saving slide', 'error');
         } finally {
-            btn.disabled = false;
-            btn.innerHTML = 'Save Slide';
+            resetBtn();
         }
     };
 
@@ -2379,8 +2387,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const btn = document.getElementById('saveDynamicSlideBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        const resetBtn = window.setButtonLoading(btn, 'Processing Slide...');
 
         try {
             const formData = new FormData();
@@ -2409,8 +2416,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.error('Error saving dynamic slide:', err);
             showToast('Network error saving slide', 'error');
         } finally {
-            btn.disabled = false;
-            btn.innerHTML = 'Save Slide';
+            resetBtn();
         }
     };
 

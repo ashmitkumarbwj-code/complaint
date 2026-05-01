@@ -11,6 +11,7 @@ function maskEmail(email) {
 
 // ── Build transporter once at startup ────────────────────────────────────────
 let transporter = null;
+let isSmtpVerified = false;
 
 function getTransporter() {
     if (transporter) return transporter;
@@ -41,15 +42,21 @@ function getTransporter() {
 (async () => {
     if (process.env.OTP_MODE === 'mock') {
         logger.info('[NotificationService] OTP_MODE=mock — skipping SMTP verify.');
+        isSmtpVerified = true;
         return;
     }
     const t = getTransporter();
     if (!t) return;
     try {
         await t.verify();
+        isSmtpVerified = true;
         logger.info('[NotificationService] ✅ SMTP connection verified successfully.');
     } catch (err) {
+        isSmtpVerified = false;
         logger.error(`[NotificationService] ❌ SMTP connection FAILED at startup: ${err.message} (code: ${err.code || 'N/A'})`);
+        if (err.message.includes('535')) {
+            logger.error('[NotificationService] CRITICAL: Invalid SMTP Credentials (535). Please check SMTP_USER and SMTP_PASS (App Password) in .env');
+        }
         logger.error('[NotificationService] Emails will fail until SMTP is fixed. Check SMTP credentials and EC2 port 587.');
     }
 })();
@@ -81,9 +88,10 @@ const sendEmail = async (to, subject, text, { requestId = null, role = null } = 
     }
 
     const t = getTransporter();
-    if (!t) {
-        logger.error(`[NotificationService] ${logCtx} No SMTP transporter — email to ${masked} NOT sent.`);
-        return { success: false, error: 'SMTP_CONFIG_ERROR' };
+    if (!t || !isSmtpVerified) {
+        const reason = !t ? 'No SMTP transporter' : 'SMTP verification failed (Bad Credentials)';
+        logger.error(`[NotificationService] ${logCtx} ${reason} — email to ${masked} NOT sent.`);
+        return { success: false, error: 'SMTP_CONFIG_ERROR', code: 'SMTP_OFFLINE' };
     }
 
     try {
@@ -101,6 +109,9 @@ const sendEmail = async (to, subject, text, { requestId = null, role = null } = 
         };
     } catch (error) {
         logger.error(`[NotificationService] ${logCtx} ❌ Email to ${masked} FAILED | Code: ${error.code || 'N/A'} | ${error.message}`);
+        // If it was a 535 error during send, mark as unverified
+        if (error.message.includes('535')) isSmtpVerified = false;
+        
         return { 
             success: false, 
             error: error.message,
