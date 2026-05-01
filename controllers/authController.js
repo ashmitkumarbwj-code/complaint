@@ -80,8 +80,9 @@ exports.requestActivation = async (req, res) => {
 
         // 4. Rate Limiting (Identifier + IP)
         const canSend = await otpService.checkRateLimit(identifier, ip);
-        if (!canSend) {
-            return res.status(429).json({ success: false, message: 'Too many requests. Please try again later.' });
+        if (canSend !== 'ok') {
+            const msg = canSend === 'cooldown' ? 'Please wait 60 seconds.' : 'Too many requests. Please try again later.';
+            return res.status(429).json({ success: false, message: msg });
         }
 
         // 5. Generate and Send OTP
@@ -792,13 +793,15 @@ exports.validateActivation = async (req, res) => {
 exports.requestOTP = async (req, res) => {
     const { email, mobile_number, method } = req.body;
     const identifier = method === 'email' ? email : mobile_number;
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     
     if (!identifier) return res.status(400).json({ success: false, message: 'Identifier is required' });
 
     try {
-        const canRequest = await otpService.checkRateLimit(identifier);
-        if (!canRequest) {
-            return res.status(429).json({ success: false, message: 'Too many OTP requests. Try again after 1 hour.' });
+        const rateStatus = await otpService.checkRateLimit(identifier, ip);
+        if (rateStatus !== 'ok') {
+            const msg = rateStatus === 'cooldown' ? 'Please wait 60 seconds.' : 'Too many OTP requests. Try again after 10 minutes.';
+            return res.status(429).json({ success: false, message: msg });
         }
 
         const tenantId = db.getTenantId(req);
@@ -807,7 +810,7 @@ exports.requestOTP = async (req, res) => {
         const userId = users.length > 0 ? users[0].id : null;
 
         const otp = otpService.generateOTP();
-        await otpService.saveOTP(identifier, otp, userId);
+        await otpService.saveOTP(identifier, otp, userId, ip);
 
         if (method === 'email') {
             const emailResult = await notifier.sendOTPEmail(identifier, otp);
