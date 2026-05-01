@@ -1420,7 +1420,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 grid.innerHTML = data.images.map(img => `
                     <div class="glass-panel fade-in gallery-item" data-id="${img.id}" style="padding: 12px; position: relative; display: flex; flex-direction: column; gap: 10px; border: 1px solid ${img.is_featured ? 'var(--gold)' : 'rgba(255,255,255,0.05)'};">
                         <div style="height: 150px; border-radius: 8px; overflow: hidden; position: relative;">
-                            <img src="${API_BASE}/${img.url}" style="width: 100%; height: 100%; object-fit: cover; opacity: ${img.is_featured ? '1' : '0.5'};">
+                            <img src="${img.url.startsWith('http') ? img.url : API_BASE + '/' + img.url}" style="width: 100%; height: 100%; object-fit: cover; opacity: ${img.is_featured ? '1' : '0.5'};">
                             ${!img.is_featured ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 20px; font-size: 0.75rem;">Hidden</div>' : ''}
                             <div style="position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; border: 1px solid rgba(255,255,255,0.1);">
                                 <span>Order:</span>
