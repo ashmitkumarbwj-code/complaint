@@ -4,6 +4,8 @@ const db      = require('../config/db');
 const { getIsAvailable } = require('../config/redis');
 const logger  = require('../utils/logger');
 const cloudinary = require('../config/cloudinary');
+const requireAuth = require('../middleware/authMiddleware');   // [FIX C4] Added
+const checkRole   = require('../middleware/roleMiddleware');   // [FIX C4] Added
 
 /**
  * GET /api/health
@@ -65,9 +67,9 @@ router.get('/', async (req, res) => {
     });
 });
 
-router.get('/info', async (req, res) => {
-    // 🛡️ Proof-based verification (Admin Only)
-    // We add this here to prove the environment lockdown
+// [FIX C4] Protected: Requires valid JWT + Admin or Principal role.
+// Previously public — exposed OTP_MODE, Redis state, and process metadata to anyone.
+router.get('/info', requireAuth, checkRole(['admin', 'principal']), async (req, res) => {
     const redisAvailable = getIsAvailable();
     return res.json({
         success: true,
@@ -85,3 +87,4 @@ router.get('/info', async (req, res) => {
 });
 
 module.exports = router;
+

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const otpService = require('../utils/otpService');
 const notifier = require('../utils/notificationService');
 const authService = require('../services/authService');
+const logger = require('../utils/logger');
 
 async function logLoginAttempt(req, { tenantId, userId, identifier, success, reason }) {
     try {

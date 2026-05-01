@@ -57,10 +57,11 @@ exports.refreshAccessToken = async (refreshToken) => {
         id: user.id,
         username: user.username,
         role: user.role,
+        tenant_id: user.tenant_id, // [FIX] Preserve tenant context across token refresh
         ...roleInfo
     };
 
-    return await this.generateTokens(userData);
+    return await exports.generateTokens(userData); // [FIX] 'this' is undefined in CommonJS exports pattern
 };
 
 exports.revokeToken = async (refreshToken) => {

@@ -22,7 +22,8 @@ const COOLDOWN_SECONDS        = 60; // 60 seconds resend cooldown
  * Generate a strict 6-digit numeric OTP
  */
 exports.generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    // [FIX C6] Use cryptographically secure random integers
+    return require('crypto').randomInt(100000, 999999).toString();
 };
 
 /**
@@ -38,11 +39,11 @@ exports.saveOTP = async (identifier, otpCode, userId = null, ip = null) => {
         [identifier]
     );
 
-    // Insert new OTP record
+    // Insert new OTP record with IP auditing
     await db.execute(
-        `INSERT INTO otp_verifications (user_id, identifier, otp_hash, expires_at) 
-         VALUES ($1, $2, $3, $4)`,
-        [userId, identifier, hashedOtp, expiresAt]
+        `INSERT INTO otp_verifications (user_id, identifier, otp_hash, expires_at, ip_address) 
+         VALUES ($1, $2, $3, $4, $5)`,
+        [userId, identifier, hashedOtp, expiresAt, ip]
     );
 
     logger.info(`[OTP Service] OTP enqueued for: ${identifier} (IP: ${ip || 'unknown'})`);
@@ -121,8 +122,7 @@ exports.checkRateLimit = async (identifier, ip = null) => {
         return 'limit';
     }
 
-    // 2. Check Per-IP Limit (Disabled due to schema mismatch - ip_address column missing)
-    /*
+    // 2. Check Per-IP Limit (RE-ENABLED after schema migration)
     if (ip) {
         const [ipRows] = await db.execute(
             `SELECT COUNT(*) AS count FROM otp_verifications 
@@ -135,7 +135,6 @@ exports.checkRateLimit = async (identifier, ip = null) => {
             return 'limit';
         }
     }
-    */
 
     return 'ok';
 };
