@@ -3,6 +3,24 @@
  * Govt. College Dharamshala
  */
 
+window.setButtonLoading = function(btn, loadingText = 'Processing...') {
+    if (!btn) return () => {};
+    const originalText = btn.innerHTML;
+    const originalWidth = btn.offsetWidth;
+    const originalHeight = btn.offsetHeight;
+    btn.disabled = true;
+    if (originalWidth) btn.style.width = `${originalWidth}px`;
+    if (originalHeight) btn.style.height = `${originalHeight}px`;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${loadingText}`;
+    return function resetBtn() {
+        if (!btn) return;
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        btn.style.width = '';
+        btn.style.height = '';
+    };
+};
+
 document.addEventListener("DOMContentLoaded", async () => {
     // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
     // This allows both Admin and Principal roles since both use this dashboard logic
@@ -662,11 +680,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                         <button class="action-btn" style="background:var(--primary-color); color:white;" onclick="event.stopPropagation(); openForwardModal(${c.id})">
                             <i class="fa-solid fa-share-from-square"></i> Forward
                         </button>
-                        <button class="action-btn btn-reject" onclick="event.stopPropagation(); handleV2AdminAction(${c.id}, 'REJECTED_BY_ADMIN')">
+                        <button class="action-btn btn-reject" onclick="event.stopPropagation(); handleV2AdminAction(${c.id}, 'REJECTED_BY_ADMIN', '', null, this)">
                             <i class="fa-solid fa-ban"></i> Reject
                         </button>
                     ` : c.status === 'HOD_APPROVED' ? `
-                        <button class="action-btn" style="background:var(--green); color:white;" onclick="event.stopPropagation(); handleV2AdminAction(${c.id}, 'CLOSED', 'Final closure by Admin')">
+                        <button class="action-btn" style="background:var(--green); color:white;" onclick="event.stopPropagation(); handleV2AdminAction(${c.id}, 'CLOSED', 'Final closure by Admin', null, this)">
                             <i class="fa-solid fa-check-double"></i> Close Complaint
                         </button>
                     ` : `
@@ -678,7 +696,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // 🔥 V2 ADMIN ACTION HANDLER
-    window.handleV2AdminAction = async (id, status, reason = '', targetDeptId = null) => {
+    window.handleV2AdminAction = async (id, status, reason = '', targetDeptId = null, btn = null) => {
         if (status === 'REJECTED_BY_ADMIN' && !reason) {
             const promptReason = prompt("Please provide a mandatory reason/feedback for rejecting this complaint:");
             if (promptReason === null) return; // User cancelled
@@ -688,6 +706,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             reason = promptReason;
         }
+
+        const resetBtn = window.setButtonLoading(btn, 'Processing...');
 
         try {
             const res = await fetch(`${API_BASE}/api/complaints/${id}/status`, {
@@ -701,10 +721,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 showToast(`Complaint ${status} successfully`, 'success');
                 fetchComplaints();
             } else {
-                showToast(data.message, 'error');
+                showToast(data.message || 'Action failed', 'error');
             }
         } catch (err) {
-            showToast('Action failed', 'error');
+            console.error('[Admin] Action failed:', err);
+            showToast('Network error while performing action', 'error');
+        } finally {
+            resetBtn();
         }
     };
 

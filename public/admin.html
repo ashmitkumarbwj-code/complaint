@@ -22,6 +22,7 @@
     <link rel="shortcut icon" href="/favicon.png">
 </head>
 <body class="dashboard-root dashboard-page admin-dashboard" style="display: none;">
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     
     <!-- Sidebar Navigation -->
     <aside class="sidebar glass-panel">
@@ -94,6 +95,8 @@
         <!-- Dynamic Page Header -->
         <header class="main-header">
             <div class="header-left">
+                <button class="mobile-menu-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+            
                 <h2 id="current-section-title">Dashboard Overview</h2>
                 <p id="current-section-subtitle">Real-time campus pulse</p>
             </div>
@@ -1034,5 +1037,17 @@
     <script src="js/uiUtils.js"></script>
     <script src="js/admin.js"></script>
     <script src="js/admin_users.js"></script>
+
+    <!-- Mobile Responsiveness Scripts -->
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+            }
+        }
+    </script>
 </body>
 </html>

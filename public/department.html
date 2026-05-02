@@ -73,6 +73,7 @@
     <link rel="shortcut icon" href="/favicon.png">
 </head>
 <body class="dashboard-page dept-dashboard" style="display: none;">
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="container py-4">
         <header class="d-flex justify-content-between align-items-center mb-5">
             <div class="d-flex align-items-center gap-3">
@@ -170,5 +171,17 @@
     <script src="js/department.js"></script>
 
     <script src="js/uiUtils.js"></script>
+
+    <!-- Mobile Responsiveness Scripts -->
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+            }
+        }
+    </script>
 </body>
 </html>

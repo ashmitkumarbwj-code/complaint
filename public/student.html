@@ -73,6 +73,7 @@
     <link rel="shortcut icon" href="/favicon.png">
 </head>
 <body class="dashboard-page student-dashboard" style="display: none;">
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="student-dashboard-bg"></div>
     <div class="student-overlay"></div>
 
@@ -191,5 +192,17 @@
     <script src="js/config.js"></script>
     <script src="js/student.js"></script>
     <script src="js/uiUtils.js"></script>
+
+    <!-- Mobile Responsiveness Scripts -->
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+            }
+        }
+    </script>
 </body>
 </html>

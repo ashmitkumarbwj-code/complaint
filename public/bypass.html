@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bypass Login</title>
+</head>
+<body>
+    <script>
+        localStorage.setItem('scrs_user', JSON.stringify({
+            "id": 5,
+            "tenant_id": 1,
+            "username": "admin_test",
+            "email": "admin_test@gdc.edu",
+            "role": "Admin"
+        }));
+        window.location.href = '/admin.html';
+    </script>
+</body>
+</html>
