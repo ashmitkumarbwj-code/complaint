@@ -110,12 +110,13 @@ exports.deleteOldOrphans = async () => {
 exports.startMaintenanceInterval = (intervalMs = 300000) => { // Default 5 mins
     logger.info(`[Maintenance] Starting periodic maintenance every ${intervalMs / 1000}s`);
     
-    // Initial run
-    this.processPendingResyncs();
-    this.deleteOldOrphans();
+    const runMaintenance = async () => {
+        try { await exports.processPendingResyncs(); } catch (e) { logger.error('[Maintenance] resync error:', e.message); }
+        try { await exports.deleteOldOrphans(); } catch (e) { logger.error('[Maintenance] cleanup error:', e.message); }
+    };
 
-    return setInterval(() => {
-        this.processPendingResyncs();
-        this.deleteOldOrphans();
-    }, intervalMs);
+    // Initial run after 10s delay (let server fully start)
+    setTimeout(runMaintenance, 10000);
+
+    return setInterval(runMaintenance, intervalMs);
 };
