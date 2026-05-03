@@ -15,6 +15,65 @@ const CANONICAL_ROLE = window.RoleManager ? window.RoleManager.normalize(typeof 
 
 console.log(`[Activation] Initialized for Role: ${CANONICAL_ROLE}`);
 
+// Initialize OTP digit listeners
+document.addEventListener('DOMContentLoaded', () => {
+    initOTPFields();
+});
+
+function initOTPFields() {
+    const inputs = document.querySelectorAll('.otp-digit');
+    const hiddenInput = document.getElementById('otp-code');
+
+    if (!inputs.length || !hiddenInput) return;
+
+    inputs.forEach((input, index) => {
+        // Handle input
+        input.addEventListener('input', (e) => {
+            if (e.inputType === 'deleteContentBackward') return;
+            
+            const value = e.target.value;
+            if (value && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+            }
+            updateCombinedOTP();
+        });
+
+        // Handle backspace
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                inputs[index - 1].focus();
+            }
+        });
+
+        // Handle paste
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const data = e.clipboardData.getData('text').slice(0, 6);
+            if (!/^\d+$/.test(data)) return;
+
+            data.split('').forEach((char, i) => {
+                if (inputs[index + i]) {
+                    inputs[index + i].value = char;
+                }
+            });
+            
+            const nextIndex = Math.min(index + data.length, inputs.length - 1);
+            inputs[nextIndex].focus();
+            updateCombinedOTP();
+        });
+    });
+
+    function updateCombinedOTP() {
+        let combined = '';
+        inputs.forEach(input => {
+            combined += input.value;
+            if (input.value) input.classList.add('filled');
+            else input.classList.remove('filled');
+        });
+        hiddenInput.value = combined;
+    }
+}
+
 async function nextStep(step) {
     if (step === 1) {
         // PHASE 1: Forced Email Method
@@ -59,6 +118,11 @@ async function nextStep(step) {
                 transitionToStep(2, "Enter Verification Code", "66.66%");
                 
                 if (data.demoOtp) {
+                    const inputs = document.querySelectorAll('.otp-digit');
+                    const digits = data.demoOtp.split('');
+                    inputs.forEach((input, i) => {
+                        if (digits[i]) input.value = digits[i];
+                    });
                     document.getElementById('otp-code').value = data.demoOtp;
                     showToast("⚡ Demo Mode: OTP auto-filled", "info");
                 }
@@ -77,6 +141,7 @@ async function nextStep(step) {
     } else if (step === 2) {
         const otp = document.getElementById('otp-code').value.trim();
         if (!otp) return showToast('Please enter OTP', 'error');
+        if (otp.length !== 6) return showToast('Please enter 6-digit OTP', 'error');
 
         transitionToStep(3, "Secure Your Account", "100%");
     }
@@ -91,7 +156,7 @@ async function finishActivation() {
     if (password !== confirmPassword) return showToast('Passwords do not match', 'error');
 
     const email = document.getElementById('email').value.trim();
-    const mobile = document.getElementById('mobile-number').value.trim();
+    const mobile = document.getElementById('mobile-number') ? document.getElementById('mobile-number').value.trim() : '';
 
     const payload = { 
         password, 
@@ -164,14 +229,5 @@ function toggleMethod() {
     } else {
         document.getElementById('email-section').style.display = 'none';
         document.getElementById('sms-section').style.display = 'block';
-    }
-}
-
-// Global Toast (if uiUtils not loaded)
-function _ensureToast(msg, type) {
-    if (window.showToast) {
-        window.showToast(msg, type);
-    } else {
-        alert(msg);
     }
 }

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Activate Principal Account | Smart Campus SCRS</title>
-    <link rel="stylesheet" href="css/style.css?v=b47ccf0">
-    <script src="js/config.js"></script>
+    <link rel="stylesheet" href="css/style.css?v=eb25b34">
+    <script src="js/config.js?v=eb25b34"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
@@ -194,8 +194,18 @@
         <div class="step-container" id="step-2">
             <div class="form-group" style="text-align: center;">
                 <label class="form-label">Enter 6-Digit OTP</label>
-                <input type="text" id="otp-code" class="form-control" placeholder="000000" style="text-align: center; letter-spacing: 0.5rem; font-size: 1.5rem;">
-                <p style="margin-top: 1rem; font-size: 0.9rem; color: #888;">Check your registered email/mobile</p>
+                
+                <div class="otp-box-container" id="otp-inputs">
+                    <input type="text" class="otp-digit" maxlength="1" pattern="\d*">
+                    <input type="text" class="otp-digit" maxlength="1" pattern="\d*">
+                    <input type="text" class="otp-digit" maxlength="1" pattern="\d*">
+                    <input type="text" class="otp-digit" maxlength="1" pattern="\d*">
+                    <input type="text" class="otp-digit" maxlength="1" pattern="\d*">
+                    <input type="text" class="otp-digit" maxlength="1" pattern="\d*">
+                </div>
+                <input type="hidden" id="otp-code">
+                
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: #888;">Check your registered official email</p>
             </div>
             <button class="btn-activate" onclick="nextStep(2)">Verify OTP <i class="fa-solid fa-check-double"></i></button>
         </div>
@@ -221,7 +231,7 @@
     <script>
         const ROLE = 'principal'; // STRICT ROLE LOCK
     </script>
-    <script src="js/activation.js"></script>
-    <script src="js/uiUtils.js"></script>
+    <script src="js/activation.js?v=eb25b34"></script>
+    <script src="js/uiUtils.js?v=eb25b34"></script>
 </body>
 </html>
