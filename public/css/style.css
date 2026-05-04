@@ -3907,3 +3907,12 @@ body.dashboard-page.admin-dashboard .btn-action-close:hover {
         font-size: 1.2rem;
     }
 }
+/* V2 Workflow Status Badges */
+.status-badge.status-submitted { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.status-badge.status-forwarded { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+.status-badge.status-inprogress { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.status-badge.status-staff_resolved { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.status-badge.status-hod_verified { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+.status-badge.status-hod_approved { background: rgba(5, 150, 105, 0.2); color: #059669; }
+.status-badge.status-closed { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+.status-badge.status-rejected_by_admin { background: rgba(239, 68, 68, 0.2); color: #ef4444; }

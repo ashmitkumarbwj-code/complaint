@@ -216,6 +216,22 @@ const MAX_ROWS = 2000;
 const CHUNK_SIZE = 200;
 
 /**
+ * Strip whitespace and hidden characters (like \r, \n, \t) from string fields
+ */
+function normalizeRow(row) {
+    const cleaned = {};
+    for (const [key, value] of Object.entries(row)) {
+        if (typeof value === 'string') {
+            // Replace \r, \n, \t with empty string, then trim
+            cleaned[key] = value.replace(/[\r\n\t]/g, '').trim();
+        } else {
+            cleaned[key] = value;
+        }
+    }
+    return cleaned;
+}
+
+/**
  * Main bulk import function.
  *
  * @param {Buffer|object[]} input - raw CSV file buffer OR pre-parsed JSON array
@@ -261,6 +277,8 @@ async function bulkImportStudents(input, req, isJson = false, isDryRun = false) 
     // 2. Load Mapping Data once
     const [deptRows] = await db.tenantExecute(req, 'SELECT id, name FROM departments');
     const deptMap = Object.fromEntries(deptRows.map(d => [d.name.toLowerCase(), d.id]));
+    const validDepts = new Set(Object.keys(deptMap));
+    const deptNameMap = Object.fromEntries(deptRows.map(d => [d.name.toLowerCase(), d.name]));
 
     // 3. Batch/Chunk Processing (Pro Memory Protection)
     for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
@@ -275,12 +293,24 @@ async function bulkImportStudents(input, req, isJson = false, isDryRun = false) 
                 const normalized = normalizeRow(row);
                 
                 // 3.1 Validation
-                const { error, studentData } = validateStudentRow(normalized, deptMap);
+                const { error, resolvedDept } = validateRow(normalized, validDepts);
+                
+                let finalDept = resolvedDept;
+                if (finalDept === '__EXACT_MATCH__') {
+                    finalDept = deptNameMap[normalized.department.toLowerCase()];
+                }
+
                 if (error) {
                     summary.invalid++;
                     summary.failedRows.push({ ...row, error_reason: error });
                     continue;
                 }
+
+                const studentData = {
+                    ...normalized,
+                    department: finalDept,
+                    email: normalized.email.toLowerCase()
+                };
 
                 // 3.2 Duplicate Check (Master Registry)
                 const [existing] = await client.execute(

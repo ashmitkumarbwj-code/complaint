@@ -25,10 +25,10 @@ exports.getDashboardStats = async (req, res) => {
         const summaryQuery = `
             SELECT 
                 COUNT(*) as total,
-                COUNT(CASE WHEN status = 'Pending' THEN 1 END) as pending,
+                COUNT(CASE WHEN status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS', 'STAFF_RESOLVED') THEN 1 END) as pending,
                 COUNT(CASE WHEN status = 'Resolved' THEN 1 END) as resolved,
                 -- 🚀 Pro Intelligence: Count SLA Breaches (> 48h)
-                COUNT(CASE WHEN status = 'Pending' AND created_at < CURRENT_TIMESTAMP - INTERVAL '48 hours' THEN 1 END) as sla_breaches
+                COUNT(CASE WHEN status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS', 'STAFF_RESOLVED') AND created_at < CURRENT_TIMESTAMP - INTERVAL '48 hours' THEN 1 END) as sla_breaches
             FROM complaints
             WHERE 1=1
         `;
@@ -49,10 +49,10 @@ exports.getDashboardStats = async (req, res) => {
             SELECT 
                 d.id, d.name, 
                 COUNT(c.id) as total_count,
-                COUNT(CASE WHEN c.status = 'Pending' THEN 1 END) as pending_count,
+                COUNT(CASE WHEN c.status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS', 'STAFF_RESOLVED') THEN 1 END) as pending_count,
                 -- 🚀 Pro Intelligence: Pressure Score = Pending / Total (relative to department size)
                 CASE WHEN COUNT(c.id) > 0 
-                     THEN ROUND((COUNT(CASE WHEN c.status = 'Pending' THEN 1 END)::DECIMAL / COUNT(c.id)::DECIMAL) * 100, 1)
+                     THEN ROUND((COUNT(CASE WHEN c.status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS', 'STAFF_RESOLVED') THEN 1 END)::DECIMAL / COUNT(c.id)::DECIMAL) * 100, 1)
                      ELSE 0 END as pressure_score
             FROM departments d
             LEFT JOIN complaints c ON d.id = c.department_id
@@ -119,7 +119,7 @@ exports.getDashboardStats = async (req, res) => {
 exports.getPrincipalDashboardStats = async (req, res) => {
     try {
         const [totalToday] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints WHERE created_at::DATE = CURRENT_DATE');
-        const [pending] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Pending'");
+        const [pending] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS', 'STAFF_RESOLVED')");
         const [escalated] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Escalated'");
         const [resolvedToday] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Resolved' AND updated_at::DATE = CURRENT_DATE");
 
@@ -171,9 +171,9 @@ exports.getAuthorityStats = async (req, res) => {
         const [stats] = await db.tenantExecute(req, `
             SELECT 
                 COUNT(*) as total_complaints,
-                SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) as in_progress,
-                SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) as resolved,
+                SUM(CASE WHEN status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED') THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status IN ('In Progress', 'IN_PROGRESS') THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN status IN ('Resolved', 'STAFF_RESOLVED', 'HOD_APPROVED', 'CLOSED') THEN 1 ELSE 0 END) as resolved,
                 SUM(CASE WHEN status = 'Rejected' THEN 1 ELSE 0 END) as rejected
             FROM complaints
             WHERE department_id = $1
@@ -243,7 +243,7 @@ exports.getDepartmentStaff = async (req, res) => {
 exports.getAdminStats = async (req, res) => {
     try {
         const [total] = await db.tenantExecute(req, 'SELECT COUNT(*) as count FROM complaints');
-        const [pending] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Pending'");
+        const [pending] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS', 'STAFF_RESOLVED')");
         const [resolved] = await db.tenantExecute(req, "SELECT COUNT(*) as count FROM complaints WHERE status = 'Resolved'");
         const deptQuery = `
             SELECT 

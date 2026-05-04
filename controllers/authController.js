@@ -59,14 +59,14 @@ exports.requestActivation = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Roll number is required for students.' });
             }
             const query = method === 'email' 
-                ? 'SELECT * FROM verified_students WHERE roll_number = $1 AND email = $2 AND tenant_id = $3' 
+                ? 'SELECT * FROM verified_students WHERE roll_number = $1 AND BTRIM(LOWER(email), \' \\r\\n\\t\') = $2 AND tenant_id = $3' 
                 : 'SELECT * FROM verified_students WHERE roll_number = $1 AND mobile = $2 AND tenant_id = $3';
             const [rows] = await db.execute(query, [roll_number.trim(), identifier, tenantId]);
             entry = rows[0];
         } else {
             const field = method === 'email' ? 'email' : 'mobile';
             const [rows] = await db.execute(
-                `SELECT * FROM verified_staff WHERE ${field} = $1 AND LOWER(role) = $2 AND tenant_id = $3`, 
+                `SELECT * FROM verified_staff WHERE BTRIM(LOWER(${field}), \' \\r\\n\\t\') = $1 AND LOWER(role) = $2 AND tenant_id = $3`, 
                 [identifier, normalizedRole, tenantId]
             );
             entry = rows[0];
@@ -169,7 +169,7 @@ exports.completeActivation = async (req, res) => {
         if (normalizedRole === 'student') {
             const { roll_number } = req.body;
             const query = method === 'email' 
-                ? 'SELECT * FROM verified_students WHERE roll_number = $1 AND email = $2 AND tenant_id = $3 FOR UPDATE' 
+                ? 'SELECT * FROM verified_students WHERE roll_number = $1 AND BTRIM(LOWER(email), \' \\r\\n\\t\') = $2 AND tenant_id = $3 FOR UPDATE' 
                 : 'SELECT * FROM verified_students WHERE roll_number = $1 AND mobile = $2 AND tenant_id = $3 FOR UPDATE';
             const [vRows] = await conn.execute(query, [roll_number?.trim(), identifier, tenantId]);
             if (vRows.length === 0) throw new Error('NOT_IN_REGISTRY');
@@ -203,7 +203,7 @@ exports.completeActivation = async (req, res) => {
         } else {
             const field = method === 'email' ? 'email' : 'mobile'; // Match verified_staff column name
             const [vRows] = await conn.execute(
-                `SELECT * FROM verified_staff WHERE ${field} = $1 AND LOWER(role) = $2 AND tenant_id = $3 FOR UPDATE`, 
+                `SELECT * FROM verified_staff WHERE BTRIM(LOWER(${field}), \' \\r\\n\\t\') = $1 AND LOWER(role) = $2 AND tenant_id = $3 FOR UPDATE`, 
                 [identifier, normalizedRole, tenantId]
             );
             
