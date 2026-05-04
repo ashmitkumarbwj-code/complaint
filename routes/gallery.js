@@ -33,15 +33,15 @@ const upload = multer({
 });
 
 // @route   GET /api/gallery
-// Restrict the full image list (with metadata) to Admins only
-router.get('/', auth, checkRole(['Admin']), galleryController.getGallery);
+// Restrict the full image list (with metadata) to Admins and Principals
+router.get('/', auth, checkRole(['Admin', 'Principal']), galleryController.getGallery);
 
 // @route   GET /api/gallery/public
 // Explicit public route
 router.get('/public', galleryController.getPublicGallery);
 
 // @route   POST /api/gallery/upload
-router.post('/upload', auth, checkRole(['Admin']), upload.single('file'), galleryController.uploadImage);
+router.post('/upload', auth, checkRole(['Admin', 'Principal']), upload.single('file'), galleryController.uploadImage);
 
 // @route   PATCH /api/gallery/:id/featured
 router.patch('/:id/featured', auth, checkRole(['Admin', 'Principal']), galleryController.toggleFeatured);

@@ -92,11 +92,11 @@ router.patch('/complaints/:id/forward', auth, checkRole(['Admin', 'Principal']),
 // ==========================================
 // ADMIN SLIDES MANAGEMENT
 // ==========================================
-router.get('/slides', auth, checkRole(['Admin']), slidesController.getAllSlides);
-router.post('/slides', auth, checkRole(['Admin']), slideUpload.single('image'), slidesController.createSlide);
-router.put('/slides/:id', auth, checkRole(['Admin']), slideUpload.single('image'), slidesController.updateSlide);
-router.delete('/slides/:id', auth, checkRole(['Admin']), slidesController.deleteSlide);
-router.patch('/slides/:id/toggle', auth, checkRole(['Admin']), slidesController.toggleSlide);
+router.get('/slides', auth, checkRole(['Admin', 'Principal']), slidesController.getAllSlides);
+router.post('/slides', auth, checkRole(['Admin', 'Principal']), slideUpload.single('image'), slidesController.createSlide);
+router.put('/slides/:id', auth, checkRole(['Admin', 'Principal']), slideUpload.single('image'), slidesController.updateSlide);
+router.delete('/slides/:id', auth, checkRole(['Admin', 'Principal']), slidesController.deleteSlide);
+router.patch('/slides/:id/toggle', auth, checkRole(['Admin', 'Principal']), slidesController.toggleSlide);
 
 const dynamicSlidesController = require('../controllers/dynamicSlidesController');
 
@@ -117,10 +117,10 @@ const dynamicSlideUpload = multer({
 // ==========================================
 // ADMIN DYNAMIC SLIDES MANAGEMENT
 // ==========================================
-router.get('/dynamic-slides', auth, checkRole(['Admin']), dynamicSlidesController.getAllSlides);
-router.post('/dynamic-slides', auth, checkRole(['Admin']), dynamicSlideUpload.single('media'), dynamicSlidesController.createSlide);
-router.put('/dynamic-slides/:id', auth, checkRole(['Admin']), dynamicSlideUpload.single('media'), dynamicSlidesController.updateSlide);
-router.delete('/dynamic-slides/:id', auth, checkRole(['Admin']), dynamicSlidesController.deleteSlide);
+router.get('/dynamic-slides', auth, checkRole(['Admin', 'Principal']), dynamicSlidesController.getAllSlides);
+router.post('/dynamic-slides', auth, checkRole(['Admin', 'Principal']), dynamicSlideUpload.single('media'), dynamicSlidesController.createSlide);
+router.put('/dynamic-slides/:id', auth, checkRole(['Admin', 'Principal']), dynamicSlideUpload.single('media'), dynamicSlidesController.updateSlide);
+router.delete('/dynamic-slides/:id', auth, checkRole(['Admin', 'Principal']), dynamicSlidesController.deleteSlide);
 
 // @route   GET /api/admin/db-audit
 // @desc    Safe Read-Only Database Audit

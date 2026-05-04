@@ -95,9 +95,10 @@ exports.deleteImage = async (req, res) => {
         const { id } = req.params;
         const tenant_id = req.user.tenant_id;
 
-        // 🛑 Backend Guard: Principal Only
-        if (req.user.role !== 'principal') {
-            return res.status(403).json({ success: false, message: 'Access denied: Only Principal can delete images' });
+        // 🛑 Backend Guard: Admin or Principal Only
+        const userRole = req.user.role.toLowerCase();
+        if (userRole !== 'principal' && userRole !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Access denied: Insufficient permissions' });
         }
 
         // Find image first to get filename
@@ -144,9 +145,10 @@ exports.toggleFeatured = async (req, res) => {
         const { is_featured } = req.body;
         const tenant_id = req.user.tenant_id;
 
-        // 🛑 Backend Guard: Principal Only
-        if (req.user.role !== 'principal') {
-            return res.status(403).json({ success: false, message: 'Access denied: Only Principal can control visibility' });
+        // 🛑 Backend Guard: Admin or Principal Only
+        const userRole = req.user.role.toLowerCase();
+        if (userRole !== 'principal' && userRole !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Access denied: Insufficient permissions' });
         }
 
         // 🚀 Enforce Featured Limit: MAX 5
@@ -185,9 +187,10 @@ exports.updateDisplayOrder = async (req, res) => {
         const { display_order } = req.body;
         const tenant_id = req.user.tenant_id;
 
-        // 🛑 Backend Guard: Principal Only
-        if (req.user.role !== 'principal') {
-            return res.status(403).json({ success: false, message: 'Access denied: Only Principal can change order' });
+        // 🛑 Backend Guard: Admin or Principal Only
+        const userRole = req.user.role.toLowerCase();
+        if (userRole !== 'principal' && userRole !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Access denied: Insufficient permissions' });
         }
 
         await db.execute(
@@ -211,9 +214,10 @@ exports.reorderImages = async (req, res) => {
         const { order } = req.body;
         const tenant_id = req.user.tenant_id;
 
-        // 🛑 Backend Guard: Principal Only
-        if (req.user.role !== 'principal') {
-            return res.status(403).json({ success: false, message: 'Access denied: Only Principal can reorder gallery' });
+        // 🛑 Backend Guard: Admin or Principal Only
+        const userRole = req.user.role.toLowerCase();
+        if (userRole !== 'principal' && userRole !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Access denied: Insufficient permissions' });
         }
 
         if (!Array.isArray(order)) {

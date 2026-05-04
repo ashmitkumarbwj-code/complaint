@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
-    <link rel="stylesheet" href="css/style.css?v=b47ccf0">
+    <link rel="stylesheet" href="css/style.css?v=fb878ca">
     <!-- SheetJS (XLSX) for Bulk Import Preview -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
@@ -375,9 +375,13 @@
                         <div class="table-actions">
                             <select id="filter-status" class="elegant-select" onchange="window.currentCompPage=1; fetchComplaints()">
                                 <option value="">All Statuses</option>
-                                <option value="Pending">Pending</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Resolved">Resolved</option>
+                                <option value="SUBMITTED">New / Submitted</option>
+                                <option value="FORWARDED">Forwarded to HOD</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                                <option value="HOD_APPROVED">HOD Approved</option>
+                                <option value="CLOSED">Closed</option>
+                                <option value="Pending">Pending (Legacy)</option>
+                                <option value="Resolved">Resolved (Legacy)</option>
                                 <option value="Rejected">Rejected</option>
                             </select>
                             <select id="filter-dept" class="elegant-select" onchange="window.currentCompPage=1; fetchComplaints()">

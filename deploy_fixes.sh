@@ -6,7 +6,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 EC2_USER="ubuntu"
-EC2_IP="3.107.107.92"
+EC2_IP="3.24.254.215"
 PEM_KEY="C:\Users\Rajesh Kumar\Downloads\smart_campus.pem"
 REMOTE_DIR="/home/ubuntu/Smart-complaint-and-Response-System"
 
@@ -23,6 +23,9 @@ FILES=(
     "public/js/uiUtils.js"
     "public/js/config.js"
     "controllers/authController.js"
+    "controllers/galleryController.js"
+    "routes/gallery.js"
+    "routes/admin.js"
     "utils/otpService.js"
     "workers/notificationWorker.js"
 )

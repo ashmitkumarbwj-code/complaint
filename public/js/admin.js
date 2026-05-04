@@ -56,8 +56,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         }
         
-        // Admin-only Navigation Guard
-        if (String(user.role).toLowerCase() === 'admin') {
+        // Admin/Principal Navigation Guard (Media Tabs)
+        const lowerRole = String(user.role).toLowerCase();
+        if (lowerRole === 'admin' || lowerRole === 'principal') {
             const slidesTab = document.getElementById('nav-item-slides');
             if (slidesTab) slidesTab.style.display = 'flex';
             const dynamicSlidesTab = document.getElementById('nav-item-dynamic-slides');
@@ -1451,13 +1452,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 grid.innerHTML = data.images.map(img => `
                     <div class="glass-panel fade-in gallery-item" data-id="${img.id}" style="padding: 12px; position: relative; display: flex; flex-direction: column; gap: 10px; border: 1px solid ${img.is_featured ? 'var(--gold)' : 'rgba(255,255,255,0.05)'};">
                         <div style="height: 150px; border-radius: 8px; overflow: hidden; position: relative;">
-                            <img src="${img.url.startsWith('http') ? img.url : API_BASE + '/' + img.url}" style="width: 100%; height: 100%; object-fit: cover; opacity: ${img.is_featured ? '1' : '0.5'};">
-                            ${!img.is_featured ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 20px; font-size: 0.75rem;">Hidden</div>' : ''}
+                            <img src="${img.url.startsWith('http') ? img.url : API_BASE + '/' + img.url}" style="width: 100%; height: 100%; object-fit: cover; opacity: ${img.is_featured ? '1' : '0.85'};">
+                            ${!img.is_featured ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 20px; font-size: 0.75rem;">Not Featured</div>' : ''}
                             <div style="position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; border: 1px solid rgba(255,255,255,0.1);">
                                 <span>Order:</span>
                                 <input type="number" value="${img.display_order || 0}" 
                                     onchange="updateDisplayOrder(${img.id}, this.value)"
-                                    ${user.role !== 'Principal' ? 'disabled' : ''}
+                                    ${(user.role.toLowerCase() !== 'principal' && user.role.toLowerCase() !== 'admin') ? 'disabled' : ''}
                                     style="width: 35px; background: transparent; border: none; color: var(--gold); font-weight: bold; text-align: center;">
                             </div>
                         </div>
@@ -1469,15 +1470,15 @@ document.addEventListener("DOMContentLoaded", async () => {
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.05);">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <label class="featured-toggle" title="${user.role === 'Principal' ? 'Toggle Homepage Visibility' : 'Principal Only'}">
+                                <label class="featured-toggle" title="${(user.role.toLowerCase() === 'principal' || user.role.toLowerCase() === 'admin') ? 'Toggle Homepage Visibility' : 'Insufficient Permissions'}">
                                     <input type="checkbox" ${img.is_featured ? 'checked' : ''} 
-                                        ${user.role !== 'Principal' ? 'disabled' : ''}
+                                        ${(user.role.toLowerCase() !== 'principal' && user.role.toLowerCase() !== 'admin') ? 'disabled' : ''}
                                         onchange="toggleFeatured(${img.id}, this.checked)">
                                     <span class="toggle-slider"></span>
                                 </label>
                                 <span style="font-size: 0.70rem; color: var(--text-muted);">${new Date(img.created_at).toLocaleDateString()}</span>
                             </div>
-                            ${user.role === 'Principal' ? `
+                            ${(user.role.toLowerCase() === 'principal' || user.role.toLowerCase() === 'admin') ? `
                             <button class="action-btn btn-reject" onclick="deleteGalleryImage(${img.id})" style="padding: 4px 8px; font-size: 0.75rem;">
                                 <i class="fa-solid fa-trash"></i> Delete
                             </button>` : ''}
@@ -1485,8 +1486,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                     </div>
                 `).join('');
 
-                // 🚀 Initialize Sortable (Principal Only)
-                if (user.role === 'Principal' && typeof Sortable !== 'undefined') {
+                // 🚀 Initialize Sortable (Admin or Principal)
+                if ((user.role.toLowerCase() === 'principal' || user.role.toLowerCase() === 'admin') && typeof Sortable !== 'undefined') {
                     Sortable.create(grid, {
                         animation: 150,
                         ghostClass: 'sortable-ghost',
@@ -1719,7 +1720,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     window.deleteGalleryImage = async (id) => {
-        if (!confirm('Are you sure you want to delete this image? One careless click = broken homepage slider!')) return;
+        if (!confirm('Are you sure you want to delete this image? This cannot be undone.')) return;
         try {
             const res = await fetch(`${API_BASE}/api/gallery/${id}`, {
                 method: 'DELETE',
@@ -2238,7 +2239,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     window.deleteSlide = (id) => {
-        showConfirmModal('Delete Slide', 'Are you sure you want to delete this slide? The image will be permanently removed.', async () => {
+        showConfirmModal('Delete Slide', 'Are you sure you want to delete this slide? This cannot be undone.', async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/admin/slides/${id}`, {
                     method: 'DELETE',
@@ -2487,7 +2488,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // --- Delete ---
     window.deleteDynamicSlide = (id) => {
-        showConfirmModal('Delete Dynamic Slide', 'Are you sure? This will permanently delete the slide and its media from Cloudinary.', async () => {
+        showConfirmModal('Delete Dynamic Slide', 'Are you sure you want to delete this slide? This cannot be undone.', async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/admin/dynamic-slides/${id}`, {
                     method: 'DELETE',
