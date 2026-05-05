@@ -28,6 +28,8 @@ FILES=(
     "routes/admin.js"
     "utils/otpService.js"
     "workers/notificationWorker.js"
+    "public/index.html"
+    "public/images/leadership/vats.png"
 )
 
 echo ""
