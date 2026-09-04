@@ -130,10 +130,26 @@ exports.validateVerifyOTP = [
     methodRule(),
     emailRuleOptional('email'),
     mobileRuleOptional('mobile_number'),
+    body('identifier').optional().trim(),
     otpRule('otp'),
     tenantRule(),
     validate
 ];
+
+const ALLOWED_ROLES = ['student', 'staff', 'hod', 'admin', 'principal', 'studenthead'];
+
+const roleRuleOptional = (field = 'role') =>
+    body(field)
+        .optional()
+        .customSanitizer(val => typeof val === 'string' ? val.trim().toLowerCase() : val)
+        .isIn(ALLOWED_ROLES).withMessage('Invalid role specified.');
+
+const roleRuleRequired = (field = 'role') =>
+    body(field)
+        .trim()
+        .notEmpty().withMessage('Role is required.')
+        .customSanitizer(val => typeof val === 'string' ? val.trim().toLowerCase() : val)
+        .isIn(ALLOWED_ROLES).withMessage('Invalid role specified.');
 
 // POST /api/auth/complete-activation
 exports.validateCompleteActivation = [
@@ -150,10 +166,7 @@ exports.validateCompleteActivation = [
         .trim()
         .notEmpty().withMessage('Firebase token is required for mobile verification.'),
     passwordRule('password'),
-    body('role')
-        .trim()
-        .notEmpty().withMessage('Role is required.')
-        .isIn(['Student', 'Staff', 'HOD', 'Admin', 'Principal', 'student', 'staff', 'hod', 'admin', 'principal']).withMessage('Invalid role.'),
+    roleRuleRequired('role'),
     tenantRule(),
     validate
 ];
@@ -163,10 +176,8 @@ exports.validateRequestReset = [
     methodRule(),
     emailRuleOptional('email'),
     mobileRuleOptional('mobile_number'),
-    body('role')
-        .optional()
-        .trim()
-        .isIn(['Student', 'Staff', 'HOD', 'Admin', 'Principal']).withMessage('Invalid role specified.'),
+    body('identifier').optional().trim(),
+    roleRuleOptional('role'),
     tenantRule(),
     validate
 ];
@@ -176,6 +187,8 @@ exports.validateVerifyReset = [
     methodRule(),
     emailRuleOptional('email'),
     mobileRuleOptional('mobile_number'),
+    body('identifier').optional().trim(),
+    roleRuleOptional('role'),
     otpRule('otp'),
     tenantRule(),
     validate
@@ -186,6 +199,8 @@ exports.validateResetPassword = [
     methodRule(),
     emailRuleOptional('email'),
     mobileRuleOptional('mobile_number'),
+    body('identifier').optional().trim(),
+    roleRuleOptional('role'),
     otpRule('otp'),
     passwordRule('password'),
     tenantRule(),
