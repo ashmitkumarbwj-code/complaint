@@ -51,12 +51,20 @@ exports.saveOTP = async (identifier, otpCode, userId = null, ip = null) => {
 
 /**
  * Verify OTP - Strictly matching User's logic requirement
+ * @param {string} identifier - Email or mobile number
+ * @param {string} otpCode - 6-digit OTP entered by user
+ * @param {object} [options] - Verification options
+ * @param {boolean} [options.allowRecentlyVerified=false] - If true, allows an OTP verified during step 2 to be confirmed in step 3 (within active expiry window).
  */
-exports.verifyOTP = async (identifier, otpCode) => {
+exports.verifyOTP = async (identifier, otpCode, { allowRecentlyVerified = false } = {}) => {
     // 1. Fetch latest active OTP
+    const condition = allowRecentlyVerified
+        ? 'WHERE identifier = $1'
+        : 'WHERE identifier = $1 AND verified = false';
+
     const [rows] = await db.execute(
         `SELECT * FROM otp_verifications 
-         WHERE identifier = $1 AND verified = false
+         ${condition}
          ORDER BY created_at DESC LIMIT 1`,
         [identifier]
     );
@@ -85,7 +93,9 @@ exports.verifyOTP = async (identifier, otpCode) => {
     }
 
     // Success: Mark as verified
-    await db.execute('UPDATE otp_verifications SET verified = true WHERE id = $1', [record.id]);
+    if (!record.verified) {
+        await db.execute('UPDATE otp_verifications SET verified = true WHERE id = $1', [record.id]);
+    }
     return 'valid';
 };
 
