@@ -262,23 +262,26 @@ exports.completeActivation = async (req, res) => {
  * Generic response implemented to prevent account enumeration.
  */
 exports.requestPasswordReset = async (req, res) => {
-    const { email, method, role } = req.body;
+    const { email, mobile_number, method, role } = req.body;
     
     // PHASE 1: Email-Only Enforcement
     if (method === 'sms') {
         return res.status(400).json({ success: false, message: 'SMS verification is currently disabled. Please use your registered email.' });
     }
 
-    const identifier = (email)?.trim().toLowerCase();
+    const rawId = email || req.body.identifier || mobile_number;
+    const identifier = (rawId || '').trim().toLowerCase();
     const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     if (!identifier) {
         return res.status(400).json({ success: false, message: 'Official Email is required.' });
     }
 
+    console.log(`[PasswordReset] Request received for: ${notifier.maskEmail(identifier)} (IP: ${ip})`);
+
     try {
         const tenantId = db.getTenantId(req) || 1;
-        const normalizedPortalRole = (role || '').toLowerCase().trim();
+        const normalizedPortalRole = String(role || '').trim().toLowerCase();
         
         // 1. Generic Success Response (Standard Security Practice)
         const genericResponse = { 
@@ -286,38 +289,44 @@ exports.requestPasswordReset = async (req, res) => {
             message: 'If the provided email matches our records, a reset code has been sent.' 
         };
 
-        // 2. Lookup User
-        const query = method === 'email' 
-            ? 'SELECT * FROM users WHERE email = $1 AND tenant_id = $2' 
-            : 'SELECT * FROM users WHERE mobile_number = $1 AND tenant_id = $2';
+        // 2. Lookup User: match email or username
+        const actualMethod = method || (identifier.includes('@') ? 'email' : 'sms');
+        const query = actualMethod === 'email' 
+            ? 'SELECT * FROM users WHERE (BTRIM(LOWER(email)) = BTRIM(LOWER($1)) OR BTRIM(LOWER(username)) = BTRIM(LOWER($1))) AND tenant_id = $2' 
+            : 'SELECT * FROM users WHERE BTRIM(mobile_number) = BTRIM($1) AND tenant_id = $2';
         const [users] = await db.execute(query, [identifier, tenantId]);
         
         // 3. Security: Exit with generic success if user not found
         if (users.length === 0) {
-            console.log(`[AUTH-SEC] Password reset attempt for non-existent user: ${identifier} (IP: ${ip})`);
+            console.log(`[AUTH-SEC] Password reset attempt for non-existent user: ${notifier.maskEmail(identifier)} (IP: ${ip})`);
             return res.json(genericResponse);
         }
 
         const user = users[0];
-        const userRole = (user.role || '').toLowerCase();
+        const userRole = String(user.role || '').trim().toLowerCase();
+        const recipientEmail = (user.email || identifier).trim().toLowerCase();
 
         // 4. Cross-Portal Abuse Protection (Silent Fail)
         if (normalizedPortalRole) {
-            const isStaffPortalIdentifier = ['staff', 'hod', 'admin', 'principal'].includes(normalizedPortalRole);
-            const isStudentPortalIdentifier = normalizedPortalRole === 'student';
+            const isStaffPortal = ['staff', 'hod', 'admin', 'principal'].includes(normalizedPortalRole);
+            const isStudentPortal = normalizedPortalRole === 'student' || normalizedPortalRole === 'studenthead';
+            const isStudentUser = userRole === 'student' || userRole === 'studenthead';
+            const isStaffUser = ['staff', 'hod', 'admin', 'principal'].includes(userRole);
 
-            if (isStudentPortalIdentifier && userRole !== 'student') {
+            if (isStudentPortal && !isStudentUser) {
                 console.log(`[AUTH-SEC] Portal/Role mismatch on reset: User is ${userRole}, Portal is student`);
                 return res.json(genericResponse);
             }
-            if (isStaffPortalIdentifier && userRole === 'student') {
-                console.log(`[AUTH-SEC] Portal/Role mismatch on reset: User is student, Portal is staff`);
+            if (isStaffPortal && !isStaffUser) {
+                console.log(`[AUTH-SEC] Portal/Role mismatch on reset: User is ${userRole}, Portal is staff`);
                 return res.json(genericResponse);
             }
         }
 
+        console.log(`[PasswordReset] User lookup successful (Role: ${userRole})`);
+
         // 5. Rate Limiting (Identifier + IP)
-        const rateStatus = await otpService.checkRateLimit(identifier, ip);
+        const rateStatus = await otpService.checkRateLimit(recipientEmail, ip);
         if (rateStatus === 'cooldown') {
             return res.status(429).json({ success: false, message: 'Please wait 60 seconds before requesting another OTP.' });
         }
@@ -327,23 +336,33 @@ exports.requestPasswordReset = async (req, res) => {
 
         // 6. Generate and Send OTP
         const otp = otpService.generateOTP();
-        await otpService.saveOTP(identifier, otp, user.id, ip);
+        await otpService.saveOTP(recipientEmail, otp, user.id, ip);
+        console.log(`[PasswordReset] OTP generated and stored securely for ${notifier.maskEmail(recipientEmail)}`);
 
+        console.log(`[NotificationService] Attempting SMTP delivery to ${notifier.maskEmail(recipientEmail)}`);
         const requestId = req.requestId || req.headers['x-request-id'] || null;
-        const emailResult = await notifier.sendOTPEmail(identifier, otp, { requestId, role: userRole });
+        const emailResult = await notifier.sendOTPEmail(recipientEmail, otp, { requestId, role: userRole });
 
-        if (!emailResult.success && process.env.OTP_MODE !== 'mock') {
-            console.error(`[AUTH-FAILURE] Email delivery failed for ${identifier} in requestPasswordReset: ${emailResult.error}`);
-            await otpService.clearOTPs(identifier);
-            return res.status(500).json({ 
-                success: false, 
-                message: 'Failed to send reset email. Please try again or contact support.' 
-            });
+        if (!emailResult.success) {
+            if (process.env.OTP_MODE === 'mock') {
+                console.log(`[NotificationService] OTP_MODE=mock active — email delivery simulated`);
+            } else {
+                console.error(`[NotificationService] SMTP delivery failed to ${notifier.maskEmail(recipientEmail)}: ${emailResult.error} (code: ${emailResult.code || 'N/A'})`);
+                await otpService.clearOTPs(recipientEmail);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'SMTP_CONFIG_ERROR',
+                    message: 'Password reset email could not be sent. Please try again later.' 
+                });
+            }
+        } else {
+            console.log(`[NotificationService] Email sent successfully to ${notifier.maskEmail(recipientEmail)}`);
         }
 
-        // Include mock OTP if in development mode
+        // demoOtp is allowed ONLY strictly in mock mode
         if (process.env.OTP_MODE === 'mock') {
             genericResponse.demoOtp = otp;
+            genericResponse.isMock = true;
         }
 
         return res.json(genericResponse);
@@ -356,14 +375,32 @@ exports.requestPasswordReset = async (req, res) => {
 
 
 /**
- * Reset Password (Step 3) — Verifies OTP again as final confirmation before writing new password.
+ * Reset Password (Step 3) — Verifies OTP (supports pre-verified OTP from Step 2) before writing new password.
  */
 exports.resetPassword = async (req, res) => {
-    const { email, method, otp, password } = req.body;
-    const identifier = (email || '').trim().toLowerCase();
+    const { email, mobile_number, method, otp, password } = req.body;
+    const rawId = email || req.body.identifier || mobile_number;
+    const identifier = (rawId || '').trim().toLowerCase();
+
+    if (!identifier) {
+        return res.status(400).json({ success: false, message: 'Email address is required.' });
+    }
+
+    if (!otp) {
+        return res.status(400).json({ success: false, message: 'OTP is required.' });
+    }
+
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+    if (!password || !passwordRegex.test(password)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Password must be at least 8 characters and include both letters and numbers.' 
+        });
+    }
 
     try {
-        const result = await otpService.verifyOTP(identifier, otp);
+        // Step 3: verify OTP with allowRecentlyVerified=true so Step 2 verification does not invalidate Step 3
+        const result = await otpService.verifyOTP(identifier, otp, { allowRecentlyVerified: true });
         if (result === 'locked') {
             return res.status(429).json({ success: false, message: 'OTP is locked due to too many attempts. Please request a new reset.' });
         }
@@ -374,21 +411,19 @@ exports.resetPassword = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Incorrect OTP. Please check and try again.' });
         }
 
-        if (!password || password.length < 8) {
-            return res.status(400).json({ success: false, message: 'Password must be at least 8 characters.' });
-        }
-
+        const tenantId = db.getTenantId(req) || 1;
         const hashedPassword = await bcrypt.hash(password, 10);
-        const query = 'UPDATE users SET password_hash = $1, failed_attempts = 0, locked_until = NULL WHERE email = $2';
+        const query = 'UPDATE users SET password_hash = $1, failed_attempts = 0, locked_until = NULL WHERE (BTRIM(LOWER(email)) = BTRIM(LOWER($2)) OR BTRIM(LOWER(username)) = BTRIM(LOWER($2)) OR BTRIM(mobile_number) = BTRIM($2)) AND tenant_id = $3';
         
-        const [dbRows, dbResult] = await db.execute(query, [hashedPassword, identifier]);
+        const [dbRows, dbResult] = await db.execute(query, [hashedPassword, identifier, tenantId]);
 
         if (dbResult.rowCount === 0) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
+        // Wipe OTP records so code cannot be reused
         await otpService.clearOTPs(identifier);
-        res.json({ success: true, message: 'Password reset successfully. You may now login.' });
+        return res.json({ success: true, message: 'Password reset successfully' });
     } catch (error) {
         console.error('Password reset error:', error);
         res.status(500).json({ success: false, message: 'Failed to reset password' });
@@ -838,7 +873,8 @@ exports.requestOTP = async (req, res) => {
  */
 exports.verifyOTP = async (req, res) => {
     const { email, mobile_number, method, otp } = req.body;
-    const identifier = method === 'email' ? email : mobile_number;
+    const rawId = req.body.identifier || (method === 'email' ? email : (method === 'sms' ? mobile_number : (email || mobile_number)));
+    const identifier = (rawId || '').trim().toLowerCase();
     
     if (!identifier || !otp) return res.status(400).json({ success: false, message: 'Identifier and OTP are required' });
 
