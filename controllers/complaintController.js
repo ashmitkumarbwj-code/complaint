@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 const { uploadQueue } = require('../utils/queueService');
 const db = require('../config/db'); // Kept temporarily for remaining unrefactored methods
 const priorityEngine = require('../utils/priorityEngine');
+const cloudinary = require('cloudinary').v2;
 
 exports.submitComplaint = async (req, res) => {
     const { title, category, location, description, priority } = req.body;
@@ -28,7 +29,7 @@ exports.submitComplaint = async (req, res) => {
         const finalPriority = analysis.priority;
         const suggestedDeptId = await complaintService.getTargetDepartment(category, tenantId);
 
-        // 🛡️ WORKFLOW ENFORCEMENT: All new complaints go to Admin Queue first
+        // ??? WORKFLOW ENFORCEMENT: All new complaints go to Admin Queue first
         const { ADMIN_DEPT_ID } = require('../utils/constants');
         const initialDeptId = ADMIN_DEPT_ID; 
 
@@ -108,7 +109,7 @@ exports.submitComplaint = async (req, res) => {
         // 6. Socket & Notifications
         socketService.emitNewComplaint({ id: complaintId, student_id, department_id: initialDeptId, category, location, status: 'Pending', created_at: new Date() });
 
-        // 🚨 Phase 1: Signal Real-Time Dashboard Update
+        // ?? Phase 1: Signal Real-Time Dashboard Update
         socketService.emitStatsChanged(tenantId);
 
         res.json({ success: true, message: 'Complaint submitted successfully', complaint_id: complaintId, assigned_department: initialDeptId });
@@ -146,12 +147,34 @@ exports.updateStatus = async (req, res) => {
         });
 
         if (!result.noOp) {
-            socketService.emitStatusUpdate(complaint_id, status, result.data.student_id, result.data.department_id);
-            // 🚨 Phase 1: Signal Real-Time Dashboard Update
+            // Real-time Socket.io emission using validated IDs
+            socketService.emitStatusUpdate(
+                complaint_id, 
+                status, 
+                result.data.student_id, 
+                result.data.department_id
+            );
             socketService.emitStatsChanged(req.user.tenant_id);
+
+            // Resilient Lifecycle Email Dispatch (Decoupled / Asynchronous)
+            if (status === 'FORWARDED') {
+                notifier.sendComplaintForwardedNotifications({
+                    complaintId: complaint_id,
+                    targetDeptId: result.data.department_id || targetDeptId,
+                    tenantId: req.user.tenant_id
+                }).catch(err => {
+                    logger.error(`[Notification] Failed to send FORWARDED notifications for complaint #${complaint_id}:`, err);
+                });
+            } else if (status === 'CLOSED') {
+                notifier.sendComplaintResolvedNotification({
+                    complaintId: complaint_id,
+                    resolutionNote: reason || admin_notes,
+                    tenantId: req.user.tenant_id
+                }).catch(err => {
+                    logger.error(`[Notification] Failed to send CLOSED notification for complaint #${complaint_id}:`, err);
+                });
+            }
         }
-
-
 
         res.json({ 
             success: true, 
@@ -263,7 +286,7 @@ exports.applyAiSuggestion = async (req, res) => {
     const { type } = req.body; // 'priority' or 'category' or 'both'
     const tenantId = req.user.tenant_id;
 
-    // 🛡️ Phase 2: Feature Flag Control
+    // ??? Phase 2: Feature Flag Control
     if (process.env.AI_APPLY_ENABLED !== 'true') {
         return res.status(403).json({ success: false, message: "AI Suggestion Adoption is currently disabled." });
     }
@@ -362,35 +385,66 @@ exports.applyAiSuggestion = async (req, res) => {
  */
 exports.getComplaintHistory = async (req, res) => {
     const { id } = req.params;
-    const { id: user_id, role } = req.user;
+    const { id: user_id, role, student_id: sessionStudentId } = req.user;
 
     try {
-        // Senior Security Verification
-        if (role === 'staff' || role === 'hod') {
-            const [complaint] = await db.tenantExecute(req, 'SELECT department_id FROM complaints WHERE id = $1', [id]);
-            if (complaint.length === 0) return res.status(404).json({ success: false, message: 'Complaint not found' });
-            
+        // 1. Fetch complaint basic record to verify authorization
+        const [complaints] = await db.tenantExecute(req, 
+            'SELECT id, student_id, user_id, department_id FROM complaints WHERE id = $1', 
+            [id]
+        );
+        if (complaints.length === 0) {
+            return res.status(404).json({ success: false, message: 'Complaint not found' });
+        }
+        const complaint = complaints[0];
+
+        // 2. Strict Role & Ownership Isolation
+        if (role === 'student') {
+            // Must belong to this student
+            if (complaint.student_id !== sessionStudentId && complaint.user_id !== user_id) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: 'Access denied: You can only view history for your own complaints.' 
+                });
+            }
+        } else if (role === 'staff' || role === 'hod') {
             const [membership] = await db.tenantExecute(req,
                 'SELECT 1 FROM department_members WHERE department_id = $1 AND user_id = $2',
-                [complaint[0].department_id, user_id]
+                [complaint.department_id, user_id]
             );
             if (membership.length === 0) {
-                return res.status(403).json({ success: false, message: 'Access denied: You can only view history for complaints assigned to your department.' });
+                return res.status(403).json({ 
+                    success: false, 
+                    message: 'Access denied: You can only view history for complaints assigned to your department.' 
+                });
             }
         }
 
-        const [rows] = await db.tenantExecute(req, `
+        // 3. Query audit history with visibility filter (students only see STUDENT_VISIBLE / PUBLIC)
+        let historyQuery = `
             SELECT 
+                h.id,
                 h.created_at as assigned_at,
                 h.note as notes,
+                h.from_status,
                 h.to_status,
+                h.visibility,
                 u.username as assigned_by_name,
+                h.actor_role,
                 h.action_type
             FROM complaint_status_history h
             LEFT JOIN users u ON h.actor_user_id = u.id
             WHERE h.complaint_id = $1
-            ORDER BY h.created_at DESC
-        `, [id], 'h');
+        `;
+        const params = [id];
+
+        if (role === 'student') {
+            historyQuery += ` AND (h.visibility = 'STUDENT_VISIBLE' OR h.visibility = 'PUBLIC' OR h.visibility IS NULL)`;
+        }
+
+        historyQuery += ` ORDER BY h.created_at ASC`;
+
+        const [rows] = await db.tenantExecute(req, historyQuery, params, 'h');
 
         res.json({ success: true, history: rows });
     } catch (error) {
