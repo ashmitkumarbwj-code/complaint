@@ -21,13 +21,13 @@ exports.getDashboardStats = async (req, res) => {
         }
 
         // 2. Aggregate Data from DB
-        // ??? Pro Analytics: Every query below is hardened via tenantExecute
+        // 🛡️ Pro Analytics: Every query below is hardened via tenantExecute
         const summaryQuery = `
             SELECT 
                 COUNT(*) as total,
                 COUNT(CASE WHEN status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS', 'STAFF_RESOLVED') THEN 1 END) as pending,
                 COUNT(CASE WHEN status = 'Resolved' THEN 1 END) as resolved,
-                -- ?? Pro Intelligence: Count SLA Breaches (> 48h)
+                -- 🚀 Pro Intelligence: Count SLA Breaches (> 48h)
                 COUNT(CASE WHEN status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS', 'STAFF_RESOLVED') AND created_at < CURRENT_TIMESTAMP - INTERVAL '48 hours' THEN 1 END) as sla_breaches
             FROM complaints
             WHERE 1=1
@@ -50,7 +50,7 @@ exports.getDashboardStats = async (req, res) => {
                 d.id, d.name, 
                 COUNT(c.id) as total_count,
                 COUNT(CASE WHEN c.status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS', 'STAFF_RESOLVED') THEN 1 END) as pending_count,
-                -- ?? Pro Intelligence: Pressure Score = Pending / Total (relative to department size)
+                -- 🚀 Pro Intelligence: Pressure Score = Pending / Total (relative to department size)
                 CASE WHEN COUNT(c.id) > 0 
                      THEN ROUND((COUNT(CASE WHEN c.status IN ('Pending', 'SUBMITTED', 'FORWARDED', 'HOD_VERIFIED', 'IN_PROGRESS', 'STAFF_RESOLVED') THEN 1 END)::DECIMAL / COUNT(c.id)::DECIMAL) * 100, 1)
                      ELSE 0 END as pressure_score
@@ -60,7 +60,7 @@ exports.getDashboardStats = async (req, res) => {
             GROUP BY d.id, d.name
         `;
 
-        // ?? Pro Intelligence: Category Intensity
+        // 🚀 Pro Intelligence: Category Intensity
         const categoryIntensityQuery = `
             SELECT category, COUNT(*) as count 
             FROM complaints 
@@ -70,7 +70,7 @@ exports.getDashboardStats = async (req, res) => {
             LIMIT 5
         `;
 
-        // ?? Pro Intelligence: Avg Resolution Time (in hours)
+        // 🚀 Pro Intelligence: Avg Resolution Time (in hours)
         const avgResolutionTimeQuery = `
             SELECT ROUND(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600), 1) as avg_hours
             FROM complaints
@@ -124,7 +124,7 @@ exports.getDashboardStats = async (req, res) => {
     }
 };
 
-// ??? LEGACY / AUTHORITY METHODS (RESTORED) ???????????????????????????????????
+// ─── LEGACY / AUTHORITY METHODS (RESTORED) ───────────────────────────────────
 
 exports.getPrincipalDashboardStats = async (req, res) => {
     try {
@@ -386,11 +386,11 @@ exports.getPublicStats = async (req, res) => {
         const tenantId = req.query?.tenant_id || 1;
 
         /**
-         * ??? PERFORMANCE SAFETY:
+         * 🛡️ PERFORMANCE SAFETY:
          * We use specific COUNT(CASE) aggregations within a single table scan 
          * filtered by tenant_id to avoid full table scans and multiple queries.
          * 
-         * ? EMERGENCY ALERTS LOGIC:
+         * ⚡ EMERGENCY ALERTS LOGIC:
          * Defined as:
          * 1. Priority is 'High' or 'Emergency' (Immediate action required)
          * 2. ANY unresolved complaint older than 48 hours (Overdue SLA)
@@ -432,7 +432,7 @@ exports.getPublicStats = async (req, res) => {
             ORDER BY weeks_ago DESC
         `;
 
-        // ?? Parallel Execution for Speed
+        // 🚀 Parallel Execution for Speed
         const [[summaryRows], [deptRows], [weeklyRows]] = await Promise.all([
             db.execute(summaryQuery, [tenantId]),
             db.execute(deptQuery, [tenantId]),
