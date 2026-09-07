@@ -433,6 +433,7 @@ exports.getComplaintHistory = async (req, res) => {
                 h.actor_role,
                 h.action_type
             FROM complaint_status_history h
+            JOIN complaints c ON h.complaint_id = c.id
             LEFT JOIN users u ON h.actor_user_id = u.id
             WHERE h.complaint_id = $1
         `;
@@ -444,7 +445,7 @@ exports.getComplaintHistory = async (req, res) => {
 
         historyQuery += ` ORDER BY h.created_at ASC`;
 
-        const [rows] = await db.tenantExecute(req, historyQuery, params, 'h');
+        const [rows] = await db.tenantExecute(req, historyQuery, params, 'c');
 
         res.json({ success: true, history: rows });
     } catch (error) {

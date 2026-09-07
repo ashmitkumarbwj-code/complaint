@@ -160,6 +160,17 @@ class ComplaintService {
             const complaint = rows[0];
             if (!complaint) throw new Error('COMPLAINT_NOT_FOUND');
 
+            const isV2 = (complaint.workflow_version === 2);
+
+            // Map admin actions for legacy V1 complaints to appropriate V1 statuses
+            let adjustedStatus = newStatus;
+            if (!isV2 && normalizedRole === 'admin') {
+                // Legacy V1 does not have SUBMITTED/FORWARDED/REJECTED_BY_ADMIN statuses
+                if (newStatus === 'FORWARDED') adjustedStatus = 'IN_PROGRESS';
+                else if (newStatus === 'REJECTED_BY_ADMIN') adjustedStatus = 'REJECTED';
+                else if (newStatus === 'CLOSED') adjustedStatus = 'RESOLVED';
+            }
+
             // 1.1 Idempotency Check: Prevent duplicate transitions/audit logs
             if (complaint.status === adjustedStatus) {
                 logger.info(`[Workflow] Idempotent ignore: Complaint #${complaintId} already has status ${adjustedStatus}.`);
@@ -178,17 +189,6 @@ class ComplaintService {
                         previous_status: complaint.status
                     } 
                 };
-            }
-
-            const isV2 = (complaint.workflow_version === 2);
-
-            // Map admin actions for legacy V1 complaints to appropriate V1 statuses
-            let adjustedStatus = newStatus;
-            if (!isV2 && normalizedRole === 'admin') {
-                // Legacy V1 does not have SUBMITTED/FORWARDED/REJECTED_BY_ADMIN statuses
-                if (newStatus === 'FORWARDED') adjustedStatus = 'IN_PROGRESS';
-                else if (newStatus === 'REJECTED_BY_ADMIN') adjustedStatus = 'REJECTED';
-                else if (newStatus === 'CLOSED') adjustedStatus = 'RESOLVED';
             }
 
             // 2. Strict V2 Validation (or adjusted V1 handling)
