@@ -12,7 +12,7 @@ class ComplaintService {
             'SELECT COUNT(*) as count FROM complaints WHERE student_id = $1 AND tenant_id = $2 AND created_at > CURRENT_TIMESTAMP - INTERVAL \'1 hour\'',
             [studentId, tenantId]
         );
-        return spamRows[0].count >= MAX_COMPLAINTS_PER_HOUR;
+        return parseInt(spamRows[0].count, 10) >= MAX_COMPLAINTS_PER_HOUR;
     }
 
     /**
@@ -57,14 +57,14 @@ class ComplaintService {
 
         let query = `
             SELECT 
-                c.*, d.name as department_name, u.username as student_name,
+                c.*, COALESCE(d.name, 'General Administration') as department_name, COALESCE(u.username, 'Student') as student_name,
                 ai.suggested_priority as ai_priority, ai.evidence_match_score as ai_score,
                 ai.is_emergency as ai_is_emergency, ai.requires_manual_review as ai_review,
                 ai.reasoning_summary as ai_reasoning
             FROM complaints c
-            JOIN departments d ON c.department_id = d.id
-            JOIN students s ON c.student_id = s.id
-            JOIN users u ON s.user_id = u.id
+            LEFT JOIN departments d ON c.department_id = d.id
+            LEFT JOIN students s ON c.student_id = s.id
+            LEFT JOIN users u ON (s.user_id = u.id OR c.user_id = u.id)
             LEFT JOIN complaint_ai_analysis ai ON c.id = ai.complaint_id
             WHERE c.tenant_id = $1
         `;
@@ -73,19 +73,20 @@ class ComplaintService {
 
         // 1. Zero-Trust Ownership/Membership Enforcement
         if (normalizedRole === 'student') {
-            pCount++;
-            query += ` AND c.student_id = $${pCount}`;
-            params.push(sessionStudentId);
+            const p1 = ++pCount;
+            const p2 = ++pCount;
+            query += ` AND (c.student_id = $${p1} OR c.user_id = $${p2})`;
+            params.push(sessionStudentId, userId);
         } else if (normalizedRole === 'staff' || normalizedRole === 'hod') {
-            pCount++;
+            const p1 = ++pCount;
+            const p2 = ++pCount;
             // V2 Ownership OR V1 Membership
             query += ` AND (
-                (c.workflow_version = 2 AND (c.current_owner_user_id = $${pCount} OR (c.current_owner_user_id IS NULL AND c.current_owner_role = $${pCount + 1} AND c.current_owner_department_id IN (SELECT department_id FROM department_members WHERE user_id = $${pCount}))))
+                (c.workflow_version = 2 AND (c.current_owner_user_id = $${p1} OR (c.current_owner_user_id IS NULL AND c.current_owner_role = $${p2} AND c.current_owner_department_id IN (SELECT department_id FROM department_members WHERE user_id = $${p1}))))
                 OR 
-                (c.workflow_version = 1 AND c.department_id IN (SELECT department_id FROM department_members WHERE user_id = $${pCount}))
+                (c.workflow_version = 1 AND c.department_id IN (SELECT department_id FROM department_members WHERE user_id = $${p1}))
             )`;
             params.push(userId, normalizedRole);
-            pCount++;
         } else if (normalizedRole === 'admin') {
             // Admins see everything + explicitly their queue-owned complaints
         }
@@ -127,14 +128,15 @@ class ComplaintService {
         
         // Total count (Simplified for brevity but mirroring logic)
         const [countRows] = await db.execute(`SELECT COUNT(*) as total FROM complaints WHERE tenant_id = $1`, [tenantId]);
+        const totalCount = parseInt(countRows[0].total, 10);
 
         return {
             data: data,
             pagination: {
-                total: countRows[0].total,
+                total: totalCount,
                 page: parseInt(page),
                 limit: parseInt(limit),
-                totalPages: Math.ceil(countRows[0].total / limit)
+                totalPages: Math.ceil(totalCount / limit)
             }
         };
     }

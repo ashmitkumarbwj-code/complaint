@@ -9,8 +9,26 @@ const cloudinary = require('cloudinary').v2;
 
 exports.submitComplaint = async (req, res) => {
     const { title, category, location, description, priority } = req.body;
-    const student_id = req.user?.student_id;
+    let student_id = req.user?.student_id;
     const tenantId = req.user?.tenant_id || 1;
+
+    // Graceful identity auto-resolution: if student_id is missing from JWT, look it up or auto-link
+    if (!student_id && req.user?.id) {
+        try {
+            const [stRows] = await db.execute('SELECT id FROM students WHERE user_id = $1 AND tenant_id = $2', [req.user.id, tenantId]);
+            if (stRows.length > 0) {
+                student_id = stRows[0].id;
+            } else {
+                const [newSt] = await db.execute(
+                    'INSERT INTO students (tenant_id, user_id, roll_number) VALUES ($1, $2, $3) RETURNING id',
+                    [tenantId, req.user.id, req.user.username || `student_${req.user.id}`]
+                );
+                student_id = newSt[0].id;
+            }
+        } catch (idErr) {
+            logger.warn('[Complaint] Fallback student lookup error:', idErr.message);
+        }
+    }
 
     if (!student_id) {
         return res.status(403).json({ success: false, message: "Forbidden: Only authenticated students can submit complaints." });
@@ -29,7 +47,7 @@ exports.submitComplaint = async (req, res) => {
         const finalPriority = analysis.priority;
         const suggestedDeptId = await complaintService.getTargetDepartment(category, tenantId);
 
-        // 🛡️ WORKFLOW ENFORCEMENT: All new complaints go to Admin Queue first
+        // ??? WORKFLOW ENFORCEMENT: All new complaints go to Admin Queue first
         const { ADMIN_DEPT_ID } = require('../utils/constants');
         const initialDeptId = ADMIN_DEPT_ID; 
 
@@ -109,7 +127,7 @@ exports.submitComplaint = async (req, res) => {
         // 6. Socket & Notifications
         socketService.emitNewComplaint({ id: complaintId, student_id, department_id: initialDeptId, category, location, status: 'Pending', created_at: new Date() });
 
-        // 🚨 Phase 1: Signal Real-Time Dashboard Update
+        // ?? Phase 1: Signal Real-Time Dashboard Update
         socketService.emitStatsChanged(tenantId);
 
         res.json({ success: true, message: 'Complaint submitted successfully', complaint_id: complaintId, assigned_department: initialDeptId });
@@ -286,7 +304,7 @@ exports.applyAiSuggestion = async (req, res) => {
     const { type } = req.body; // 'priority' or 'category' or 'both'
     const tenantId = req.user.tenant_id;
 
-    // 🛡️ Phase 2: Feature Flag Control
+    // ??? Phase 2: Feature Flag Control
     if (process.env.AI_APPLY_ENABLED !== 'true') {
         return res.status(403).json({ success: false, message: "AI Suggestion Adoption is currently disabled." });
     }
