@@ -128,7 +128,7 @@ exports.addStudent = async (req, res) => {
         }
 
         await db.tenantExecute(req,
-            'INSERT INTO verified_students (tenant_id, roll_number, name, department, year, mobile_number, email, id_card_image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+            'INSERT INTO verified_students (tenant_id, roll_number, full_name, department, year, mobile_number, email, id_card_image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
             [req.user.tenant_id, roll_number, name, department, year, mobile_number, email, id_card_image || null]
         );
 
@@ -169,12 +169,23 @@ exports.forwardComplaint = async (req, res) => {
 
         if (!result.noOp) {
             const socketService = require('../utils/socketService');
-            socketService.emitStatusUpdate(id, 'FORWARDED', null, department_id); // student_id will be handled correctly by clients reading status
+            socketService.emitStatusUpdate(id, 'FORWARDED', result.data.student_id, result.data.department_id);
+            socketService.emitStatsChanged(req.user.tenant_id);
+
+            const notifier = require('../utils/notificationService');
+            notifier.sendComplaintForwardedNotifications({
+                complaintId: id,
+                targetDeptId: result.data.department_id || department_id,
+                tenantId: req.user.tenant_id
+            }).catch(err => {
+                logger.error(`[Admin] Failed to send FORWARDED notifications for #${id}:`, err);
+            });
         }
 
         res.json({
             success: true,
-            message: `Complaint #${id} forwarded successfully`
+            message: `Complaint #${id} forwarded successfully`,
+            data: result.data
         });
     } catch (error) {
         logger.error('[Admin] forwardComplaint error:', error);
@@ -231,7 +242,7 @@ exports.bulkImportStudents = async (req, res) => {
             return res.status(400).json({ success: false, message: 'No data provided. Upload a .csv file or send a JSON array.' });
         }
 
-        // 🛡️ Audit Log Persistence
+        // ??? Audit Log Persistence
         try {
             await db.tenantExecute(req,
                 `INSERT INTO bulk_import_logs 
@@ -277,7 +288,7 @@ exports.bulkImportStaff = async (req, res) => {
 
         const summary = await staffImportService.bulkImportStaff(req.body.staff, req, isDryRun);
 
-        // 🛡️ Audit Log Persistence
+        // ??? Audit Log Persistence
         try {
             await db.tenantExecute(req,
                 `INSERT INTO bulk_import_logs 

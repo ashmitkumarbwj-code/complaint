@@ -1,25 +1,30 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
+    // ??? SECURITY HARDENING: Immediate Server-Side Session Validation
     const userProfile = await window.validateSession('student');
     if (!userProfile) return;
 
     // Sync localStorage for UI consistency, but server is the source of truth
     const user = JSON.parse(localStorage.getItem('scrs_user')) || userProfile;
 
-    document.getElementById('welcome-text').textContent = `Hello, ${user.username}!`;
+    const displayName = user.username || user.name || 'Student';
+    document.getElementById('welcome-text').textContent = `Hello, ${displayName}!`;
 
     // Populate profile photo
     const profileImgContainer = document.getElementById('student-profile-img');
     if (profileImgContainer) {
-        profileImgContainer.innerHTML = MediaUtils.renderProfilePhoto(user.profile_image, user.username, 'md');
+        profileImgContainer.innerHTML = MediaUtils.renderProfilePhoto(user.profile_image, displayName, 'md');
     }
 
     const complaintForm = document.getElementById('complaint-form');
+    // Prevent double submissions
+    let isSubmitting = false;
     const complaintList = document.getElementById('complaint-list');
 
     // Handle Submission
     complaintForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (isSubmitting) return; // guard against double clicks
+        isSubmitting = true;
 
         const submitBtn = complaintForm.querySelector('button[type="submit"]');
         const origHtml = submitBtn.innerHTML;
@@ -35,34 +40,40 @@ document.addEventListener("DOMContentLoaded", async () => {
         formData.append("description", document.getElementById("complaint-description").value);
 
         const fileInput = document.getElementById("image");
-        if (fileInput.files[0]) {
-            formData.append("image", fileInput.files[0]); // ⚠️ name must match backend
+        if (fileInput && fileInput.files[0]) {
+            formData.append("image", fileInput.files[0]); // ?? name must match backend
         }
 
         try {
             const res = await fetch(`${API_BASE}/api/complaints`, {
                 method: "POST",
                 body: formData,
-                credentials: "include" // 🔥 MUST
+                credentials: "include" // ?? MUST
             });
 
             const data = await res.json();
             console.log("Response:", data);
 
             if (res.ok && data.success) {
-                showToast("Complaint submitted ✅", "success");
+                showToast("Complaint submitted ?", "success");
                 complaintForm.reset();
-                fetchComplaints();
+                // Explicitly clear file input (some browsers retain file path after reset)
+                if (fileInput) fileInput.value = '';
+                // Refresh list and ensure new complaint is visible at top
+                fetchComplaints().then(() => {
+                    if (complaintList) complaintList.scrollTop = 0;
+                });
             } else {
-                showToast(data.message || "Failed ❌", "error");
+                showToast(data.message || "Failed ?", "error");
             }
 
         } catch (err) {
             console.error(err);
-            showToast("Server error ❌", "error");
+            showToast("Server error ?", "error");
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = origHtml;
+            isSubmitting = false;
         }
     });
 
@@ -80,9 +91,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     fetchComplaints();
 
     async function fetchComplaints() {
-        if (!user || !user.student_id || user.student_id === 'undefined') {
+        if (!user || (!user.student_id && user.student_id !== 0) || user.student_id === 'undefined') {
             console.error('[Student] Missing student identity. Aborting fetch.');
-            complaintList.innerHTML = '<div class="error-msg">Unable to load reports. Profile incomplete.</div>';
+            complaintList.innerHTML = '<div class="error-msg text-center" style="color: var(--red); padding: 2rem;"><i class="fa-solid fa-circle-exclamation fa-2x mb-3"></i><p>Unable to load reports. Profile incomplete.</p></div>';
             return;
         }
 
@@ -94,11 +105,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             `;
 
             const response = await fetch(`${API_BASE}/api/complaints/student/${user.student_id}`, {
-                credentials: 'include' // ← httpOnly cookie auth
+                credentials: 'include' // ? httpOnly cookie auth
             });
             if (!response.ok) { 
                 console.error('[Student] fetchComplaints failed:', response.status); 
                 showToast('Failed to load your reports.', 'error');
+                complaintList.innerHTML = '<div class="error-msg text-center" style="color: var(--red); padding: 2rem;"><i class="fa-solid fa-server fa-2x mb-3"></i><p>Failed to load your reports.</p></div>';
                 return; 
             }
             const data = await response.json();
@@ -112,6 +124,100 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
+    function renderStudentWorkflowTimeline(currentStatus) {
+        const statuses = [
+            { key: 'SUBMITTED', label: 'Submitted' },
+            { key: 'FORWARDED', label: 'Forwarded' },
+            { key: 'HOD_VERIFIED', label: 'HOD Verified' },
+            { key: 'IN_PROGRESS', label: 'In Progress' },
+            { key: 'STAFF_RESOLVED', label: 'Staff Resolved' },
+            { key: 'HOD_APPROVED', label: 'HOD Approved' },
+            { key: 'CLOSED', label: 'Closed' }
+        ];
+
+        const s = String(currentStatus || '').toUpperCase().trim();
+
+        // Exception States
+        if (s === 'REJECTED_BY_ADMIN') {
+            return `
+                <div style="background: rgba(248, 81, 73, 0.1); border: 1px solid rgba(248, 81, 73, 0.3); border-radius: 8px; padding: 0.75rem 1rem; margin: 1rem 0; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-ban" style="color: var(--red); font-size: 1.2rem;"></i>
+                    <div>
+                        <strong style="color: var(--red); font-size: 0.85rem;">Complaint Rejected by Administration</strong>
+                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.7);">This report did not meet submission criteria or was flagged during central triage.</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (s === 'RETURNED_TO_ADMIN') {
+            return `
+                <div style="background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; padding: 0.75rem 1rem; margin: 1rem 0; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-arrow-left" style="color: var(--gold); font-size: 1.2rem;"></i>
+                    <div>
+                        <strong style="color: var(--gold); font-size: 0.85rem;">Returned to Admin Queue for Re-routing</strong>
+                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.7);">The department requested reassignment to a more suitable department.</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (s === 'HOD_REWORK_REQUIRED') {
+            return `
+                <div style="background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; padding: 0.75rem 1rem; margin: 1rem 0; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-arrows-rotate fa-spin" style="color: var(--gold); font-size: 1.2rem;"></i>
+                    <div>
+                        <strong style="color: var(--gold); font-size: 0.85rem;">Rework Requested by HOD</strong>
+                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.7);">The Head of Department reviewed staff resolution and requested further corrective action.</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (s === 'REOPENED') {
+            return `
+                <div style="background: rgba(58, 134, 255, 0.1); border: 1px solid rgba(58, 134, 255, 0.3); border-radius: 8px; padding: 0.75rem 1rem; margin: 1rem 0; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-rotate-left" style="color: #3a86ff; font-size: 1.2rem;"></i>
+                    <div>
+                        <strong style="color: #3a86ff; font-size: 0.85rem;">Complaint Reopened by Student</strong>
+                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.7);">Reopened for further investigation by the Head of Department.</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        let currentIndex = statuses.findIndex(st => st.key === s);
+        if (currentIndex === -1) currentIndex = 0;
+
+        return `
+            <div class="workflow-timeline" style="margin: 1.25rem 0 1.5rem 0; overflow-x: auto; padding-bottom: 5px;">
+                ${statuses.map((st, i) => {
+                    let stateClass = '';
+                    let iconHtml = `${i + 1}`;
+                    let tooltip = 'Pending';
+                    
+                    if (i < currentIndex) {
+                        stateClass = 'completed';
+                        iconHtml = '<i class="fa-solid fa-check"></i>';
+                        tooltip = 'Completed';
+                    } else if (i === currentIndex) {
+                        stateClass = 'active';
+                        if (st.key === 'CLOSED') iconHtml = '<i class="fa-solid fa-lock"></i>';
+                        else iconHtml = '<i class="fa-solid fa-circle-dot fa-beat-fade"></i>';
+                        tooltip = 'Current Stage';
+                    }
+
+                    return `
+                        <div class="timeline-step ${stateClass}" title="${st.label}: ${tooltip}">
+                            <div class="step-icon">${iconHtml}</div>
+                            <div class="step-label" style="font-size: 0.62rem;">${st.label}</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
     function renderComplaints(complaints) {
         if (complaints.length === 0) {
             complaintList.innerHTML = '<p class="text-center" style="color: var(--text-secondary); padding: 2rem;">No reports yet.</p>';
@@ -120,12 +226,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         complaintList.innerHTML = complaints.map(c => {
             const isVideo = c.media_url && (c.media_url.endsWith('.mp4') || c.media_url.endsWith('.mov') || c.media_url.includes('/video/upload/'));
+            const timelineHtml = renderStudentWorkflowTimeline(c.status);
             
             return `
             <div class="complaint-card glass-panel" style="margin-bottom: 1.5rem; padding: 1.5rem; border-left: 4px solid var(--gold);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
                     <div>
-                        <span class="status-badge status-${c.status.toLowerCase().replace(' ', '')}" style="font-weight: 800;">${c.status}</span>
+                        <span class="status-badge status-${c.status.toLowerCase().replace(/_/g, '').replace(/ /g, '')}" style="font-weight: 800;">${c.status}</span>
                         <span class="status-badge" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); margin-left: 0.5rem; font-size: 0.75rem;">
                              ${c.priority || 'Medium'} Priority
                         </span>
@@ -138,8 +245,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <i class="fa-solid fa-location-dot"></i> ${c.location} | <i class="fa-solid fa-tag"></i> ${c.category}
                 </div>
                 
-                <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 1.5rem;">${c.description}</p>
+                <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 1.25rem;">${c.description}</p>
                 
+                <!-- ??? 7-Stage Workflow Progression Display -->
+                ${timelineHtml}
+
                 ${c.media_url ? '' : `
                     <div class="processing-status-container" style="margin-top: 1rem;">
                         ${c.processing_status === 'processing' ? `
@@ -169,23 +279,78 @@ document.addEventListener("DOMContentLoaded", async () => {
                     </div>
                 ` : ''}
                 
-                ${c.status === 'CLOSED' ? `
-                    <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-                        <button onclick="promptReopen(${c.id})" class="btn-secondary" style="flex: 1; font-weight: 800; border-color: var(--red); color: var(--red);">
+                <!-- Action / Audit History Controls -->
+                <div style="margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                    <button onclick="toggleAuditTrail(${c.id})" id="btn-toggle-audit-${c.id}" class="btn btn-glass btn-sm" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+                        <i class="fa-solid fa-clock-rotate-left"></i> View Full Timeline History
+                    </button>
+                    ${c.status === 'CLOSED' ? `
+                        <button onclick="promptReopen(${c.id})" class="btn-secondary btn-sm" style="font-weight: 800; border-color: var(--red); color: var(--red); padding: 0.4rem 0.8rem;">
                             <i class="fa-solid fa-rotate-left"></i> Reopen (within 7 days)
                         </button>
-                    </div>
-                ` : ''}
+                    ` : ''}
+                </div>
+
+                <div id="audit-trail-${c.id}" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);"></div>
                 
                 <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center;">
-                    <span><i class="fa-solid fa-building"></i> Assigned: <strong>${c.department_name}</strong></span>
+                    <span><i class="fa-solid fa-building"></i> Department: <strong>${c.department_name}</strong></span>
                     <span style="font-family: monospace; opacity: 0.5;">ID: #${c.id}</span>
                 </div>
             </div>
         `}).join('');
     }
 
-    // 🔥 V2 ACTION HANDLERS
+    // Toggle Audit History for Complaint
+    window.toggleAuditTrail = async (complaintId) => {
+        const container = document.getElementById(`audit-trail-${complaintId}`);
+        const btn = document.getElementById(`btn-toggle-audit-${complaintId}`);
+        if (!container) return;
+
+        if (container.style.display === 'block') {
+            container.style.display = 'none';
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> View Full Timeline History';
+            return;
+        }
+
+        container.style.display = 'block';
+        container.innerHTML = '<div style="font-size: 0.8rem; color: var(--text-secondary);"><i class="fa-solid fa-spinner fa-spin"></i> Loading audit history...</div>';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-up"></i> Hide Timeline History';
+
+        try {
+            const res = await fetch(`${API_BASE}/api/complaints/${complaintId}/history`, { credentials: 'include' });
+            const data = await res.json();
+            if (data.success && data.history && data.history.length > 0) {
+                container.innerHTML = `
+                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--gold); margin-bottom: 0.75rem;">
+                        <i class="fa-solid fa-list-check"></i> Stage Transition Audit Log
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        ${data.history.map(item => `
+                            <div style="display: flex; gap: 10px; font-size: 0.8rem; border-left: 2px solid var(--gold); padding-left: 10px;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <strong style="color: white;">${item.to_status || 'STATUS UPDATE'}</strong>
+                                        <span class="badge" style="font-size: 0.65rem; background: rgba(255,255,255,0.08);">${item.actor_role || 'System'}</span>
+                                    </div>
+                                    <div style="color: var(--text-secondary); font-size: 0.72rem; margin-top: 2px;">
+                                        ${new Date(item.assigned_at).toLocaleString()}
+                                    </div>
+                                    ${item.notes ? `<div style="color: rgba(255,255,255,0.85); margin-top: 4px; font-size: 0.8rem;">${item.notes}</div>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                container.innerHTML = '<div style="font-size: 0.8rem; color: var(--text-secondary);">No audit events recorded yet.</div>';
+            }
+        } catch (err) {
+            container.innerHTML = '<div style="font-size: 0.8rem; color: var(--red);">Unable to load history at this time.</div>';
+        }
+    };
+
+    // ?? V2 ACTION HANDLERS
     window.handleComplaintAction = async (id, status, reason = '') => {
         try {
             const res = await fetch(`${API_BASE}/api/complaints/${id}/status`, {

@@ -5,7 +5,7 @@
 let allComplaints = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
-    // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
+    // ??? SECURITY HARDENING: Immediate Server-Side Session Validation
     const userProfile = await window.validateSession(['staff', 'hod']);
     if (!userProfile) return;
 
@@ -31,6 +31,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     socket.on('complaint_updated', () => {
+        fetchDashboardData();
+    });
+
+    socket.on('status_updated', () => {
+        fetchDashboardData();
+    });
+
+    socket.on('DASHBOARD_STATS_CHANGED', () => {
         fetchDashboardData();
     });
 
@@ -60,7 +68,7 @@ async function fetchDashboardData() {
     try {
         // Fetch Stats
         const statsRes = await fetch(`${API_BASE}/api/dashboards/authority/stats/${user.department_id}`, {
-            credentials: 'include' // ← httpOnly cookie auth
+            credentials: 'include' // ? httpOnly cookie auth
         });
         if (!statsRes.ok) { console.error('[Dept] Stats fetch failed:', statsRes.status); return; }
         const statsData = await statsRes.json();

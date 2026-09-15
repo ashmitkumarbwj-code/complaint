@@ -1,16 +1,16 @@
 #!/bin/bash
-# ═══════════════════════════════════════════════════════════════════════════════
+# ???????????????????????????????????????????????????????????????????????????????
 # SMART CAMPUS - ONE-SHOT DEPLOYMENT SCRIPT
 # Run this from your local machine once EC2 is accessible again.
 # Usage: ssh + scp based deployment
-# ═══════════════════════════════════════════════════════════════════════════════
+# ???????????????????????????????????????????????????????????????????????????????
 
 EC2_USER="ubuntu"
 EC2_IP="3.24.254.215"
 PEM_KEY="C:\Users\Rajesh Kumar\Downloads\smart_campus.pem"
 REMOTE_DIR="/home/ubuntu/Smart-complaint-and-Response-System"
 
-echo "═══ SMART CAMPUS DEPLOYMENT ═══"
+echo "??? SMART CAMPUS DEPLOYMENT ???"
 echo "Target: ${EC2_USER}@${EC2_IP}"
 
 # Files to sync (all the fixed files)
@@ -22,21 +22,24 @@ FILES=(
     "public/js/forgot-password.js"
     "public/js/uiUtils.js"
     "public/js/config.js"
+    "public/forgot-password.html"
+    "public/forgot-password-staff.html"
     "controllers/authController.js"
     "controllers/galleryController.js"
+    "routes/auth.js"
     "routes/gallery.js"
     "routes/admin.js"
+    "middleware/validators.js"
     "utils/otpService.js"
+    "utils/notificationService.js"
     "workers/notificationWorker.js"
-    "public/index.html"
-    "public/images/leadership/vats.png"
 )
 
 echo ""
 echo "Uploading ${#FILES[@]} files..."
 
 for f in "${FILES[@]}"; do
-    echo "  → $f"
+    echo "  ? $f"
     scp -i "$PEM_KEY" "$f" "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/${f}"
 done
 
@@ -45,4 +48,4 @@ echo "Restarting PM2..."
 ssh -i "$PEM_KEY" "${EC2_USER}@${EC2_IP}" "cd ${REMOTE_DIR} && pm2 restart all && pm2 status"
 
 echo ""
-echo "═══ DEPLOYMENT COMPLETE ═══"
+echo "??? DEPLOYMENT COMPLETE ???"

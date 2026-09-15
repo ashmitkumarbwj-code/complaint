@@ -11,7 +11,7 @@ const { traceMiddleware } = require('./middleware/traceMiddleware');
 
 // Handle Uncaught Exceptions EARLY
 process.on('uncaughtException', (err) => {
-    logger.error('CRITICAL UNCAUGHT EXCEPTION — App Shutting Down:', err);
+    logger.error('CRITICAL UNCAUGHT EXCEPTION - App Shutting Down:', err);
     // Give Winston time to flush logs before exiting
     setTimeout(() => {
         process.exit(1);
@@ -20,7 +20,7 @@ process.on('uncaughtException', (err) => {
 
 // Handle Unhandled Promise Rejections EARLY
 process.on('unhandledRejection', (reason, promise) => {
-    logger.error('CRITICAL UNHANDLED REJECTION — App Shutting Down:', reason);
+    logger.error('CRITICAL UNHANDLED REJECTION - App Shutting Down:', reason);
     setTimeout(() => {
         process.exit(1);
     }, 1000);
@@ -42,7 +42,7 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-// HTTP request logging → logs/access-YYYY-MM-DD.log  (via Winston stream)
+// HTTP request logging ? logs/access-YYYY-MM-DD.log  (via Winston stream)
 app.use(morgan(
     ':remote-addr :method :url :status :res[content-length] - :response-time ms',
     { stream: logger.stream }
@@ -107,7 +107,7 @@ const departmentRoutes = require('./routes/departments');
 const healthRoutes = require('./routes/health');
 const slidesRoutes = require('./routes/slides');
 const dynamicSlidesRoutes = require('./routes/dynamicSlides');
-
+const studentRoutes = require('./routes/students');
 const publicRoutes = require('./routes/public');
 
 app.use('/api/auth', authRoutes);
@@ -122,9 +122,10 @@ app.use('/api/users', usersRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/students', studentRoutes);
 
 
-// API 404 — unknown /api/* routes return JSON (static won't serve these)
+// API 404 - unknown /api/* routes return JSON (static won't serve these)
 app.use((req, res, next) => {
     if (req.originalUrl.startsWith('/api')) {
         return res.status(404).json({ success: false, message: 'Not found' });
@@ -192,7 +193,7 @@ if (!isServerless && process.env.USE_REDIS === 'true') {
 
 // Global error-handling middleware
 app.use((err, req, res, next) => {
-    logger.error(`Unhandled error on ${req.method} ${req.originalUrl} — ${err.message}`, err);
+    logger.error(`Unhandled error on ${req.method} ${req.originalUrl} - ${err.message}`, err);
     
     if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(422).json({ 
@@ -241,7 +242,7 @@ if (!isServerless) {
     setInterval(async () => {
         try {
             await complaintControllerCore.cleanupOldMedia();
-            await resyncWorker.deleteOldOrphans(); // 🛡️ Disk Safety Cleanup
+            await resyncWorker.deleteOldOrphans(); // ??? Disk Safety Cleanup
         } catch (err) {
             logger.error('[Cron] Media/Disk Cleanup Job Failed:', err);
         }

@@ -8,7 +8,7 @@ const {
 const authController = require('../controllers/authController');
 const v = require('../middleware/validators');
 
-// ── Routes ────────────────────────────────────────────────────────────────────
+// ?? Routes ????????????????????????????????????????????????????????????????????
 
 router.post('/login',               loginLimiter,  v.validateLogin,               authController.login);
 
@@ -30,7 +30,7 @@ router.post('/request-activation',  activationLimiter, v.validateRequestActivati
 router.post('/complete-activation',                     v.validateCompleteActivation,  authController.completeActivation);
 
 router.post('/request-reset',       otpLimiter,         v.validateRequestReset,        authController.requestPasswordReset);
-router.post('/verify-reset',        otpLimiter,         v.validateVerifyOTP,           authController.verifyOTP);       // FIX: was missing — forgot-password-staff.html Step 2
+router.post('/verify-reset',        otpLimiter,         v.validateVerifyReset,         authController.verifyOTP);       // FIX: was missing - forgot-password-staff.html Step 2
 router.post('/reset-password',      otpLimiter,         v.validateResetPassword,       authController.resetPassword);
 
 
