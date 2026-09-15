@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    // ??? SECURITY HARDENING: Immediate Server-Side Session Validation
+    // 🛡️ SECURITY HARDENING: Immediate Server-Side Session Validation
     const userProfile = await window.validateSession('student');
     if (!userProfile) return;
 
@@ -41,21 +41,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const fileInput = document.getElementById("image");
         if (fileInput && fileInput.files[0]) {
-            formData.append("image", fileInput.files[0]); // ?? name must match backend
+            formData.append("image", fileInput.files[0]); // ⚠️ name must match backend
         }
 
         try {
             const res = await fetch(`${API_BASE}/api/complaints`, {
                 method: "POST",
                 body: formData,
-                credentials: "include" // ?? MUST
+                credentials: "include" // 🔥 MUST
             });
 
             const data = await res.json();
             console.log("Response:", data);
 
             if (res.ok && data.success) {
-                showToast("Complaint submitted ?", "success");
+                showToast("Complaint submitted ✅", "success");
                 complaintForm.reset();
                 // Explicitly clear file input (some browsers retain file path after reset)
                 if (fileInput) fileInput.value = '';
@@ -64,12 +64,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                     if (complaintList) complaintList.scrollTop = 0;
                 });
             } else {
-                showToast(data.message || "Failed ?", "error");
+                showToast(data.message || "Failed ❌", "error");
             }
 
         } catch (err) {
             console.error(err);
-            showToast("Server error ?", "error");
+            showToast("Server error ❌", "error");
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = origHtml;
@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             `;
 
             const response = await fetch(`${API_BASE}/api/complaints/student/${user.student_id}`, {
-                credentials: 'include' // ? httpOnly cookie auth
+                credentials: 'include' // ← httpOnly cookie auth
             });
             if (!response.ok) { 
                 console.error('[Student] fetchComplaints failed:', response.status); 
@@ -247,7 +247,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 
                 <p style="font-size: 0.95rem; color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 1.25rem;">${c.description}</p>
                 
-                <!-- ??? 7-Stage Workflow Progression Display -->
+                <!-- 🛡️ 7-Stage Workflow Progression Display -->
                 ${timelineHtml}
 
                 ${c.media_url ? '' : `
@@ -350,7 +350,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     };
 
-    // ?? V2 ACTION HANDLERS
+    // 🔥 V2 ACTION HANDLERS
     window.handleComplaintAction = async (id, status, reason = '') => {
         try {
             const res = await fetch(`${API_BASE}/api/complaints/${id}/status`, {

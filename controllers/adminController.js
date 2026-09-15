@@ -242,7 +242,7 @@ exports.bulkImportStudents = async (req, res) => {
             return res.status(400).json({ success: false, message: 'No data provided. Upload a .csv file or send a JSON array.' });
         }
 
-        // ??? Audit Log Persistence
+        // 🛡️ Audit Log Persistence
         try {
             await db.tenantExecute(req,
                 `INSERT INTO bulk_import_logs 
@@ -288,7 +288,7 @@ exports.bulkImportStaff = async (req, res) => {
 
         const summary = await staffImportService.bulkImportStaff(req.body.staff, req, isDryRun);
 
-        // ??? Audit Log Persistence
+        // 🛡️ Audit Log Persistence
         try {
             await db.tenantExecute(req,
                 `INSERT INTO bulk_import_logs 

@@ -3,1060 +3,755 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Smart Campus</title>
-    <meta name="robots" content="noindex, nofollow">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <title>Smart Complaint System for Govt. College Dharamshala | Campus OS</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    
+    <!-- Icons (FontAwesome used for storytelling icons) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
-    <!-- Leaflet Configuration -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+    
+    <!-- SEO & Identity -->
+    <meta name="google-site-verification" content="i3b8UlHuoJZXL-4BvKzY_X8v_t-wM9J_M_L8" />
+    <link rel="canonical" href="https://gcd-smart-complaint-and-response-system.co.in/" />
+    <meta name="description" content="The official Smart Complaint & Response System for Govt. College Dharamshala. A modern digital platform for transparent campus governance, faster student grievance resolution, and efficient administrative feedback.">
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Smart Complaint System - Govt. College Dharamshala",
+      "url": "https://gcd-smart-complaint-and-response-system.co.in",
+      "sameAs": [],
+      "description": "A digital platform for managing student complaints and administrative responses at Govt. College Dharamshala."
+    }
+    </script>
+    
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:title" content="Smart Complaint System for Govt. College Dharamshala" />
+    <meta property="og:description" content="Official platform for transparent campus governance and student issue resolution at Govt. College Dharamshala." />
+    <meta property="og:url" content="https://gcd-smart-complaint-and-response-system.co.in/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://gcd-smart-complaint-and-response-system.co.in/images/branding/logo.png" />
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    
+    <!-- Styles -->
     <link rel="stylesheet" href="css/style.css?v=fb878ca">
-    <!-- SheetJS (XLSX) for Bulk Import Preview -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
 
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png">
     <link rel="shortcut icon" href="/favicon.png">
 </head>
-<body class="dashboard-root dashboard-page admin-dashboard" style="display: none;">
-    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-    
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar glass-panel">
-        <div class="sidebar-brand">
-            <img src="images/branding/logo.png" alt="Logo">
-            <span>SmartCampus</span>
-        </div>
+<body style="background: var(--bg-dark);">
 
-        <nav class="sidebar-nav">
-            <ul>
-                <li class="nav-item active" data-tab="tab-dashboard">
-                    <i class="fa-solid fa-gauge-high"></i>
-                    <span>Dashboard</span>
-                </li>
-                <li class="nav-item" data-tab="tab-complaints">
-                    <i class="fa-solid fa-clipboard-list"></i>
-                    <span>Complaints</span>
-                </li>
-                <li class="nav-item" data-tab="tab-departments">
-                    <i class="fa-solid fa-building-user"></i>
-                    <span>Departments</span>
-                </li>
-                <li class="nav-item" data-tab="tab-staff">
-                    <i class="fa-solid fa-user-tie"></i>
-                    <span>Staff</span>
-                </li>
-                <li class="nav-item" data-tab="tab-students">
-                    <i class="fa-solid fa-user-graduate"></i>
-                    <span>Students</span>
-                </li>
-                <li class="nav-item" data-tab="tab-user-mgmt">
-                    <i class="fa-solid fa-users-gear"></i>
-                    <span>User Management</span>
-                </li>
-                <li class="nav-item" data-tab="tab-slides" id="nav-item-slides" style="display: none;">
-                    <i class="fa-solid fa-layer-group"></i>
-                    <span>Hero Slider</span>
-                </li>
-                <li class="nav-item" data-tab="tab-gallery" id="nav-item-gallery">
-                    <i class="fa-solid fa-images"></i>
-                    <span>Gallery</span>
-                </li>
-                <li class="nav-item" data-tab="tab-dynamic-slides" id="nav-item-dynamic-slides" style="display: none;">
-                    <i class="fa-solid fa-photo-film"></i>
-                    <span>Dynamic Slider</span>
-                </li>
-            </ul>
-        </nav>
+    <!-- Premium Background System -->
+    <div class="bg-layers">
+        <div class="bg-layer bg-layer--1"></div>
+        <div class="bg-layer bg-layer--2"></div>
+        <div class="bg-layer bg-layer--3"></div>
+        <div class="bg-overlay"></div>
+    </div>
 
-        <div class="sidebar-footer">
-            <div class="user-info">
-                <div class="user-avatar" id="user-avatar-initial">A</div>
-                <div class="user-details">
-                    <span id="user-display-name">Admin</span>
-                    <small id="user-display-role">Principal</small>
-                </div>
+    <!-- Interactive Cursor Canvas -->
+    <canvas id="hero-canvas"></canvas>
+
+
+    <!-- Section 1 — Welcome Screen -->
+    <section id="section-1" class="fullscreen-section section-welcome">
+        
+        <!-- Background Hero Slider -->
+        <div id="hero-slider" class="swiper" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index: 0;">
+            <div class="swiper-wrapper" id="hero-swiper-wrapper">
+                <!-- Dynamic slides inject here -->
             </div>
-            <button class="logout-btn" onclick="logout()">
-                <i class="fa-solid fa-right-from-bracket"></i>
-            </button>
         </div>
-    </aside>
 
-    <!-- Main Content Area -->
-    <main class="main-content">
-        <!-- Dashboard Background -->
-        <div id="admin-bg-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;"></div>
-        <div class="fog-layer"></div>
+        <!-- Add Pagination & Navigation (Outside slider for z-index layering) -->
+        <div class="swiper-pagination hero-pagination"></div>
+        <div class="swiper-button-next hero-nav-next" style="color: var(--gold); z-index: 10;"></div>
+        <div class="swiper-button-prev hero-nav-prev" style="color: var(--gold); z-index: 10;"></div>
 
-        <!-- Dynamic Page Header -->
-        <header class="main-header">
-            <div class="header-left">
-                <button class="mobile-menu-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+        <!-- Particles container (Layered behind content) -->
+        <div id="particles-js" class="particles-bg" style="z-index: 1; opacity: 0.3;"></div>
+        
+        <!-- College Header - Top Left aligned -->
+        <div class="college-header gsap-fade-up">
+            <img src="images/branding/logo.png" alt="Govt. College Dharamshala Logo" class="college-logo">
+            <div class="header-text">
+                <h2 style="font-weight: 800; text-transform: uppercase; color: var(--gold);">Govt. College Dharamshala</h2>
+                <p class="established">Established 1926</p>
+            </div>
+        </div>
+
+        <div class="content-wrapper text-center z-index-2">
+            <!-- Portal Buttons (Now at top) -->
+            <div class="portal-buttons gsap-fade-up">
+                <a href="login.html?role=student" class="btn btn-glass btn-glow"><i class="fa-solid fa-user-graduate"></i> Student Portal</a>
+                <a href="login.html?role=staff" class="btn btn-glass btn-glow"><i class="fa-solid fa-chalkboard-user"></i> Staff Portal</a>
+                <a href="login.html?role=admin" class="btn btn-glass btn-glow"><i class="fa-solid fa-user-shield"></i> Admin Panel</a>
+                <a href="login.html?role=principal" class="btn btn-glass btn-gold"><i class="fa-solid fa-chart-pie"></i> Principal Dashboard</a>
+                <a href="#section-bibliography" class="btn btn-glass"><i class="fa-solid fa-book"></i> Bibliography</a>
+                <a href="terms-conditions/terms.html" class="btn btn-glass"><i class="fa-solid fa-circle-question"></i> Help</a>
+            </div>
+
+            <!-- Main Title -->
+            <h1 class="main-title gsap-fade-up delay-1">Smart Complaint System for <span class="text-gold">Govt. College Dharamshala</span></h1>
             
-                <h2 id="current-section-title">Dashboard Overview</h2>
-                <p id="current-section-subtitle">Real-time campus pulse</p>
+            <!-- Tagline -->
+            <p class="tagline gsap-fade-up delay-2">"Empowering Transparent Campus Governance Through Technology"</p>
+
+            <!-- Embedded Dynamic Media Slider -->
+            <div id="dynamic-slider-header" style="text-align:center; margin-bottom: 1.5rem; display:none;" class="gsap-fade-up delay-3">
+                <h2 style="font-family: var(--font-serif); font-size: 1.8rem; color: var(--gold); margin-bottom: 0.2rem;">Campus Highlights</h2>
             </div>
-            <div class="header-right">
-                <div class="search-bar">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="search" placeholder="Search anything...">
-                </div>
-                <div class="notifications-bell" id="notifBtn" style="position: relative; cursor: pointer;">
-                    <i class="fa-solid fa-bell"></i>
-                    <span class="bell-dot"></span>
-                    <div id="notifDropdown" class="glass-panel" style="display: none; position: absolute; top: 100%; right: 0; min-width: 250px; padding: 1rem; z-index: 100; margin-top: 10px;">
-                        <h4 style="margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; color: var(--gold);">Notifications</h4>
-                        <div id="notifList" style="font-size: 0.85rem; color: var(--text-secondary); max-height: 200px; overflow-y: auto;">
-                            No new notifications yet.
-                        </div>
+
+            <div id="dynamic-slider-container" style="position: relative; width: 100%; max-width: 800px; margin: 0 auto; display: none;" class="gsap-fade-up delay-3">
+                <!-- Slides injected here -->
+                <div id="dynamic-slider-track" style="position: relative; width: 100%; overflow: hidden; border-radius: 15px; box-shadow: 0 15px 45px rgba(0,0,0,0.6); min-height: 380px; background: rgba(255,255,255,0.03);">
+                    <div id="dynamic-slides-inner" style="display: flex; transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); will-change: transform;"></div>
+
+                    <!-- Overlay for title/description -->
+                    <div id="dynamic-slide-overlay" style="
+                        position: absolute; bottom: 0; left: 0; right: 0;
+                        background: linear-gradient(transparent, rgba(0,0,0,0.9));
+                        padding: 2rem 1.5rem 1.2rem;
+                        pointer-events: none;
+                        border-radius: 0 0 15px 15px;
+                    ">
+                        <h3 id="dynamic-slide-title-display" style="margin:0 0 0.4rem; font-size: 1.2rem; color: #fff; font-family: var(--font-serif);"></h3>
+                        <p id="dynamic-slide-desc-display" style="margin:0; font-size: 0.85rem; color: rgba(255,255,255,0.8); line-height: 1.4;"></p>
                     </div>
                 </div>
+
+                <!-- Navigation Arrows -->
+                <button id="dyn-prev" onclick="dynamicSliderPrev()" style="
+                    position: absolute; left: -15px; top: 50%; transform: translateY(-50%);
+                    width: 40px; height: 40px; border-radius: 50%; border: none;
+                    background: rgba(212,175,55,0.95); color: #0a0f1e;
+                    font-size: 1rem; cursor: pointer; z-index: 10;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                    transition: all 0.2s ease; display: none;
+                " onmouseover="this.style.transform='translateY(-50%) scale(1.1)'" onmouseout="this.style.transform='translateY(-50%) scale(1)'">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button id="dyn-next" onclick="dynamicSliderNext()" style="
+                    position: absolute; right: -15px; top: 50%; transform: translateY(-50%);
+                    width: 40px; height: 40px; border-radius: 50%; border: none;
+                    background: rgba(212,175,55,0.95); color: #0a0f1e;
+                    font-size: 1rem; cursor: pointer; z-index: 10;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                    transition: all 0.2s ease; display: none;
+                " onmouseover="this.style.transform='translateY(-50%) scale(1.1)'" onmouseout="this.style.transform='translateY(-50%) scale(1)'">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+
+                <!-- Dot Navigation -->
+                <div id="dynamic-slider-dots" style="text-align: center; margin-top: 1rem; display: flex; justify-content: center; gap: 6px;"></div>
             </div>
-        </header>
-
-        <!-- Modals & Overlays -->
-        <div id="idModal" class="modal">
-            <div class="modal-content" style="position: relative;">
-                <button onclick="window.closeModal('idModal')" style="position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.5); border: none; color: white; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10;">&times;</button>
-                <img id="modalImg" style="max-width: 100%; border-radius: 12px; display: block;">
-            </div>
-        </div>
-
-        <div id="confirmModal" class="modal">
-            <div class="glass-panel" style="padding: 2rem; max-width: 400px; width: 90%; text-align: center;">
-                <i class="fa-solid fa-circle-question" style="font-size: 3rem; color: var(--gold); margin-bottom: 1rem;"></i>
-                <h3 id="confirmTitle" style="margin-bottom: 1rem;">Confirm Action</h3>
-                <div id="confirmMessage" style="margin-bottom: 2rem; color: var(--text-secondary);">Are you sure you want to proceed?</div>
-                <div style="display: flex; gap: 1rem; justify-content: center;">
-                    <button class="btn btn-glass" onclick="closeConfirmModal()">Cancel</button>
-                    <button id="confirmActionBtn" class="btn btn-primary">Confirm</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="forwardModal" class="modal">
-            <div class="glass-panel forward-modal-panel">
-                <div class="forward-modal-header">
-                    <div class="forward-modal-icon">
-                        <i class="fa-solid fa-share-from-square"></i>
-                    </div>
-                    <div class="forward-modal-title-area">
-                        <h3>Forward Complaint</h3>
-                        <p>Manually reassign this complaint to the correct department.</p>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Select Target Department</label>
-                    <select id="forward-dept-select" class="forward-modal-control" style="width: 100%;"></select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Reason / Admin Note</label>
-                    <textarea id="forward-notes" class="forward-modal-control forward-modal-textarea" rows="3" placeholder="Explain why this complaint is being re-routed..."></textarea>
-                </div>
-
-                <div class="forward-modal-actions">
-                    <button class="btn btn-glass forward-modal-cancel" onclick="closeForwardModal()">Cancel</button>
-                    <button id="forwardConfirmBtn" class="btn btn-primary forward-modal-confirm" onclick="executeForward()">
-                        <i class="fa-solid fa-share-from-square"></i> Confirm Forward
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="userMgmtModal" class="modal">
-            <div class="glass-panel modal-card large">
-                <h3 id="userMgmtModalTitle">Add New User</h3>
-                <form id="user-mgmt-form" onsubmit="handleUserSubmit(event)">
-                    <input type="hidden" id="mgmt-user-id">
-                    <input type="hidden" id="mgmt-user-type">
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Full Name</label>
-                                <input type="text" id="mgmt-user-name" class="form-control" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Mobile Number</label>
-                                <input type="text" id="mgmt-user-mobile" class="form-control" required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Email Address</label>
-                                <input type="email" id="mgmt-user-email" class="form-control" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Role</label>
-                                <select id="mgmt-user-role" class="form-control" onchange="toggleMgmtFields()" required>
-                                    <option value="Student">Student</option>
-                                    <option value="Staff">Staff</option>
-                                    <option value="HOD">HOD</option>
-                                    <option value="Admin">Admin</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Student Specific Fields -->
-                    <div id="mgmt-student-fields">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Roll Number</label>
-                                    <input type="text" id="mgmt-user-roll" class="form-control">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Course/Stream</label>
-                                    <input type="text" id="mgmt-user-dept-text" class="form-control" placeholder="e.g. B.A. Arts">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Staff Specific Fields -->
-                    <div id="mgmt-staff-fields" style="display: none;">
-                        <div class="form-group">
-                            <label>Department</label>
-                            <select id="mgmt-user-dept-id" class="form-control"></select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="checkbox-container">
-                            <input type="checkbox" id="mgmt-user-active" checked>
-                            <span class="checkmark"></span>
-                            <b>Account Active</b>
-                        </label>
-                    </div>
-
-                    <div class="modal-footer" style="margin-top: 1.5rem;">
-                        <button type="button" class="btn btn-glass" onclick="closeUserMgmtModal()">Cancel</button>
-                        <button type="submit" id="mgmt-submit-btn" class="btn btn-primary">Save User</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div id="toast-container"></div>
-
-
-
-        <!-- TAB SECTIONS -->
-        <div class="tab-viewport">
             
-            <!-- 1. Dashboard Tab -->
-            <section id="tab-dashboard" class="admin-tab-content active">
-                <div class="stats-grid" id="stats-grid">
-                    <div class="stat-card glass-panel">
-                        <p>Total Complaints</p>
-                        <div class="stat-number" id="stat-total">0</div>
-                        <i class="fa-solid fa-layer-group card-icon"></i>
-                    </div>
-                    <div class="stat-card glass-panel">
-                        <p>SLA Breaches (>48h)</p>
-                        <div class="stat-number" id="stat-sla" style="color: #ef4444;">0</div>
-                        <i class="fa-solid fa-biohazard card-icon" style="color: #ef4444;"></i>
-                        <div style="font-size: 0.65rem; color: #ef4444; opacity: 0.8; margin-top: 5px;">Needs Immediate Attention</div>
-                    </div>
-                    <div class="stat-card glass-panel">
-                        <p>Avg Resolution</p>
-                        <div class="stat-number" id="stat-avg-time" style="color: var(--gold);">0h</div>
-                        <i class="fa-solid fa-bolt-lightning card-icon" style="color: var(--gold);"></i>
-                        <div style="font-size: 0.65rem; color: var(--gold); opacity: 0.8; margin-top: 5px;">Efficiency Metric</div>
-                    </div>
-                    <div class="stat-card glass-panel">
-                        <p>Total Pending</p>
-                        <div class="stat-number" id="stat-pending" style="color: #f59e0b;">0</div>
-                        <i class="fa-solid fa-clock card-icon" style="color: #f59e0b;"></i>
-                    </div>
-                    <div class="stat-card glass-panel">
-                        <p>Total Resolved</p>
-                        <div class="stat-number" id="stat-resolved" style="color: #10b981;">0</div>
-                        <i class="fa-solid fa-check-double card-icon" style="color: #10b981;"></i>
-                    </div>
-                    <div class="stat-card glass-panel">
-                        <p>Active Students</p>
-                        <div class="stat-number" id="stat-students" style="color: #3b82f6;">0</div>
-                        <i class="fa-solid fa-user-graduate card-icon" style="color: #3b82f6;"></i>
-                    </div>
-                </div>
-                
-                <!-- ?? Real-Time Analytics Suite -->
-                <div class="analytics-row">
-                    <div class="chart-container main-chart glass-panel">
-                        <div class="chart-header">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <h4>Complaint Trends (Last 7 Days)</h4>
-                                <span class="status-badge status-resolved" style="font-size: 0.65rem; padding: 2px 6px;">Live Insights</span>
-                            </div>
-                        </div>
-                        <canvas id="trendsChart"></canvas>
-                    </div>
+            <div class="scroll-indicator gsap-fade-up delay-4" style="margin-top: 3rem;">
+                <span>Scroll to explore</span>
+                <i class="fa-solid fa-chevron-down scroll-bounce"></i>
+            </div>
+        </div>
+    </section>
 
-                    <div class="side-charts">
-                        <div class="chart-container glass-panel">
-                            <h4>Status Distribution</h4>
-                            <div style="height: 180px;"><canvas id="statusPieChart"></canvas></div>
-                        </div>
-                        <div class="chart-container glass-panel">
-                            <h4>Category Intensity</h4>
-                            <div style="height: 180px;"><canvas id="categoryChart"></canvas></div>
+    <!-- Section 1.5 — Leadership & Guidance -->
+    <section id="section-leadership" class="fullscreen-section section-leadership premium-reveal" style="background: linear-gradient(135deg, rgba(11, 19, 43, 0.95), rgba(10, 15, 30, 0.98)); position: relative; z-index: 5;">
+        <div class="content-wrapper" style="padding-top: 5rem; padding-bottom: 5rem;">
+            <div class="text-center gsap-fade-up">
+                <h2 class="section-title" style="color: var(--gold); font-size: 2.5rem; margin-bottom: 1rem;">Leadership & Guidance</h2>
+                <p style="color: rgba(255,255,255,0.8); max-width: 700px; margin: 0 auto 3rem; font-size: 1.1rem; line-height: 1.6;">Guided by visionaries dedicated to academic excellence, student welfare, and technological innovation at Govt. College Dharamshala.</p>
+            </div>
+
+            <div class="leadership-grid">
+                <!-- Principal Card -->
+                <div class="leader-card leader-card--principal glass-panel stagger-item">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/rakesh_final.jpg" alt="Prof. Rakesh Pathania" class="leader-image">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-principal', this)">Read Full Profile</button>
                         </div>
                     </div>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Prof. Rakesh Pathania</h3>
+                        <p class="leader-title text-gold"><i class="fa-solid fa-shield-halved"></i> Principal</p>
+                        <p class="leader-snippet">An architect of progressive change, continually redefining the contours of academic excellence and student welfare.</p>
+                    </div>
                 </div>
 
-                <!-- ?? Campus Pulse (Department Pressure & Risk Heatmap) -->
-                <div class="glass-panel" style="margin-top: 1.5rem; padding: 1.5rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem;">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: 12px; color: var(--gold);">
-                            <i class="fa-solid fa-microchip" style="color: #3b82f6;"></i> Campus Pulse: Department Pressure Scale
-                        </h3>
-                        <div style="display: flex; gap: 1rem; font-size: 0.75rem;">
-                            <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span> Healthy (0-30%)</span>
-                            <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></span> Stressed (30-60%)</span>
-                            <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span> Critical (>60%)</span>
+                <!-- Mentor Card 1 -->
+                <div class="leader-card leader-card--naresh glass-panel stagger-item">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/naresh_whatsapp.jpeg" alt="Dr. Naresh Sharma" class="leader-image">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-naresh', this)">Read Full Profile</button>
                         </div>
                     </div>
-                    <div id="dept-pressure-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
-                        <!-- Injected via JS: Department Pressure Cards -->
-                        <div class="skeleton-row" style="height: 80px;"></div>
-                        <div class="skeleton-row" style="height: 80px;"></div>
-                        <div class="skeleton-row" style="height: 80px;"></div>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Dr. Naresh Sharma</h3>
+                        <p class="leader-title text-gold"><i class="fa-solid fa-book-open"></i> Head of Dept. (English) & Project Guide</p>
+                        <p class="leader-snippet">A scholar, educator, and mentor par excellence, recognized as a Best State Professor and cornerstone of this initiative.</p>
                     </div>
                 </div>
 
-                <!-- ? Live Action Feed (Hackathon Intelligence) -->
-                <div class="analytics-row" style="margin-top: 1.5rem;">
-                    <div class="welcome-card glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; flex: 1;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-bottom: 1rem;">
-                            <h3 style="margin: 0; color: var(--gold); display: flex; align-items: center; gap: 10px;">
-                                <i class="fa-solid fa-bolt" style="color: #f59e0b; text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);"></i> Live Activity Feed
-                            </h3>
-                            <span class="status-badge status-inprogress" style="animation: pulse 2s infinite;">Live</span>
-                        </div>
-                        <div id="activity-feed" class="activity-feed-container" style="max-height: 300px; overflow-y: auto;">
-                            <!-- Feed items appended here via JS -->
-                            <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">Listening for campus events...</div>
+                <!-- Mentor Card 2 -->
+                <div class="leader-card leader-card--harsh glass-panel stagger-item">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/harsh_final.jpg" alt="Mr. Harsh Guleria" class="leader-image">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-harsh', this)">Read Full Profile</button>
                         </div>
                     </div>
-                    
-                    <div class="welcome-card glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; flex: 1;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-bottom: 1rem;">
-                            <h3 style="margin: 0; color: var(--gold); display: flex; align-items: center; gap: 10px;">
-                                <i class="fa-solid fa-fire" style="color: #ef4444; text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);"></i> Live Incident Heatmap
-                            </h3>
-                        </div>
-                        <div id="map" style="height: 300px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); width: 100%; background: #222;"></div>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Mr. Harsh Guleria</h3>
+                        <p class="leader-title text-gold"><i class="fa-solid fa-user-tie"></i> Mentor & Inspiration</p>
+                        <p class="leader-snippet">A source of energy and inspiration, fostering a culture of innovation and empowerment for student growth.</p>
                     </div>
                 </div>
-            </section>
 
-            <!-- 2. Complaints Tab -->
-            <section id="tab-complaints" class="admin-tab-content">
-                <div class="table-card glass-panel">
-                    <div class="table-header">
-                        <h2>Live Complaints Stream</h2>
-                        <div class="table-actions">
-                            <select id="filter-status" class="elegant-select" onchange="window.currentCompPage=1; fetchComplaints()">
-                                <option value="">All Statuses</option>
-                                <option value="SUBMITTED">New / Submitted</option>
-                                <option value="FORWARDED">Forwarded to HOD</option>
-                                <option value="IN_PROGRESS">In Progress</option>
-                                <option value="STAFF_RESOLVED">Staff Resolved</option>
-                                <option value="HOD_VERIFIED">HOD Verified</option>
-                                <option value="HOD_APPROVED">HOD Approved</option>
-                                <option value="CLOSED">Closed</option>
-                                <option value="REJECTED_BY_ADMIN">Rejected by Admin</option>
-                                <option value="RETURNED_TO_ADMIN">Returned to Admin</option>
-                                <option value="HOD_REWORK_REQUIRED">HOD Rework Required</option>
-                                <option value="Pending">Pending (Legacy)</option>
-                                <option value="Resolved">Resolved (Legacy)</option>
-                                <option value="Rejected">Rejected</option>
-                            </select>
-                            <select id="filter-dept" class="elegant-select" onchange="window.currentCompPage=1; fetchComplaints()">
-                                <option value="">All Departments</option>
-                            </select>
-                            <div class="pagination-controls">
-                                <button class="btn btn-glass" onclick="changeCompPage(-1)"><i class="fa-solid fa-chevron-left"></i></button>
-                                <span id="comp-page-info">Page 1</span>
-                                <button class="btn btn-glass" onclick="changeCompPage(1)"><i class="fa-solid fa-chevron-right"></i></button>
-                            </div>
+                <!-- Technical Assistance Card -->
+                <div class="leader-card leader-card--pawan glass-panel stagger-item">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/pawan_final.jpg" alt="Dr. Pawan Thakur" class="leader-image leader-image--pawan">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-pawan', this)">Read Full Profile</button>
                         </div>
                     </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Title</th>
-                                <th>Student</th>
-                                <th>Category / Location</th>
-                                <th>Status</th>
-                                <th>Media</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="complaints-tbody"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- 3. Departments Tab -->
-            <section id="tab-departments" class="admin-tab-content">
-                <div class="table-card glass-panel">
-                    <div class="table-header">
-                        <h2>Department Management</h2>
-                        <button class="btn btn-primary" onclick="openDeptModal()">+ Add New Department</button>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Dr. Pawan Thakur</h3>
+                        <p class="leader-title text-gold"><i class="fa-solid fa-screwdriver-wrench"></i> Technical Assistance</p>
+                        <p class="leader-snippet">Providing dedicated technical assistance and ensuring the seamless operation of the system across all departments.</p>
                     </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Department</th>
-                                <th>Categories</th>
-                                <th>Staff</th>
-                                <th>Pending</th>
-                                <th>Resolved</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dept-tbody"></tbody>
-                    </table>
                 </div>
-            </section>
 
-            <!-- 4. Staff Tab -->
-            <section id="tab-staff" class="admin-tab-content">
-                <div class="table-card glass-panel">
-                    <div class="table-header">
-                        <h2>Staff & Faculty Management</h2>
-                        <div class="header-actions">
-                            <button class="btn btn-glass" onclick="openBulkImport('staff')"><i class="fa-solid fa-file-import"></i> Bulk Import</button>
-                            <button class="btn btn-primary" onclick="toggleStaffForm()">+ Add New Staff</button>
+                <!-- Technical Contributor Card -->
+                <div class="leader-card leader-card--lucky glass-panel stagger-item">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/lucky.jpg" alt="Mr. Lucky Sharma" class="leader-image">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-lucky', this)">Read Full Profile</button>
                         </div>
                     </div>
-                    
-                    <div id="staff-form-container" style="display: none;" class="form-container-panel">
-                        <form id="add-staff-form" class="horizontal-form">
-                            <input type="text" id="staff-name" class="elegant-input" placeholder="Full Name" required>
-                            <input type="email" id="staff-email" class="elegant-input" placeholder="Email" required>
-                            <input type="text" id="staff-mobile" class="elegant-input" placeholder="Mobile" required>
-                            <select id="staff-dept" class="elegant-select" required></select>
-                            <select id="staff-role" class="elegant-select" required>
-                                <option value="Staff">Staff</option>
-                                <option value="HOD">HOD</option>
-                                <option value="Principal">Principal</option>
-                            </select>
-                            <button type="submit" class="btn btn-primary">Invite</button>
-                        </form>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Mr. Lucky Sharma</h3>
+                        <p class="leader-title text-gold"><i class="fa-solid fa-code"></i> Technical Contributor</p>
+                        <p class="leader-snippet">Final-year B.Tech student specializing in software and smart systems development. Currently at CDAC Mohali.</p>
                     </div>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Department</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="staff-tbody"></tbody>
-                    </table>
                 </div>
-            </section>
+            </div> <!-- End first grid -->
 
-            <!-- 5. Students Tab -->
-            <section id="tab-students" class="admin-tab-content">
-                <div class="table-card glass-panel">
-                    <div class="table-header">
-                        <h2>Student Identity Registry</h2>
-                        <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
-                            <div class="pagination-controls" style="margin-right: 15px;">
-                                <button class="btn btn-glass" onclick="window.changeStudentPage(-1)"><i class="fa-solid fa-chevron-left"></i></button>
-                                <span id="student-page-info" style="font-size: 0.85rem; min-width: 80px; display: inline-block; text-align: center;">Page 1</span>
-                                <button class="btn btn-glass" onclick="window.changeStudentPage(1)"><i class="fa-solid fa-chevron-right"></i></button>
-                            </div>
-                            <button class="btn btn-glass" onclick="openBulkImport('student')"><i class="fa-solid fa-file-import"></i> Bulk Import</button>
-                            <button class="btn btn-primary" onclick="toggleStudentForm()">+ Register Student</button>
+            <div class="text-center gsap-fade-up" style="margin-top: 5rem;">
+                <h2 class="section-title" style="color: var(--gold); font-size: 2.5rem; margin-bottom: 2.5rem;">Idea & Developement</h2>
+            </div>
+
+            <div class="leadership-grid">
+                <!-- Lead Developer Card -->
+                <div class="leader-card leader-card--ashmit glass-panel stagger-item">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/ashmit.jpg" alt="Mr. Ashmit Kumar" class="leader-image" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Ashmit+Kumar&background=d4af37&color=0b132b&size=512';">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-ashmit', this)">Read Full Profile</button>
                         </div>
                     </div>
-
-                    <div id="student-form-container" style="display: none;" class="form-container-panel">
-                        <form id="add-student-form" class="horizontal-form">
-                            <input type="text" id="stu-roll" class="elegant-input" placeholder="Roll No" required>
-                            <input type="text" id="stu-name" class="elegant-input" placeholder="Full Name" required>
-                            <input type="text" id="stu-dept" class="elegant-input" placeholder="Dept" required>
-                            <input type="text" id="stu-year" class="elegant-input" placeholder="Year" required>
-                            <input type="text" id="stu-mobile" class="elegant-input" placeholder="Mobile" required>
-                            <input type="email" id="stu-email" class="elegant-input" placeholder="Email" required>
-                            <input type="text" id="stu-id-url" class="elegant-input" placeholder="ID Card URL">
-                            <button type="submit" class="btn btn-primary">Add</button>
-                        </form>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Mr. Ashmit Kumar</h3>
+                        <p class="leader-title text-gold"><i class="fa-solid fa-code-branch"></i> Lead Developer & Concept</p>
+                        <p class="leader-snippet">2nd semester B.Tech (C.S.E) student and the primary architect behind the Smart Complaint System's digital transformation.</p>
                     </div>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Roll No</th>
-                                <th>Name/Email</th>
-                                <th>Dept/Year</th>
-                                <th>Mobile</th>
-                                <th>ID Card</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="students-tbody"></tbody>
-                    </table>
                 </div>
-            </section>
 
-            <!-- 6. Unified User Management Tab -->
-            <section id="tab-user-mgmt" class="admin-tab-content">
-                <div class="table-card glass-panel">
-                    <div class="table-header">
-                        <h2>Master User Management</h2>
-                        <div class="header-actions">
-                            <button class="btn btn-primary" onclick="openAddUserModal()">+ Add New User</button>
+                <!-- Concept & Data Contributor Card -->
+                <div class="leader-card leader-card--kanika glass-panel stagger-item">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/kanika.jpg" alt="Ms. Kanika Devi" class="leader-image" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Ms.+Kanika+Devi&background=d4af37&color=0b132b&size=512';">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-kanika', this)">Read Full Profile</button>
                         </div>
                     </div>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Ms. Kanika Devi</h3>
+                        <p class="leader-title text-gold"><i class="fa-solid fa-database"></i> Concept & Data Contributor</p>
+                        <p class="leader-snippet">B.Sc Physics student whose ground-level data collection shaped the core foundation of CampusVoice.</p>
+                    </div>
+                </div>
 
-                    <!-- Filters & Search Bar -->
-                    <div class="filter-bar glass-panel" style="margin-bottom: 1.5rem; padding: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
-                        <div class="filter-group">
-                            <label>Role</label>
-                            <select id="mgmt-filter-role" class="elegant-select" onchange="fetchMgmtUsers()">
-                                <option value="">All Roles</option>
-                                <option value="Student">Student</option>
-                                <option value="Staff">Staff</option>
-                                <option value="HOD">HOD</option>
-                                <option value="Admin">Admin</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label>Department</label>
-                            <select id="mgmt-filter-dept" class="elegant-select" onchange="fetchMgmtUsers()">
-                                <option value="">All Departments</option>
-                            </select>
-                        </div>
-                        <div class="filter-group" style="flex: 1; min-width: 250px;">
-                            <label>Search</label>
-                            <div class="search-input-wrapper" style="position: relative;">
-                                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.5;"></i>
-                                <input type="text" id="mgmt-search" class="elegant-input" placeholder="Search by name, mobile, email..." style="width: 100%; padding-left: 35px;" onkeyup="debounce(fetchMgmtUsers, 500)()">
-                            </div>
-                        </div>
-                        <div class="filter-group">
-                            <label>Status</label>
-                            <select id="mgmt-filter-status" class="elegant-select" onchange="fetchMgmtUsers()">
-                                <option value="">All Status</option>
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                            </select>
+                <!-- Co-Developer & System Strategist Card -->
+                <div class="leader-card leader-card--ankita glass-panel stagger-item">
+                    <div class="leader-image-wrapper">
+                        <img src="images/leadership/ankita_new.jpg" alt="Ms. Ankita Bharti" class="leader-image" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Ms.+Ankita+Bharti&background=d4af37&color=0b132b&size=512';">
+                        <div class="leader-overlay">
+                            <button class="btn btn-glass btn-glow read-more-btn" onclick="openBioModal('bio-ankita', this)">Read Full Profile</button>
                         </div>
                     </div>
-
-                    <div class="table-container" style="overflow-x: auto;">
-                        <table id="mgmt-users-table">
-                            <thead>
-                                <tr>
-                                    <th onclick="sortMgmt('name')" style="cursor: pointer;">Name <i class="fa-solid fa-sort"></i></th>
-                                    <th onclick="sortMgmt('identifier')" style="cursor: pointer;">Identifier <i class="fa-solid fa-sort"></i></th>
-                                    <th>Mobile</th>
-                                    <th>Role</th>
-                                    <th>Department</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="mgmt-users-tbody">
-                                <!-- Users injected via JS -->
-                            </tbody>
-                        </table>
+                    <div class="leader-info">
+                        <h3 class="leader-name">Ms. Ankita Bharti</h3>
+                        <p class="leader-title text-gold"><i class="fa-solid fa-microchip"></i> Co-Developer & System Strategist</p>
+                        <p class="leader-snippet">2nd semester B.Tech (CSE) student and a driving force behind the GDC Dharamshala Smart Campus Complaint Response System.</p>
                     </div>
-                </div>
-
-                <!-- Audit Logs Section -->
-                <div class="table-card glass-panel" style="margin-top: 2rem;">
-                    <div class="table-header">
-                        <h2>Administrative Audit Logs</h2>
-                    </div>
-                    <div class="table-container" style="max-height: 400px; overflow-y: auto;">
-                        <table id="mgmt-audit-table" style="font-size: 0.85rem;">
-                            <thead>
-                                <tr>
-                                    <th>Timestamp</th>
-                                    <th>Admin</th>
-                                    <th>Action</th>
-                                    <th>Target</th>
-                                    <th>Details</th>
-                                </tr>
-                            </thead>
-                            <tbody id="mgmt-audit-tbody">
-                                <!-- Logs injected via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 6. Hero Slider (Admin Only) -->
-            <section id="tab-slides" class="admin-tab-content">
-                <div class="table-card glass-panel">
-                    <div class="table-header">
-                        <h2>Homepage Hero Slider Manager</h2>
-                        <button class="btn btn-primary" onclick="openSlideModal()">+ Add New Slide</button>
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Order</th>
-                                <th>Preview</th>
-                                <th>Title</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="slides-tbody"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- 7. Dynamic Hero Slider (Admin Only) -->
-            <section id="tab-dynamic-slides" class="admin-tab-content">
-                <div class="table-card glass-panel">
-                    <div class="table-header">
-                        <h2>Manage Dynamic Slides</h2>
-                        <button class="btn btn-primary" onclick="openDynamicSlideModal()">+ Add Dynamic Slide</button>
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Order</th>
-                                <th>Media</th>
-                                <th>Type</th>
-                                <th>Title</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dynamic-slides-tbody"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- 6. Gallery Tab -->
-            <section id="tab-gallery" class="admin-tab-content">
-                <div class="table-card glass-panel">
-                    <div class="table-header">
-                        <h2>Homepage Slider Gallery</h2>
-                        <div>
-                            <input type="file" id="gallery-file" style="display: none;" accept="image/*" onchange="uploadGalleryImage(this)">
-                            <button class="btn btn-primary" onclick="document.getElementById('gallery-file').click()">+ Upload Image</button>
-                        </div>
-                    </div>
-                    <div id="gallery-grid" class="gallery-layout"></div>
-                </div>
-            </section>
-
-        </div> <!-- /tab-viewport -->
-
-        <!-- Shared Modals -->
-        <div id="deptModal" class="modal">
-            <!-- Existing content for deptModal -->
-            <div class="glass-panel modal-card">
-                <h3 id="deptModalTitle">Department</h3>
-                <div class="form-group">
-                    <label>Name</label>
-                    <input type="text" id="dept-name-input" class="form-control" placeholder="e.g. Computer Science">
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="dept-desc-input" class="form-control" rows="2" placeholder="Brief description..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Contact Email</label>
-                    <input type="email" id="dept-email-input" class="form-control" placeholder="dept@college.edu">
-                </div>
-                <div class="form-group">
-                    <label>Complaint Categories Handled</label>
-                    <div id="dept-categories-checkboxes" class="checkbox-grid"></div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-glass" onclick="closeDeptModal()">Cancel</button>
-                    <button id="saveDeptBtn" class="btn btn-primary" onclick="saveDept()">Save</button>
                 </div>
             </div>
         </div>
 
-        <div id="slideModal" class="modal">
-            <div class="glass-panel modal-card large">
-                <h3 id="slideModalTitle">Add/Edit Slide</h3>
-                <form id="slide-form" onsubmit="saveSlide(event)">
-                    <input type="hidden" id="slide-id">
-                    
-                    <div class="form-group">
-                        <label>Image <span style="font-size: 0.8rem; opacity:0.8;">(Required on create. JPEG/PNG/WebP, max 5MB)</span></label>
-                        <input type="file" id="slide-image" class="form-control" accept="image/jpeg, image/png, image/webp" onchange="previewSlideImage(this)">
-                        <div id="slide-preview-wrapper" style="margin-top: 10px; display: none; border-radius: 8px; overflow: hidden; max-height: 200px; border: 1px solid var(--glass-border);">
-                            <img id="slide-image-preview" src="" style="width: 100%; height: auto; display: block; object-fit: cover;" alt="Preview">
-                        </div>
+        <!-- Bio Modals -->
+        <div id="bio-modal" class="bio-modal-overlay" style="display: none;">
+            <div class="bio-modal-content glass-panel">
+                <button class="bio-modal-close" onclick="closeBioModal()"><i class="fa-solid fa-times"></i></button>
+                <img id="modal-profile-img" class="modal-profile-image" src="" alt="Profile Image">
+                <div id="bio-principal" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Prof. Rakesh Pathania</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Principal, Govt. College Dharamshala</h4>
+                    <div class="bio-text-body">
+                        <p style="margin-bottom: 1rem;">In the ever-evolving landscape of higher education, where institutions are not merely centers of learning but ecosystems of growth, safety, and innovation, the role of a Principal transcends administration—it becomes a vision. At the helm of Government College Dharamshala stands Prof. Rakesh Pathania, a leader whose foresight, commitment, and transformative approach have continually redefined the contours of academic excellence and student welfare.</p>
+                        <p style="margin-bottom: 1rem;">Prof. Pathania is not just an administrator; he is an architect of progressive change. Under his stewardship, the college has witnessed a remarkable shift toward modernization, inclusivity, and student-centric development. His vision extends beyond conventional academics—he envisions an institution where students feel secure, empowered, and inspired to innovate. It is within this framework of forward-thinking leadership that initiatives like the Smart Complaint System find their roots.</p>
+                        <p>What sets Prof. Pathania apart is his unwavering dedication to fostering an environment where every student's voice is heard and valued. His proactive stance on campus development continues to elevate the institution to new heights of prestige and operational efficiency.</p>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Title</label>
-                        <input type="text" id="slide-title" class="form-control" placeholder="Slide headline" required>
+                </div>
+                <div id="bio-naresh" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Dr. Naresh Sharma</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Head of the Department of English & Project Guide</h4>
+                    <div class="bio-text-body">
+                        <p style="margin-bottom: 1rem;">Behind every successful academic initiative lies the guiding force of a mentor who not only imparts knowledge but shapes vision. Dr. Naresh Sharma, Head of the Department of English, embodies this role with remarkable distinction. A scholar, educator, and mentor par excellence, he has been a cornerstone in nurturing intellectual curiosity and academic brilliance among students.</p>
+                        <p style="margin-bottom: 1rem;">Recognized as a Best State Professor, Dr. Sharma’s achievements speak volumes about his dedication to education. However, beyond accolades, what truly defines him is his unwavering commitment to student growth. He believes that education is not confined to textbooks—it is a dynamic process of exploration, questioning, and creation.</p>
+                        <p style="margin-bottom: 1rem;">Under his guidance, students have consistently achieved excellence, not only in academics but also in innovative projects such as this Student Safety App. His mentorship played a crucial role in shaping the conceptual clarity and execution of this initiative. He encouraged students to think critically about real-world issues and guided them in translating those thoughts into actionable solutions.</p>
+                        <p style="margin-bottom: 1rem;">Dr. Sharma’s teaching philosophy is deeply rooted in engagement and empowerment. He creates an environment where students feel confident to express ideas, challenge perspectives, and explore new dimensions of knowledge. It is this environment that allowed the idea of a safety app to flourish—from a simple concept to a fully realized project.</p>
+                        <p style="margin-bottom: 1rem;">He is known for his ability to connect literature with life, theory with practice, and ideas with implementation. His interdisciplinary approach has inspired students to step beyond their academic boundaries and venture into areas such as technology and social innovation. This app is a reflection of that holistic learning approach.</p>
+                        <p style="margin-bottom: 1rem;">What makes Dr. Sharma exceptional is his constant availability for guidance. Students have always found in him a mentor who is approachable, supportive, and deeply invested in their success. Whether it is refining an idea, overcoming challenges, or encouraging perseverance, his role has been pivotal at every stage of this project.</p>
+                        <p style="margin-bottom: 1rem;">His belief in student potential is unwavering. He does not merely guide; he empowers. He instills in students the confidence that they are capable of making meaningful contributions to society. The success of this initiative is a direct outcome of his ability to inspire and lead with purpose.</p>
+                        <p style="margin-bottom: 1rem;">Moreover, Dr. Sharma’s emphasis on ethical responsibility has deeply influenced the nature of this project. He has consistently reminded students that innovation must serve humanity, and this app, focused on student safety, perfectly embodies that principle.</p>
+                        <p>This dedication section stands as a humble acknowledgment of his invaluable contribution. The success of this initiative is not just a technological achievement but a reflection of the academic culture he has cultivated—one that values excellence, responsibility, and innovation.</p>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea id="slide-description" class="form-control" rows="2" placeholder="Sub-text overlay on slide"></textarea>
+                </div>
+                <div id="bio-harsh" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Mr. Harsh Guleria</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Mentor & Source of Inspiration</h4>
+                    <div class="bio-text-body">
+                        <p style="margin-bottom: 1rem;">In every academic journey, there are certain educators whose influence goes beyond formal designations—individuals who become a source of energy, inspiration, and unwavering support for students. Mr. Harsh Guleria stands as one such figure, whose contribution to this initiative reflects not just guidance, but a deep-rooted commitment to student growth and innovation.</p>
+                        <p style="margin-bottom: 1rem;">Known for his dynamic presence and engaging approach, Mr. Guleria has consistently created an environment where students feel encouraged to think freely, express openly, and act confidently. His association with the institution has been marked by an extraordinary ability to connect with students on both intellectual and personal levels, making him a mentor whom students actively seek out.</p>
+                        <p style="margin-bottom: 1rem;">What makes his role truly significant is not a title, but the impact he creates. He brings with him a sense of enthusiasm and clarity that transforms ideas into action. Students working on this Safety App found in him a constant motivator—someone who believed in their vision even when it was in its earliest stages. His encouragement played a crucial role in shaping their confidence and sustaining their determination throughout the development process.</p>
+                        <p style="margin-bottom: 1rem;">Mr. Guleria’s approach to teaching and mentorship is rooted in relevance and application. He believes that education must extend beyond theoretical boundaries and find its place in real-world solutions. This belief is vividly reflected in this initiative, where students were guided to address a genuine concern—campus safety—through innovation and collaboration.</p>
+                        <p style="margin-bottom: 1rem;">His ability to simplify complex ideas and provide practical direction has been instrumental in the execution of this project. More importantly, his openness and accessibility ensured that students always had a space to discuss, refine, and improve their ideas. He has not only guided them academically but has also instilled in them a sense of responsibility and purpose.</p>
+                        <p style="margin-bottom: 1rem;">Students often describe him as someone who listens without judgment, guides without imposing, and motivates without pressure. It is this rare combination of qualities that has made him an integral part of their journey. His presence has fostered a culture of confidence, where students feel empowered to take initiative and embrace challenges.</p>
+                        <p style="margin-bottom: 1rem;">Beyond the classroom, Mr. Guleria has been a driving force in encouraging creativity and innovation. His belief in student potential has helped many realize their capabilities and step into roles of responsibility and leadership. This Safety App stands as a testament to that belief—a product of guidance that was both supportive and inspiring.</p>
+                        <p style="margin-bottom: 1rem;">This dedication is a recognition of his invaluable contribution—one that is defined not by designation, but by influence, connection, and impact. His role in this initiative highlights the importance of mentorship that is rooted in passion and genuine care for student development.</p>
+                        <p>His contribution will continue to resonate, not only in this project but in the confidence and vision he has instilled in every student he has guided.</p>
                     </div>
+                </div>
+                <div id="bio-pawan" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Dr. Pawan Thakur</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">HOD, Technical Assistance</h4>
+                    <div class="bio-text-body">
+                        <p style="margin-bottom: 1rem;">Dr. Pawan Thakur provides dedicated technical assistance and ensuring the seamless operation of the system across all departments at Govt. College Dharamshala.</p>
+                        <p>With a focus on strategic implementation and institutional efficiency, he plays a vital role in maintaining the technological integrity of the campus complaint management infrastructure.</p>
+                        <p style="margin-top: 1rem; font-style: italic; color: var(--gold); font-size: 0.9rem;">(Note: Full biography to be updated)</p>
+                    </div>
+                </div>
 
-                    <div style="display: flex; gap: 1rem;">
-                        <div class="form-group" style="flex: 1;">
-                            <label>Display Order</label>
-                            <input type="number" id="slide-order" class="form-control" value="0">
-                        </div>
+                <div id="bio-ashmit" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Mr. Ashmit Kumar</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Lead Developer | B.Tech C.S.E (2nd Sem)</h4>
+                    <div class="bio-text-body">
+                        <p style="margin-bottom: 1rem;">Ashmit Kumar is the primary developer and architect of the <strong>Smart Campus Complaint & Response System</strong>. A 2nd-semester B.Tech Computer Science student at Government College Dharamshala, he envisioned this project as a way to solve real-world administrative challenges through technology.</p>
+                        <p style="margin-bottom: 1rem;">He was responsible for the full-stack development of the platform, including the design of the user interface, backend logic, and the integration of automated routing systems. His focus was on creating a transparent, accountable, and efficient digital ecosystem for campus governance.</p>
+                        <p>Driven by a passion for innovation and software engineering, Ashmit aimed to replace outdated manual processes with a high-performance system that ensures every student's voice is heard and addressed promptly.</p>
+                    </div>
+                </div>
+
+                <div id="bio-lucky" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Mr. Lucky Sharma</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Technical Contributor</h4>
+                    <div class="bio-text-body">
+                        <p style="margin-bottom: 1rem;">Mr. Lucky Sharma is a Final-year B.Tech student specializing in software and smart systems development. Currently working at the Centre for Development of Smart Computing (CDAC), Mohali.</p>
+                        <p style="margin-bottom: 1rem;">He contributed significantly to building the Smart Complaint and Response System for Govt. College Dharamshala, focusing on backend development and deployment. He provided consistent technical support to faculty and students, ensuring the system runs efficiently and addresses real campus needs.</p>
+                        <p>Passionate about using technology to create impactful, accessible solutions, he continues to drive digital transformation initiatives within academic environments.</p>
+                    </div>
+                </div>
+
+                <div id="bio-kanika" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Ms. Kanika Devi</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">B.Sc Physics (2nd Year) | Govt. Degree College Dharamshala</h4>
+                    <div class="bio-text-body">
+                        <p style="margin-bottom: 1rem;">Ms. Kanika Devi is one of the key contributors behind the conceptual foundation of the <strong>CampusVoice: Smart Complaint & Response System</strong>. With a strong inclination towards scientific thinking and structured problem-solving, she played a crucial role in identifying real student challenges and translating them into a practical, scalable solution.</p>
+                        <p style="margin-bottom: 1rem;">Her contribution focused on <strong>collecting, organizing, and structuring ground-level data</strong>, ensuring that the system reflects genuine student needs rather than assumptions. This data-driven approach helped shape a platform that is both efficient and relevant to campus life.</p>
+                        <p style="margin-bottom: 1rem;">Kanika combines analytical thinking with a clear vision for improving everyday systems within the college environment. Her work reflects a commitment to building solutions that are not just innovative, but also <strong>impactful, accessible, and student-centric</strong>.</p>
                         
-                        <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
-                            <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 8px;">
-                                <input type="checkbox" id="slide-active" checked style="width: 20px; height: 20px;">
-                                <span class="checkmark"></span>
-                                <b>Is Active</b>
-                            </label>
-                        </div>
+                        <h4 style="color: var(--gold); margin-top: 2rem; margin-bottom: 1rem;">About the Project – CampusVoice</h4>
+                        <p style="margin-bottom: 1rem;"><strong>CampusVoice</strong> is an automated, real-time grievance redressal platform designed to modernize the way student issues are handled.</p>
+                        <p style="margin-bottom: 0.5rem;">Instead of outdated manual processes, the system provides:</p>
+                        <ul style="margin-bottom: 1rem; padding-left: 1.5rem; color: rgba(255,255,255,0.8);">
+                            <li>A <strong>centralized digital platform</strong> for complaint submission</li>
+                            <li><strong>Category-based routing</strong> (academics, infrastructure, facilities, etc.)</li>
+                            <li><strong>Instant forwarding</strong> to the relevant department</li>
+                            <li><strong>Real-time status tracking</strong> for transparency</li>
+                            <li>Faster resolution cycles, reducing delays from days to hours</li>
+                        </ul>
+                        <p>The platform ensures that every concern raised by students is <strong>visible, trackable, and accountable</strong>, creating a more responsive and efficient campus environment.</p>
                     </div>
-                    
-                    <div class="modal-footer" style="margin-top: 1.5rem;">
-                        <button type="button" class="btn btn-glass" onclick="closeSlideModal()">Cancel</button>
-                        <button type="submit" id="saveSlideBtn" class="btn btn-primary">Save Slide</button>
+                </div>
+
+                <div id="bio-ankita" class="bio-content-block" style="display: none;">
+                    <h2 class="text-gold" style="margin-bottom: 0.5rem;">Ms. Ankita Bharti</h2>
+                    <h4 style="color: rgba(255,255,255,0.7); margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Co-Developer & System Strategist | B.Tech CSE (2nd Sem)</h4>
+                    <div class="bio-text-body">
+                        <p style="margin-bottom: 1rem;">2nd semester B.Tech (CSE) student and a driving force behind the <em>GDC Dharamshala Smart Campus Complaint Response System</em>, transforming a critical institutional need into a fully operational digital platform.</p>
+                        <p style="margin-bottom: 1rem;">Her core expertise was instrumental in architecting the complete backend framework from scratch, where she conducted extensive data analysis to design and optimize complaint workflows for maximum efficiency and transparency. Her role transcended technical development - she spearheaded ground-level execution by liaising with college authorities to secure permissions, presenting the strategic vision to faculty and administration, and iterating on the core concept based on direct stakeholder feedback.</p>
+                        <p style="margin-bottom: 1rem;">From assembling complex backend logic to leading live demonstrations for campus-wide adoption, she ensured the platform was not only technically sound but also deeply aligned with real student needs. By bridging innovative development with practical implementation, she helped deliver a solution that has fundamentally modernized grievance redressal at GDC Dharamshala.</p>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
-
-        <div id="cropModal" class="modal">
-            <div class="glass-panel modal-card large">
-                <h3 id="cropModalTitle">Crop & Prepare Image</h3>
-                <div style="max-height: 400px; overflow: hidden; display: flex; justify-content: center; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 1.5rem;">
-                    <img id="imageToCrop" src="" style="max-width: 100%; display: block;">
-                </div>
+        
+        <script>
+            function openBioModal(id, btn) {
+                // Get image info from clicked card
+                if (btn) {
+                    const card = btn.closest('.leader-card');
+                    const img = card.querySelector('.leader-image').src;
+                    const name = card.querySelector('.leader-name').innerText;
+                    const modalImg = document.getElementById('modal-profile-img');
+                    if (modalImg) {
+                        modalImg.src = img;
+                        modalImg.alt = name;
+                    }
+                }
                 
-                <div id="crop-gallery-fields" style="display: none; margin-bottom: 1.5rem;">
-                    <label class="form-label">Gallery Title</label>
-                    <input type="text" id="gallery-title-input" class="form-control" placeholder="Enter image title for gallery...">
-                </div>
-
-                <div class="modal-footer" style="margin-top: 1.5rem;">
-                    <button type="button" class="btn btn-glass" onclick="closeCropModal()">Cancel</button>
-                    <button type="button" id="btn-crop-upload" class="btn btn-primary">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> <span id="crop-btn-text">Crop & Upload</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="dynamicSlideModal" class="modal">
-            <div class="glass-panel modal-card large">
-                <h3 id="dynamicSlideModalTitle">Add/Edit Dynamic Slide</h3>
-                <form id="dynamic-slide-form" onsubmit="saveDynamicSlide(event)">
-                    <input type="hidden" id="dynamic-slide-id">
-                    
-                    <div class="form-group">
-                        <label>Media (Image or Video) <span style="font-size: 0.8rem; opacity:0.8;">(Required on create. JPEG/PNG/WebP/MP4/WebM, max 50MB)</span></label>
-                        <input type="file" id="dynamic-slide-media" class="form-control" accept="image/*, video/*" onchange="previewDynamicSlideMedia(this)">
-                        <div id="dynamic-slide-preview-wrapper" style="margin-top: 10px; display: none; border-radius: 8px; overflow: hidden; max-height: 200px; border: 1px solid var(--glass-border);">
-                            <div id="dynamic-slide-media-preview-container"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Title</label>
-                        <input type="text" id="dynamic-slide-title" class="form-control" placeholder="Slide headline" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea id="dynamic-slide-description" class="form-control" rows="2" placeholder="Sub-text overlay on slide"></textarea>
-                    </div>
-
-                    <div style="display: flex; gap: 1rem;">
-                        <div class="form-group" style="flex: 1;">
-                            <label>Display Order</label>
-                            <input type="number" id="dynamic-slide-order" class="form-control" value="0">
-                        </div>
-                        
-                        <div class="form-group" style="flex: 1; display: flex; align-items: flex-end;">
-                            <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 8px;">
-                                <input type="checkbox" id="dynamic-slide-active" checked style="width: 20px; height: 20px;">
-                                <span class="checkmark"></span>
-                                <b>Is Active</b>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="modal-footer" style="margin-top: 1.5rem;">
-                        <button type="button" class="btn btn-glass" onclick="closeDynamicSlideModal()">Cancel</button>
-                        <button type="submit" id="saveDynamicSlideBtn" class="btn btn-primary">Save Slide</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div id="membersModal" class="modal">
-            <!-- Existing content for membersModal -->
-            <div class="glass-panel modal-card large">
-                <h3 id="membersModalTitle">Members</h3>
-                <div class="add-member-row">
-                    <select id="add-member-select" class="form-control"></select>
-                    <select id="add-member-role" class="form-control">
-                        <option value="Staff">Staff</option>
-                        <option value="HOD">HOD (Head of Dept)</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="submitAddMember()">Add</button>
-                </div>
-                <table>
-                    <thead>
-                        <tr><th>Name</th><th>Role</th><th>Action</th></tr>
-                    </thead>
-                    <tbody id="members-tbody"></tbody>
-                </table>
-                <button onclick="closeMembersModal()">Close</button>
-            </div>
-        </div>
-
-        <!-- ?? NEW: Bulk Import Modal ?? -->
-        <div id="bulkImportModal" class="modal">
-            <div class="glass-panel modal-card extra-large">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3><i class="fa-solid fa-file-csv" style="color: var(--gold); margin-right: 10px;"></i> <span id="bulkModalTitle">Bulk Ingestion Wizard</span></h3>
-                    <button class="btn btn-icon" onclick="closeBulkModal()"><i class="fa-solid fa-times"></i></button>
-                </div>
-
-                <!-- Step 1: File Selection -->
-                <div id="bulk-step-1" class="import-step">
-                    <div class="dropzone" id="bulk-dropzone">
-                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 3rem; color: var(--gold); margin-bottom: 1rem;"></i>
-                        <h3>Drag & drop Excel/CSV here</h3>
-                        <p>or click to browse your computer</p>
-                        <input type="file" id="bulk-file-input" hidden accept=".csv, .xlsx, .xls">
-                    </div>
-                    
-                    <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-                        <div class="glass-panel" style="padding: 1rem; border: 1px solid rgba(212,175,55,0.2);">
-                            <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                                <input type="checkbox" id="isDryRunMode" style="width: 20px; height: 20px;">
-                                <span class="checkmark"></span>
-                                <div style="display: flex; flex-direction: column;">
-                                    <b style="color: var(--gold);">Validate Only (Dry Run)</b>
-                                    <small style="opacity: 0.7;">Check for errors without importing data to the registry.</small>
-                                </div>
-                            </label>
-                        </div>
-
-                        <div style="display: flex; gap: 1rem; justify-content: center;">
-                            <button class="btn btn-glass" onclick="downloadSampleTemplate()">
-                                <i class="fa-solid fa-download"></i> Sample Template
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 2: Preview & Validation -->
-                <div id="bulk-step-2" class="import-step" style="display: none;">
-                    <div class="alert-info" id="preview-info-box" style="margin-bottom: 1rem; padding: 10px; border-radius: 8px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2);">
-                        <i class="fa-solid fa-circle-info"></i> <span id="preview-count">Scanning rows...</span>
-                    </div>
-                    
-                    <div class="table-container" style="max-height: 300px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
-                        <table class="table" style="font-size: 0.8rem;">
-                            <thead id="bulk-preview-thead"></thead>
-                            <tbody id="bulk-preview-tbody"></tbody>
-                        </table>
-                    </div>
-
-                    <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                        <div id="preview-errors" class="text-danger" style="font-size: 0.85rem; font-weight: bold;"></div>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button class="action-btn" onclick="resetBulkImport()" style="background: rgba(255,255,255,0.1);">Back</button>
-                            <button class="action-btn btn-resolve" id="processImportBtn" onclick="processBulkImport()">Process Import</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 3: Success / Report -->
-                <div id="bulk-step-3" class="import-step" style="display: none; text-align: center;">
-                    <div class="success-icon" style="font-size: 4rem; color: #10b981; margin-bottom: 1rem;">
-                        <i class="fa-solid fa-circle-check"></i>
-                    </div>
-                    <h2 id="bulk-result-title">Import Successful!</h2>
-                    <p id="bulk-result-subtitle" class="text-muted">The student registry has been updated.</p>
-                    
-                    <div id="bulk-result-details" class="glass-panel" style="margin: 1.5rem 0; padding: 1.5rem;">
-                        <!-- Summary injected here -->
-                    </div>
-
-                    <div id="failed-rows-action" style="display: none; margin-bottom: 1.5rem;">
-                        <div class="alert-danger" style="padding: 10px; border-radius: 8px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); margin-bottom: 1rem;">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Some rows failed to import due to validation errors.
-                        </div>
-                        <button class="btn btn-glass" onclick="downloadErrorReport()" style="border-color: #ef4444; color: #ef4444;">
-                            <i class="fa-solid fa-file-export"></i> Download Error Report (for fix & re-upload)
-                        </button>
-                    </div>
-
-                    <button class="btn btn-glass" style="width: 100%;" onclick="closeBulkImportModal()">Close Wizard</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ?? NEW: AI Suggestion & Complaint Detail Modal ?? -->
-        <div id="complaintDetailModal" class="modal">
-            <div class="glass-panel modal-card extra-large">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3><i class="fa-solid fa-robot" style="color: var(--gold); margin-right: 10px;"></i> Complaint Detail & AI Analysis</h3>
-                    <button class="btn btn-icon" onclick="window.closeModal('complaintDetailModal')"><i class="fa-solid fa-times"></i></button>
-                </div>
-
-                <div class="modal-body-scrollable">
-                    <div class="row">
-                        <!-- Left: Complaint Details -->
-                        <div class="col-md-7">
-                            <div class="detail-section">
-                                <h4 class="text-gold mb-3">Submission Details</h4>
-                                <div id="detail-complaint-info" class="glass-panel p-3">
-                                    <p><b>ID:</b> <span id="det-id"></span></p>
-                                    <p><b>Student:</b> <span id="det-student"></span></p>
-                                    <p><b>Subject:</b> <span id="det-title"></span></p>
-                                    <p><b>Description:</b></p>
-                                    <div id="det-desc" class="p-2 mb-2" style="background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.9rem;"></div>
-                                    <p><b>Location:</b> <span id="det-location"></span></p>
-                                    <p><b>Current Category:</b> <span id="det-category"></span></p>
-                                    <p><b>Current Priority:</b> <span id="det-prio"></span></p>
-                                </div>
-                            </div>
-                            
-                            <div class="detail-section mt-4">
-                                <h4 class="text-gold mb-3">Attached Evidence</h4>
-                                <div id="det-media" class="glass-panel p-3 text-center">
-                                    <span class="text-muted">No media attached.</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right: AI Suggestion Panel -->
-                        <div class="col-md-5">
-                            <div id="ai-suggestion-panel" class="ai-suggestion-container">
-                                <div class="ai-header">
-                                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI Recommendation Engine
-                                    <span id="ai-conf-badge" class="ai-confidence-tag">Pending</span>
-                                </div>
-                                
-                                <div id="ai-loading-state" style="display: none; padding: 2rem; text-align: center;">
-                                    <i class="fa-solid fa-spinner fa-spin fa-2x mb-2" style="color: var(--gold);"></i>
-                                    <p>Analyzing context...</p>
-                                </div>
-
-                                <div id="ai-content-state" class="ai-suggestion-body">
-                                    <div class="ai-warning-box">
-                                        <i class="fa-solid fa-triangle-exclamation"></i>
-                                        <span>AI suggestions may be inaccurate. Please verify before applying.</span>
-                                    </div>
-
-                                    <div class="ai-metric-row">
-                                        <div class="ai-metric-card">
-                                            <small>Suggested Priority</small>
-                                            <b id="ai-sug-prio">...</b>
-                                        </div>
-                                        <div class="ai-metric-card">
-                                            <small>Suggested Category</small>
-                                            <b id="ai-sug-cat">...</b>
-                                        </div>
-                                    </div>
-
-                                    <div class="ai-reasoning-box">
-                                        <label>AI Reasoning Summary:</label>
-                                        <p id="ai-sug-reason">Analyzing input data to generate context-aware suggestions...</p>
-                                    </div>
-
-                                    <div class="ai-actions mt-4">
-                                        <button id="btn-apply-ai-prio" class="btn btn-glass btn-sm w-100 mb-2" onclick="applyAiSuggestion('priority')">
-                                            <i class="fa-solid fa-bolt"></i> Apply Priority Suggestion
-                                        </button>
-                                        <button id="btn-apply-ai-cat" class="btn btn-glass btn-sm w-100 mb-2" onclick="applyAiSuggestion('category')">
-                                            <i class="fa-solid fa-tags"></i> Apply Category Suggestion
-                                        </button>
-                                        <button id="btn-apply-ai-both" class="btn btn-primary btn-sm w-100" onclick="applyAiSuggestion('both')">
-                                            <i class="fa-solid fa-check-double"></i> Adopt All Suggestions
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div id="ai-none-state" style="display: none; padding: 2rem; text-align: center; opacity: 0.6;">
-                                    <i class="fa-solid fa-robot-slash fa-2x mb-2"></i>
-                                    <p>No AI analysis available for this complaint.</p>
-                                    <small>Ensure 'AI_PROCESSING_ENABLED' is on and text is >20 chars.</small>
-                                </div>
-                            </div>
-
-                            <div class="mt-4">
-                                <h4 class="text-gold mb-3">Human Actions</h4>
-                                <div class="glass-panel p-3 d-flex flex-column gap-2">
-                                    <button class="btn btn-glass" id="det-btn-forward" onclick="openForwardFromDetail()">
-                                        <i class="fa-solid fa-share-from-square"></i> Forward to Dept
-                                    </button>
-                                    <button class="btn btn-glass text-red" id="det-btn-reject" onclick="rejectFromDetail()">
-                                        <i class="fa-solid fa-ban"></i> Reject Complaint
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Project-Wide Dependencies -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <script src="js/config.js"></script>
-    <script src="js/interactive-bubbles.js"></script>
-    <script src="js/mediaUtils.js"></script>
-    <script src="js/uiUtils.js"></script>
-    <script src="js/admin.js"></script>
-    <script src="js/admin_users.js"></script>
-
-    <!-- Mobile Responsiveness Scripts -->
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            const overlay = document.querySelector('.sidebar-overlay');
-            if (sidebar && overlay) {
-                sidebar.classList.toggle('active');
-                overlay.classList.toggle('active');
+                document.getElementById('bio-modal').style.display = 'flex';
+                document.querySelectorAll('.bio-content-block').forEach(b => b.style.display = 'none');
+                document.getElementById(id).style.display = 'block';
+                // Small animation
+                gsap.fromTo(".bio-modal-content", {y: 50, opacity: 0}, {y: 0, opacity: 1, duration: 0.4, ease: "power2.out"});
             }
-        }
-    </script>
+            function closeBioModal() {
+                const modal = document.getElementById('bio-modal');
+                if (modal.style.display !== 'none') {
+                    gsap.to(".bio-modal-content", {y: 20, opacity: 0, duration: 0.3, ease: "power2.in", onComplete: () => {
+                        modal.style.display = 'none';
+                    }});
+                }
+            }
+
+            // Overlay click to close
+            const bioModalOverlay = document.getElementById('bio-modal');
+            if (bioModalOverlay) {
+                bioModalOverlay.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeBioModal();
+                    }
+                });
+            }
+
+            // ESC key to close
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeBioModal();
+                }
+            });
+        </script>
+    </section>
+
+    <!-- Section 2 — The Problem -->
+    <section id="section-2" class="fullscreen-section section-problem premium-reveal">
+        <div class="ambient-shapes"></div>
+        <div class="content-wrapper">
+            <h2 class="section-title text-center text-problem-trigger">The Reality We Face</h2>
+            
+            <div class="problem-grid">
+                <div class="problem-card glass-panel prob-card-1">
+                    <i class="fa-solid fa-person-walking"></i>
+                    <p>Wandering campus seeking the right office.</p>
+                </div>
+                <div class="problem-card glass-panel prob-card-2">
+                    <i class="fa-solid fa-lightbulb"></i> <!-- Broken conceptual -->
+                    <p>Unreported broken lights & tech issues.</p>
+                </div>
+                <div class="problem-card glass-panel prob-card-3">
+                    <i class="fa-solid fa-broom"></i>
+                    <p>Overlooked cleanliness concerns in classrooms.</p>
+                </div>
+                <div class="problem-card glass-panel prob-card-4">
+                    <i class="fa-solid fa-circle-question"></i>
+                    <p>Confusion about the correct complaint channel.</p>
+                </div>
+            </div>
+
+            <h3 class="problem-statement text-center">
+                “Students often face problems on campus but don't know where to report them.”
+            </h3>
+        </div>
+    </section>
+
+    <!-- Section 3 — Introducing the Solution -->
+    <section id="section-3" class="fullscreen-section section-solution premium-reveal">
+        <div class="content-wrapper text-center">
+            <h2 class="section-title solution-title">Introducing the Smart Campus Complaint & Response System</h2>
+            
+            <div class="interface-illustration glass-panel">
+                <div class="interface-header">
+                    <div class="dots"><span></span><span></span><span></span></div>
+                    <div class="title">System Interface</div>
+                </div>
+                <div class="interface-body">
+                    <div class="sol-step sol-step-1">
+                        <i class="fa-solid fa-mobile-screen"></i>
+                        <span>Students Submit Complaint</span>
+                    </div>
+                    <div class="connector connector-1"><i class="fa-solid fa-arrow-down"></i></div>
+                    
+                    <div class="sol-step sol-step-2">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <span>System Auto-Routes to Dept</span>
+                    </div>
+                    <div class="connector connector-2"><i class="fa-solid fa-arrow-down"></i></div>
+                    
+                    <div class="sol-step sol-step-3">
+                        <i class="fa-solid fa-bell"></i>
+                        <span>Staff Receives Notification</span>
+                    </div>
+                    <div class="connector connector-3"><i class="fa-solid fa-arrow-down"></i></div>
+                    
+                    <div class="sol-step sol-step-4 text-gold">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <span>Issue Gets Resolved</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 4 — Complaint Workflow Animation -->
+    <section id="section-4" class="fullscreen-section section-workflow premium-reveal">
+        <div class="content-wrapper">
+            <h2 class="section-title text-center">The Journey of a Resolution</h2>
+            
+            <div class="workflow-container">
+                <div class="workflow-line"></div>
+                
+                <div class="wf-node wf-student">
+                    <div class="wf-icon"><i class="fa-solid fa-user-graduate"></i></div>
+                    <div class="wf-text">Student submits complaint</div>
+                </div>
+                
+                <div class="wf-node wf-admin">
+                    <div class="wf-icon"><i class="fa-solid fa-user-shield"></i></div>
+                    <div class="wf-text">Admin receives request</div>
+                </div>
+                
+                <div class="wf-node wf-dept">
+                    <div class="wf-icon"><i class="fa-solid fa-building-user"></i></div>
+                    <div class="wf-text">Department is notified</div>
+                </div>
+                
+                <div class="wf-node wf-staff">
+                    <div class="wf-icon"><i class="fa-solid fa-wrench"></i></div>
+                    <div class="wf-text">Staff resolves the issue</div>
+                </div>
+                
+                <div class="wf-node wf-success">
+                    <div class="wf-icon border-gold text-gold"><i class="fa-solid fa-check"></i></div>
+                    <div class="wf-text">Student confirms solution</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 5 — Transparency and Analytics -->
+    <section id="section-5" class="fullscreen-section section-analytics premium-reveal">
+        <div class="content-wrapper">
+            <div class="analytics-split">
+                <div class="analytics-text text-center stagger-item">
+                    <h2 class="section-title">Transparency & Analytics</h2>
+                    <h3 class="analytics-statement">“Data-driven administration improves campus accountability.”</h3>
+                </div>
+                
+                <div class="chart-container glass-panel stagger-item">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Section 6 — Principal Dashboard Highlight -->
+    <section id="section-6" class="fullscreen-section section-dashboard premium-reveal">
+        <div class="content-wrapper">
+            <h2 class="section-title text-center">Principal Dashboard Highlight</h2>
+            
+            <div class="dashboard-mockup glass-panel">
+                <div class="dash-header" style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <img src="images/branding/logo.png" alt="Govt. College Dharamshala Logo" style="height: 50px; border-radius: 50%; border: 2px solid var(--gold); background: #fff; padding: 2px;">
+                        <h3 style="margin: 0;">Live College Metrics</h3>
+                    </div>
+                    <div class="live-indicator" style="margin: 0;">LIVE</div>
+                </div>
+                
+                <div class="dash-grid">
+                    <div class="dash-card">
+                        <i class="fa-solid fa-envelope-open-text text-blue"></i>
+                        <h4>Total Complaints</h4>
+                        <div class="dash-number counter-total">0</div>
+                    </div>
+                    
+                    <div class="dash-card">
+                        <i class="fa-solid fa-check-circle text-green"></i>
+                        <h4>Resolved Issues</h4>
+                        <div class="dash-number counter-resolved">0</div>
+                    </div>
+                    
+                    <div class="dash-card">
+                        <i class="fa-solid fa-building text-gold"></i>
+                        <h4>Top Dept Efficiency</h4>
+                        <div class="dash-number counter-efficiency">0%</div>
+                    </div>
+                    
+                    <div class="dash-card alert-card">
+                        <i class="fa-solid fa-triangle-exclamation text-red"></i>
+                        <h4>Emergency Alerts</h4>
+                        <div class="dash-number counter-alerts">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- Section 7 — Final Call to Action -->
+    <section id="section-7" class="fullscreen-section section-cta premium-reveal">
+        <div id="particles-js-cta" class="particles-bg op-50"></div>
+        <div class="content-wrapper text-center z-index-2">
+            <h2 class="final-statement">“Together we build a smarter campus.”</h2>
+            
+            <div id="dynamic-gallery" class="dynamic-gallery">
+                <div class="slider-frame" id="slider-frame">
+                    <div id="slider-track" class="slider-track">
+                        <!-- Slides injected here -->
+                    </div>
+                    
+                    <!-- Arrows -->
+                    <div class="slider-arrow arrow-prev" id="slider-prev"><i class="fa-solid fa-chevron-left"></i></div>
+                    <div class="slider-arrow arrow-next" id="slider-next"><i class="fa-solid fa-chevron-right"></i></div>
+                    
+                    <div id="slider-nav" class="slider-nav">
+                        <!-- Dots injected here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="cta-buttons">
+                <a href="activate-student.html" class="btn btn-glass btn-large btn-glow"><i class="fa-solid fa-user-plus"></i> Register as Student</a>
+                <a href="login.html" class="btn btn-glass btn-large btn-gold btn-glow"><i class="fa-solid fa-right-to-bracket"></i> Login to Dashboard</a>
+                <a href="login.html?role=student" class="btn btn-glass btn-large"><i class="fa-solid fa-bullhorn"></i> Report an Issue</a>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Section: Bibliography -->
+    <section id="section-bibliography" class="fullscreen-section section-bibliography premium-reveal" style="padding: 100px 0; background: rgba(10, 15, 30, 0.4); position: relative; z-index: 5;">
+        <div class="content-wrapper" style="max-width: 900px; margin: 0 auto;">
+            <div class="text-center gsap-fade-up" style="margin-bottom: 4rem;">
+                <h2 class="section-title" style="color: var(--gold); font-size: 2.8rem;">Bibliography</h2>
+                <div style="width: 80px; height: 3px; background: var(--gold); margin: 1.5rem auto;"></div>
+            </div>
+            
+            <div class="bibliography-content glass-panel gsap-fade-up" style="padding: 3.5rem; border-radius: 24px; border: 1px solid rgba(212, 175, 55, 0.15); background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px);">
+                <div class="bib-text-body" style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 1.15rem; text-align: justify;">
+                    <p style="margin-bottom: 1.5rem;">The Smart Campus Complaint & Response System is a student-driven initiative aimed at transforming the traditional complaint handling process into a faster, more transparent, and efficient digital system. This project was conceptualized and developed by <strong>Mr. Ashmit Kumar</strong>, a 2nd semester B.Tech (C.S.E) student, in collaboration with <strong>Ms. Kanika Devi</strong>. The system was specifically designed for Government College Dharamshala, with the aim of improving communication between students and the college administration.</p>
+                    
+                    <p style="margin-bottom: 1.5rem;">The idea for this project originated from observing inefficiencies in the existing complaint system. Traditional methods relied on written applications or verbal communication, which often caused delays, miscommunication, and lack of transparency. Complaints could take days or weeks to be addressed, and students had no clear way to track progress.</p>
+                    
+                    <p style="margin-bottom: 1.5rem;">To solve this, the system was designed as a centralized digital platform where students can submit complaints easily. Once submitted, complaints are automatically routed to the appropriate department, reducing delays and ensuring faster resolution.</p>
+                    
+                    <p style="margin-bottom: 1.5rem;">A key feature of the system is transparency. Students can track complaint status in real time, ensuring accountability and trust. Every stage—from submission to resolution—is clearly visible.</p>
+                    
+                    <p style="margin-bottom: 1.5rem;">The development involved both technical and practical contributions. Ashmit Kumar led the website development and system design, focusing on a clean and user-friendly interface. Ms. Kanika Devi contributed to the conceptual design and ensured the system addressed real student needs.</p>
+                    
+                    <p style="margin-bottom: 1.5rem;">Despite challenges like limited resources and time constraints, the system was successfully built through continuous testing and improvement. This project reflects the integration of technology into institutional processes and demonstrates how innovation can solve real-world problems.</p>
+                    
+                    <p>In conclusion, the Smart Campus Complaint & Response System is a practical and impactful solution that enhances campus management and student experience.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="padding: 3rem 0 2rem; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); color: var(--text-muted); font-size: 0.9rem; position: relative; z-index: 10;">
+        <div class="content-wrapper">
+            <!-- Footer Grid -->
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 2rem; margin-bottom: 3rem; padding: 0 1rem;">
+                
+                <!-- Address Section -->
+                <div style="flex: 1; min-width: 250px; text-align: left;">
+                    <h4 style="color: var(--gold); font-size: 0.95rem; margin-bottom: 1.2rem; font-family: var(--font-sans); letter-spacing: 1px; font-weight: 600; text-transform: uppercase;">ADDRESS</h4>
+                    <p style="margin-bottom: 6px; color: rgba(255,255,255,0.9); font-weight: 500;">The Principal</p>
+                    <p style="margin-bottom: 6px; color: rgba(255,255,255,0.9);">Govt. College Dharamshala</p>
+                    <p style="margin-bottom: 6px; color: rgba(255,255,255,0.9);">Distt &ndash; Kangra, HP</p>
+                    <p style="margin-bottom: 15px; color: rgba(255,255,255,0.9);">Pin &ndash; 176215</p>
+                    <p style="margin-bottom: 6px; color: rgba(255,255,255,0.7); font-size: 0.85rem;">Phone: 01892-224894</p>
+                    <p style="margin-bottom: 0; color: rgba(255,255,255,0.7); font-size: 0.85rem;">Email: gdcdharamshala@gmail.com</p>
+                </div>
+
+                <!-- Credits Section -->
+                <div style="flex: 1; min-width: 250px; text-align: left;">
+                    <h4 style="color: var(--gold); font-size: 0.95rem; margin-bottom: 1.2rem; font-family: var(--font-sans); letter-spacing: 1px; font-weight: 600; text-transform: uppercase;">DEVELOPED BY</h4>
+                    <p style="margin-bottom: 4px; color: rgba(255,255,255,0.9); font-weight: 600;">B.Tech Students:</p>
+                    <p style="margin-bottom: 8px; color: rgba(255,255,255,0.9);">Ashmit Kumar & Ms. Ankita Bharti</p>
+                    
+                    <p style="margin-bottom: 4px; color: rgba(255,255,255,0.9); font-weight: 600;">B.Sc Physics Student:</p>
+                    <p style="margin-bottom: 12px; color: rgba(255,255,255,0.9);">Ms. Kanika Devi</p>
+                    
+                    <p style="margin-bottom: 6px; color: rgba(255,255,255,0.9); font-weight: 600;">Guidance:</p>
+                    <div style="display: flex; flex-direction: column; gap: 3px; color: rgba(255,255,255,0.8); font-size: 0.85rem;">
+                        <p style="margin: 0;">Dr. Naresh Sharma</p>
+                        <p style="margin: 0;">Dr. Pawan Thakur</p>
+                        <p style="margin: 0;">Mr. Harsh Guleria</p>
+                    </div>
+                </div>
+
+                <!-- Map Section -->
+                <div style="flex: 1.2; min-width: 300px; height: 200px; border-radius: 12px; overflow: hidden; border: 1px solid var(--glass-border); box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    <iframe 
+                        src="https://www.google.com/maps?q=Government%20Degree%20College%20Dharamshala&output=embed" 
+                        width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+                    </iframe>
+                </div>
+            </div>
+            
+            <!-- Bottom Copyright -->
+            <div style="text-align: center; width: 100%; padding-top: 1.5rem; border-top: 1px solid var(--glass-border); font-size: 0.8rem; color: rgba(255,255,255,0.5);">
+                <p style="margin-bottom: 8px;">&copy; 2026 Govt. College Dharamshala. All rights reserved.</p>
+                <a href="terms-conditions/terms.html" style="color: rgba(255,255,255,0.5); text-decoration: none; transition: 0.3s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Terms & Conditions</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- External Libraries (CDN) -->
+    <!-- Particles.js -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    
+    <!-- GSAP Core & ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+    <!-- Custom Configuration -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/config.js?v=fb878ca"></script>
+    
+    <!-- Custom Animations -->
+    <script src="js/animations.js?v=fb878ca"></script>
+    <script src="js/uiUtils.js?v=fb878ca"></script>
+    <script src="js/dynamicSlider.js?v=fb878ca"></script>
+    <script src="js/premium-ui.js?v=fb878ca"></script>
 </body>
 </html>
