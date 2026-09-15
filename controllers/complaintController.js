@@ -47,7 +47,7 @@ exports.submitComplaint = async (req, res) => {
         const finalPriority = analysis.priority;
         const suggestedDeptId = await complaintService.getTargetDepartment(category, tenantId);
 
-        // ??? WORKFLOW ENFORCEMENT: All new complaints go to Admin Queue first
+        // 🛡️ WORKFLOW ENFORCEMENT: All new complaints go to Admin Queue first
         const { ADMIN_DEPT_ID } = require('../utils/constants');
         const initialDeptId = ADMIN_DEPT_ID; 
 
@@ -127,7 +127,7 @@ exports.submitComplaint = async (req, res) => {
         // 6. Socket & Notifications
         socketService.emitNewComplaint({ id: complaintId, student_id, department_id: initialDeptId, category, location, status: 'Pending', created_at: new Date() });
 
-        // ?? Phase 1: Signal Real-Time Dashboard Update
+        // 🚨 Phase 1: Signal Real-Time Dashboard Update
         socketService.emitStatsChanged(tenantId);
 
         res.json({ success: true, message: 'Complaint submitted successfully', complaint_id: complaintId, assigned_department: initialDeptId });
@@ -304,7 +304,7 @@ exports.applyAiSuggestion = async (req, res) => {
     const { type } = req.body; // 'priority' or 'category' or 'both'
     const tenantId = req.user.tenant_id;
 
-    // ??? Phase 2: Feature Flag Control
+    // 🛡️ Phase 2: Feature Flag Control
     if (process.env.AI_APPLY_ENABLED !== 'true') {
         return res.status(403).json({ success: false, message: "AI Suggestion Adoption is currently disabled." });
     }
