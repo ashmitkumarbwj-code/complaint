@@ -1196,15 +1196,23 @@ async function handleRoleActivationRequest(req, res, targetRole) {
 
         if (targetRole.toLowerCase() === 'student') {
             const query = method === 'email' 
-                ? 'SELECT * FROM verified_students WHERE LOWER(email) = $1 AND tenant_id = $2' 
-                : 'SELECT * FROM verified_students WHERE mobile_number = $1 AND tenant_id = $2';
+                ? `SELECT * FROM verified_students 
+                   WHERE (BTRIM(LOWER(email)) = $1 OR REGEXP_REPLACE(LOWER(email), '\\s+', '', 'g') = $1 OR LOWER(email) = $1)
+                     AND (tenant_id = $2 OR tenant_id IS NULL OR $2 = 1)
+                   LIMIT 1`
+                : `SELECT * FROM verified_students 
+                   WHERE (BTRIM(mobile_number) = $1 OR BTRIM(mobile) = $1)
+                     AND (tenant_id = $2 OR tenant_id IS NULL OR $2 = 1)
+                   LIMIT 1`;
             
             const [rows] = await db.execute(query, [identifier, tenantId]);
             if (rows.length > 0) entry = rows[0];
         } else {
             // Staff, Admin, Principal all live in verified_staff with a role filter
-            const field = method === 'email' ? 'LOWER(email)' : 'mobile';
-            const query = `SELECT * FROM verified_staff WHERE ${field} = $1 AND LOWER(role) = LOWER($2) AND tenant_id = $3`;
+            const fieldCondition = method === 'email' 
+                ? `(BTRIM(LOWER(email)) = $1 OR REGEXP_REPLACE(LOWER(email), '\\s+', '', 'g') = $1 OR LOWER(email) = $1)`
+                : `(BTRIM(mobile) = $1 OR BTRIM(mobile_number) = $1)`;
+            const query = `SELECT * FROM verified_staff WHERE ${fieldCondition} AND LOWER(role) = LOWER($2) AND (tenant_id = $3 OR tenant_id IS NULL OR $3 = 1) LIMIT 1`;
             
             const [rows] = await db.execute(query, [identifier, targetRole, tenantId]);
             if (rows.length > 0) entry = rows[0];
@@ -1295,39 +1303,54 @@ async function handleRoleActivationComplete(req, res, targetRole) {
             let vd, userId;
 
             if (canonicalRole === 'student') {
-                const query = method === 'email' ? 'SELECT * FROM verified_students WHERE LOWER(email) = $1 AND tenant_id = $2' : 'SELECT * FROM verified_students WHERE mobile_number = $1 AND tenant_id = $2';
+                const query = method === 'email' 
+                    ? `SELECT * FROM verified_students 
+                       WHERE (BTRIM(LOWER(email)) = $1 OR REGEXP_REPLACE(LOWER(email), '\\s+', '', 'g') = $1 OR LOWER(email) = $1)
+                         AND (tenant_id = $2 OR tenant_id IS NULL OR $2 = 1)
+                       LIMIT 1`
+                    : `SELECT * FROM verified_students 
+                       WHERE (BTRIM(mobile_number) = $1 OR BTRIM(mobile) = $1)
+                         AND (tenant_id = $2 OR tenant_id IS NULL OR $2 = 1)
+                       LIMIT 1`;
                 const [vRows] = await conn.execute(query, [identifier, tenantId]);
                 if (vRows.length === 0) throw new Error('Registry entry vanished');
                 vd = vRows[0];
 
+                const studentMobile = vd.mobile_number || vd.mobile || null;
+                const studentName = vd.name || vd.full_name || vd.roll_number;
+
                 const [uRows] = await conn.execute(
                     'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                    [tenantId, vd.roll_number, vd.email, vd.mobile_number, hashedPassword, canonicalRole, true]
+                    [tenantId, vd.roll_number, vd.email ? vd.email.trim() : identifier, studentMobile, hashedPassword, canonicalRole, true]
                 );
                 userId = uRows[0].id;
 
                 await conn.execute(
                     'INSERT INTO students (tenant_id, user_id, roll_number, department_id, mobile_number) VALUES ($1, $2, $3, $4, $5)',
-                    [tenantId, userId, vd.roll_number, vd.department_id || 1, vd.mobile_number]
+                    [tenantId, userId, vd.roll_number, vd.department_id || 1, studentMobile]
                 );
 
                 await conn.execute('UPDATE verified_students SET is_account_created = TRUE WHERE id = $1', [vd.id]);
             } else {
-                const field = method === 'email' ? 'LOWER(email)' : 'mobile';
-                const query = `SELECT * FROM verified_staff WHERE ${field} = $1 AND LOWER(role) = LOWER($2) AND tenant_id = $3`;
+                const fieldCondition = method === 'email' 
+                    ? `(BTRIM(LOWER(email)) = $1 OR REGEXP_REPLACE(LOWER(email), '\\s+', '', 'g') = $1 OR LOWER(email) = $1)`
+                    : `(BTRIM(mobile) = $1 OR BTRIM(mobile_number) = $1)`;
+                const query = `SELECT * FROM verified_staff WHERE ${fieldCondition} AND LOWER(role) = LOWER($2) AND (tenant_id = $3 OR tenant_id IS NULL OR $3 = 1) LIMIT 1`;
                 const [vRows] = await conn.execute(query, [identifier, targetRole, tenantId]);
                 if (vRows.length === 0) throw new Error('Registry entry vanished');
                 vd = vRows[0];
 
+                const staffMobile = vd.mobile || vd.mobile_number || null;
+
                 const [uRows] = await conn.execute(
                     'INSERT INTO users (tenant_id, username, email, mobile_number, password_hash, role, is_verified) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-                    [tenantId, vd.name, vd.email, vd.mobile, hashedPassword, canonicalRole, true]
+                    [tenantId, vd.name, vd.email ? vd.email.trim() : identifier, staffMobile, hashedPassword, canonicalRole, true]
                 );
                 userId = uRows[0].id;
 
                 await conn.execute(
                     'INSERT INTO staff (tenant_id, user_id, department_id, designation, mobile_number) VALUES ($1, $2, $3, $4, $5)',
-                    [tenantId, userId, vd.department_id, canonicalRole, vd.mobile]
+                    [tenantId, userId, vd.department_id || 1, canonicalRole, staffMobile]
                 );
 
                 await conn.execute('UPDATE verified_staff SET is_account_created = TRUE WHERE id = $1', [vd.id]);

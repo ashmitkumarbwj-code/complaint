@@ -31,24 +31,28 @@ exports.addStaff = async (req, res) => {
 
         // 2. Insert into verified_staff (Tenant-Scoped)
         await db.tenantExecute(req,
-            'INSERT INTO verified_staff (tenant_id, name, email, mobile_number, department_id, role) VALUES ($1, $2, $3, $4, $5, $6)',
-            [req.user.tenant_id, name, email, mobile, department_id, role]
+            'INSERT INTO verified_staff (tenant_id, name, email, mobile, department_id, role) VALUES ($1, $2, $3, $4, $5, $6)',
+            [tenantId, name, email, mobile, department_id, role]
         );
 
-        // 3. Send Activation/Welcome Email
-        const baseUrl = process.env.BASE_URL || `http://${req.get('host')}`;
-        const loginUrl = `${baseUrl}/login.html?role=${role.toLowerCase()}`;
-        
-        await notifier.sendEmail(
-            email, 
-            `Welcome to Smart Campus - Activate your ${role} Portal`, 
-            `Hello ${name},\n\nYour ${role} account has been authorized by the Admin.\n\nPlease visit the link below, click "Activate Account", and verify your registered mobile number (${mobile}) via OTP to set your password:\n\n${loginUrl}\n\nWelcome aboard!`
-        );
+        // 3. Send Activation/Welcome Email (Graceful Delivery)
+        try {
+            const baseUrl = process.env.BASE_URL || `http://${req.get('host')}`;
+            const loginUrl = `${baseUrl}/login.html?role=${role.toLowerCase()}`;
+            
+            await notifier.sendEmail(
+                email, 
+                `Welcome to Smart Campus - Activate your ${role} Portal`, 
+                `Hello ${name},\n\nYour ${role} account has been authorized by the Admin.\n\nPlease visit the link below, click "Activate Account", and verify your registered mobile number (${mobile}) via OTP to set your password:\n\n${loginUrl}\n\nWelcome aboard!`
+            );
+        } catch (mailErr) {
+            logger.warn('[Admin] addStaff email notification non-fatal error:', mailErr.message);
+        }
 
         res.json({ success: true, message: `${role} member added successfully. Verification link sent to ${email}` });
     } catch (error) {
         logger.error('[Admin] addStaff error:', error);
-        res.status(500).json({ success: false, message: 'Server error while adding staff' });
+        res.status(500).json({ success: false, message: error.message || 'Server error while adding staff' });
     }
 };
 
