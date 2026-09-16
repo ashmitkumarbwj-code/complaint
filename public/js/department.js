@@ -353,8 +353,23 @@ async function loadStaffList(deptId) {
 }
 
 async function executeV2Action(id, status) {
-    const reason = document.getElementById('admin-notes').value;
-    const targetStaffId = document.getElementById('target-staff-id')?.value;
+    const reason = document.getElementById('admin-notes').value.trim();
+    // Parse as integer — backend expects numeric ID for DB matching
+    const rawStaffId = document.getElementById('target-staff-id')?.value;
+    const targetStaffId = rawStaffId ? parseInt(rawStaffId, 10) : null;
+
+    // Mandatory reason check for actions that require it
+    const reasonRequired = ['HOD_REWORK_REQUIRED', 'RETURNED_TO_ADMIN'].includes(status);
+    if (reasonRequired && (!reason || reason.length < 10)) {
+        showToast('Please provide a detailed reason (at least 10 characters).', 'error');
+        return;
+    }
+
+    // Must select staff before verifying
+    if (status === 'HOD_VERIFIED' && !targetStaffId) {
+        showToast('Please select a staff member to assign this complaint to.', 'error');
+        return;
+    }
     
     try {
         const res = await fetch(`${API_BASE}/api/complaints/${id}/status`, {
@@ -369,9 +384,12 @@ async function executeV2Action(id, status) {
             closeModal();
             fetchDashboardData();
         } else {
-            showToast(data.message, 'error');
+            showToast(data.message || 'Action failed. Check permissions or workflow state.', 'error');
         }
-    } catch (err) { showToast('Action failed', 'error'); }
+    } catch (err) { 
+        console.error('[Dept] V2 action failed:', err);
+        showToast('Network error while performing action.', 'error'); 
+    }
 }
 
 
